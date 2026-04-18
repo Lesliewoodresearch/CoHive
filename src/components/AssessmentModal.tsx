@@ -321,6 +321,10 @@ export function AssessmentModal({
   const [savedGemCount, setSavedGemCount] = useState(0);
   const [savedCoalCount, setSavedCoalCount] = useState(0);
   const [savedCheckCount, setSavedCheckCount] = useState(0);
+  // Persistent item lists — survive toast expiry, used to build the review panel
+  const [savedGemItems,   setSavedGemItems]   = useState<Array<{ text: string; fileName: string | null }>>([]);
+  const [savedCheckItems, setSavedCheckItems] = useState<Array<{ text: string }>>([]);
+  const [savedCoalItems,  setSavedCoalItems]  = useState<Array<{ text: string }>>([]);
   const [showReviewPanel, setShowReviewPanel] = useState(false);
   const [reviewItems, setReviewItems] = useState<ReviewItem[]>([]);
   const [summary, setSummary] = useState<string | null>(null);
@@ -521,6 +525,9 @@ export function AssessmentModal({
       setSavedGemCount(0);
       setSavedCoalCount(0);
       setSavedCheckCount(0);
+      setSavedGemItems([]);
+      setSavedCheckItems([]);
+      setSavedCoalItems([]);
       setGemToasts([]);
       setCoalToasts([]);
       setCheckToasts([]);
@@ -679,6 +686,7 @@ export function AssessmentModal({
       });
       if (result.success) {
         setSavedGemCount((prev) => prev + 1);
+        setSavedGemItems(prev => [...prev, { text: floatingBtn.text, fileName: floatingBtn.fileName }]);
         // Notify ProcessWireframe to accumulate gem into iteration-level array
         onGemSaved?.({
           gemText: floatingBtn.text,
@@ -722,6 +730,7 @@ export function AssessmentModal({
       };
       localStorage.setItem('cohive_coal', JSON.stringify([...existing, newCoal]));
       setSavedCoalCount(prev => prev + 1);
+      setSavedCoalItems(prev => [...prev, { text: floatingBtn.text }]);
       const toastId = `coal-${Date.now()}`;
       setCoalToasts(prev => [...prev, {
         id: toastId,
@@ -750,6 +759,7 @@ export function AssessmentModal({
       };
       localStorage.setItem('cohive_checks', JSON.stringify([...existing, newCheck]));
       setSavedCheckCount(prev => prev + 1);
+      setSavedCheckItems(prev => [...prev, { text: floatingBtn.text }]);
       const toastId = `check-${Date.now()}`;
       setCheckToasts(prev => [...prev, {
         id: toastId,
@@ -1437,6 +1447,9 @@ export function AssessmentModal({
                           </span>
                           <div className="flex flex-col items-start">
                             <span className={`font-medium text-sm ${isLast ? "text-purple-900" : isModerator ? "text-green-900" : isFactChecker ? "text-amber-900" : "text-gray-700"}`}>
+                              {!isModerator && !isFactChecker && (
+                                <span className="text-gray-400 font-normal mr-1.5">Round {round.roundNumber} ·</span>
+                              )}
                               {roundLabel}
                             </span>
                             {(() => {
@@ -1631,35 +1644,37 @@ export function AssessmentModal({
                   if (onAcceptResults) {
                     onAcceptResults({ rounds, citedFiles, summary, hexId, hexLabel });
                   }
-                  // Collect everything saved this assessment into review items
-                  // gemToasts stores the full gem objects; check/coalToasts store text
-                  const savedGems   = gemToasts.map((t, i) => ({
-                    id: `gem-${Date.now()}-${i}`,
-                    text: t.text,
-                    type: 'gem' as const,
-                    included: true,
-                    hexId, hexLabel,
-                    fileName: t.fileName,
-                    fileId: null as null,
-                    rank: i,
-                  }));
-                  const savedChecks = checkToasts.map((t, i) => ({
-                    id: `chk-${Date.now()}-${i}`,
-                    text: t.text,
-                    type: 'check' as const,
-                    included: true,
-                    hexId, hexLabel,
-                    rank: i,
-                  }));
-                  const savedCoal   = coalToasts.map((t, i) => ({
-                    id: `coal-${Date.now()}-${i}`,
-                    text: t.text,
-                    type: 'coal' as const,
-                    included: true,
-                    hexId, hexLabel,
-                    rank: i,
-                  }));
-                  const allNew = [...savedGems, ...savedChecks, ...savedCoal];
+                  // Build review items from persistent arrays — not toasts,
+                  // which expire after 3.5s and would cause the panel to not appear.
+                  const ts = Date.now();
+                  const allNew = [
+                    ...savedGemItems.map((g, i) => ({
+                      id: `gem-${ts}-${i}`,
+                      text: g.text,
+                      type: 'gem' as const,
+                      included: true,
+                      hexId, hexLabel,
+                      fileName: g.fileName,
+                      fileId: null as null,
+                      rank: i,
+                    })),
+                    ...savedCheckItems.map((c, i) => ({
+                      id: `chk-${ts}-${i}`,
+                      text: c.text,
+                      type: 'check' as const,
+                      included: true,
+                      hexId, hexLabel,
+                      rank: i,
+                    })),
+                    ...savedCoalItems.map((c, i) => ({
+                      id: `coal-${ts}-${i}`,
+                      text: c.text,
+                      type: 'coal' as const,
+                      included: true,
+                      hexId, hexLabel,
+                      rank: i,
+                    })),
+                  ];
                   if (allNew.length > 0) {
                     setReviewItems(allNew);
                     setShowReviewPanel(true);

@@ -1119,11 +1119,7 @@ export function CentralHexView({
                     const preview = (ex.assessment || '').substring(0, 200).replace(/\n/g, ' ');
                     return `Run ${i + 1}: ${preview}${preview.length === 200 ? '...' : ''}`;
                   });
-                  const summaryBlock = `
-
-[PRIOR_SUMMARY:
-${summaryLines.join('\n')}
-]`;
+                  const summaryBlock = `\n\n[PRIOR_SUMMARY:\n${summaryLines.join('\n')}\n]`;
                   onExecute(pendingExecuteFiles, pendingExecuteType, pendingExecuteAssessment + summaryBlock);
                   setPendingExecuteFiles([]); setPendingExecuteType([]); setPendingExecuteAssessment('');
                   setCurrentStep(hexId === 'competitors' ? 3 : 1); setSelectedFiles([]); setAssessmentType(['recommend']); setAssessment('');
