@@ -1578,8 +1578,9 @@ ${priorSummaryContext}
       label: 'Fact-Checker',
     });
 
+    const fcRoundNumber = 1 + actualDebateRounds + 1; // 0=ModOpen, 1=R1, 2..n=debate, n+1=FC
     const rFC = {
-      roundNumber: rounds.length,
+      roundNumber: fcRoundNumber,
       label: 'Fact-Checker',
       content: `## Fact-Checker\n\n${factCheckContent}`,
       timestamp: new Date().toISOString(),
@@ -1604,7 +1605,7 @@ ${priorSummaryContext}
     });
 
     const rSynth = {
-      roundNumber: rounds.length,
+      roundNumber: fcRoundNumber + 1,
       label: 'Moderator Synthesis',
       content: `## Moderator Synthesis\n\n${synthesisContent}`,
       timestamp: new Date().toISOString(),

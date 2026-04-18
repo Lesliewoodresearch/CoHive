@@ -64,7 +64,7 @@ export default async function handler(req, res) {
     let extractionMethod = 'raw';
     const ext = fileName.toLowerCase().split('.').pop();
 
-    if (['txt', 'md', 'csv'].includes(ext)) {
+    if (['txt', 'md', 'csv', 'json'].includes(ext)) {
       textContent = fileBuffer.toString('utf-8');
       extractionMethod = 'text';
     } else if (ext === 'pdf') {

@@ -1262,7 +1262,11 @@ export function AssessmentModal({
                   const lastRound = rounds[rounds.length - 1];
                   const lbl = (lastRound as any)?.label || `Round ${currentRound}`;
                   const sub = getRoundSubtitle(lbl);
-                  return sub ? `${lbl} — ${sub}` : `${lbl} complete…`;
+                  // Show the label of the just-completed round, then what's coming next
+                  const nextNum = currentRound + 1;
+                  const isFinal = lbl.toLowerCase().includes('moderator') || lbl.toLowerCase().includes('fact');
+                  const nextHint = isFinal ? '' : ` — starting Round ${nextNum}…`;
+                  return sub ? `${lbl} complete${nextHint}` : `${lbl} complete${nextHint}`;
                 })() : "Starting collaboration…"}
               </span>
               <div className="flex gap-1 ml-2">
@@ -1450,7 +1454,8 @@ export function AssessmentModal({
                               {!isModerator && !isFactChecker && (
                                 <span className="text-gray-400 font-normal mr-1.5">Round {round.roundNumber} ·</span>
                               )}
-                              {roundLabel}
+                              {/* Strip "Round N — " prefix from label since we show it separately */}
+                              {roundLabel.replace(/^Round \d+ — /, '')}
                             </span>
                             {(() => {
                               const sub = getRoundSubtitle(roundLabel);

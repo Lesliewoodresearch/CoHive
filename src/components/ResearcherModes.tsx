@@ -1,7 +1,6 @@
 /* Researcher Modes.tsx */
 
 import { useState, useEffect } from 'react';
-import { SpinHex } from './LoadingGem';
 import { DatabricksFileBrowser } from './DatabricksFileBrowser';
 import { uploadToKnowledgeBase, approveKnowledgeBaseFile, deleteKnowledgeBaseFile, updateKnowledgeBaseMetadata, listKnowledgeBaseFiles, readKnowledgeBaseFile, processKnowledgeBaseFile, type KnowledgeBaseFile } from '../utils/databricksAPI';
 import { executeAIPrompt, runAIAgent } from '../utils/databricksAI';
@@ -53,7 +52,6 @@ interface ResearcherModesProps {
   onPendingCountChange?: (count: number) => void;
   processingModelEndpoint?: string;
   onRefreshFiles?: () => void;
-  isLoadingFiles?: boolean;
 }
 
 const centralHexagons = [
@@ -210,7 +208,7 @@ export function ResearcherModes({
   availableBrands = [], availableProjectTypes = [], projectTypeConfigs = [],
   onAddBrand, onAddProjectType, onAddProjectTypeWithPrompt,
   userRole = 'marketing-manager', onModeChange, onFileOpen, onPendingCountChange,
-  processingModelEndpoint, onRefreshFiles, isLoadingFiles = false,
+  processingModelEndpoint, onRefreshFiles,
 }: ResearcherModesProps) {
 
   const [mode, setMode] = useState<'synthesis' | 'personas' | 'read-edit-approve' | 'workspace' | 'custom-prompt' | null>(() => {
@@ -227,25 +225,6 @@ export function ResearcherModes({
 
   const [synthesisOption, setSynthesisOption] = useState<'new-synthesis' | 'add-studies' | 'new-brand' | 'new-project-type' | 'edit-existing' | 'review-edits' | null>(null);
   const [synthesisResponses, setSynthesisResponses] = useState<{ [key: string]: string }>({});
-  const [allApprovedFiles, setAllApprovedFiles] = useState<KnowledgeBaseFile[]>([]);
-  const [approvedFilesLoading, setApprovedFilesLoading] = useState(false);
-  const [synthesisFileSearch, setSynthesisFileSearch] = useState('');
-  const [pendingSynthesis, setPendingSynthesis] = useState<{
-    content: string;
-    fileName: string;
-    brand: string;
-    projectType: string;
-    sourceFiles: string[];
-  } | null>(null);
-  const [synthesisMeta, setSynthesisMeta] = useState<{
-    fileName: string;
-    brand: string;
-    projectType: string;
-    contentYear: string;
-    contentMonth: string;
-    tags: string;
-    summary: string;
-  } | null>(null);
   const [selectedBrand, setSelectedBrand] = useState('');
   const [selectedProjectType, setSelectedProjectType] = useState('');
   const [selectedDatabricksFiles, setSelectedDatabricksFiles] = useState<ResearchFile[]>([]);
@@ -336,17 +315,6 @@ export function ResearcherModes({
     console.log("[KB Queues] All unapproved (" + allUnapproved.length + "):", allUnapproved.map(f => ({ id: f.fileId, name: f.fileName, cs: f.cleaningStatus, sum: !!f.contentSummary })));
     console.log("[KB Queues] Unprocessed:", unprocessed.length, "| Pending approval:", pendingApproval.length);
   };
-
-  // Load all approved KB files when synthesis mode is active with new-synthesis option
-  useEffect(() => {
-    if (mode === 'synthesis' && synthesisOption === 'new-synthesis') {
-      setApprovedFilesLoading(true);
-      listKnowledgeBaseFiles({ isApproved: true, sortBy: 'upload_date', sortOrder: 'DESC', limit: 500 })
-        .then(files => setAllApprovedFiles(files.filter(f => f.fileType !== 'Findings')))
-        .catch(() => setAllApprovedFiles([]))
-        .finally(() => setApprovedFilesLoading(false));
-    }
-  }, [mode, synthesisOption]);
 
   const refreshPendingQueues = async () => {
     // Force fresh fetch — avoids Vercel edge cache returning stale data after delete/approve
@@ -688,27 +656,7 @@ export function ResearcherModes({
           {userRole === 'administrator' && <button onClick={() => handleModeChange('workspace')} className={`px-4 py-2 rounded-lg transition-colors ${current === 'workspace' ? 'bg-orange-600 text-white' : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-orange-500 hover:bg-orange-50'}`}>Workspace</button>}
           {userRole === 'administrator' && <button onClick={() => { handleModeChange('custom-prompt'); setCpView('list'); setCpResult(null); setCpError(null); }} className={`px-4 py-2 rounded-lg transition-colors ${current === 'custom-prompt' ? 'bg-teal-600 text-white' : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-teal-500 hover:bg-teal-50'}`}>Custom Prompt</button>}
         </div>
-        {isLoadingFiles ? (
-          <div className="flex items-center gap-2 px-4 py-2 bg-blue-100 rounded-lg">
-            <svg viewBox="0 0 200 165" className="w-5 h-5 flex-shrink-0" style={{ animation: 'spin 2s linear infinite' }}>
-              <defs>
-                <linearGradient id="hexSpinGradKB" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#7C3AED" />
-                  <stop offset="35%" stopColor="#DC2626" />
-                  <stop offset="65%" stopColor="#C026D3" />
-                  <stop offset="100%" stopColor="#9333EA" />
-                </linearGradient>
-              </defs>
-              <path d="M 50 0 L 150 0 L 200 82.5 L 150 165 L 50 165 L 0 82.5 Z" fill="url(#hexSpinGradKB)" />
-              <path d="M 100 0 L 200 82.5 L 100 82.5 Z" fill="#B91C1C" opacity="0.35" />
-              <path d="M 0 82.5 L 100 82.5 L 50 165 Z" fill="#9333EA" opacity="0.35" />
-            </svg>
-            <span className="text-blue-700 text-sm font-medium">Loading...</span>
-            <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-          </div>
-        ) : (
-          <button onClick={async () => { onRefreshFiles?.(); await refreshPendingQueues(); alert('✓ Refreshed!'); }} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"><RefreshCw className="w-4 h-4" />Refresh</button>
-        )}
+        <button onClick={async () => { onRefreshFiles?.(); await refreshPendingQueues(); alert('✓ Refreshed!'); }} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"><RefreshCw className="w-4 h-4" />Refresh</button>
       </div>
     </div>
   );
@@ -767,7 +715,7 @@ export function ResearcherModes({
           <div className="border-t-2 border-gray-200 px-6 py-4 flex items-center justify-between">
             <button onClick={() => { setShowMetadataModal(false); setMetadataQueue([]); }} className="px-4 py-2 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm">Skip — assign later</button>
             <button onClick={handleSaveMetadataAssignments} disabled={isSavingMetadata} className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 flex items-center gap-2 text-sm font-semibold">
-              {isSavingMetadata ? <><SpinHex className="w-4 h-4" />Saving...</> : <><Save className="w-4 h-4" />Save Metadata</>}
+              {isSavingMetadata ? <><Loader className="w-4 h-4 animate-spin" />Saving...</> : <><Save className="w-4 h-4" />Save Metadata</>}
             </button>
           </div>
         </div>
@@ -834,13 +782,13 @@ export function ResearcherModes({
             </div>
             <div>
               <h4 className="text-gray-900 font-medium mb-2 text-sm">File Content</h4>
-              {isLoadingPreview ? <div className="flex items-center justify-center py-8"><SpinHex className="w-6 h-6" /><span className="ml-2 text-gray-500">Loading...</span></div> : <textarea value={editedKBContent} onChange={e => setEditedKBContent(e.target.value)} className="w-full min-h-[300px] bg-gray-50 border-2 border-gray-300 rounded p-4 text-gray-700 text-sm resize-y focus:outline-none focus:border-green-500" />}
+              {isLoadingPreview ? <div className="flex items-center justify-center py-8"><Loader className="w-6 h-6 animate-spin text-gray-400" /><span className="ml-2 text-gray-500">Loading...</span></div> : <textarea value={editedKBContent} onChange={e => setEditedKBContent(e.target.value)} className="w-full min-h-[300px] bg-gray-50 border-2 border-gray-300 rounded p-4 text-gray-700 text-sm resize-y focus:outline-none focus:border-green-500" />}
             </div>
           </div>
           {canApproveResearch && (
             <div className="border-t-2 border-gray-300 p-4 flex items-center justify-between">
               <button onClick={handleSaveKBChanges} disabled={isSavingKBChanges} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-300 flex items-center gap-2">
-                {isSavingKBChanges ? <><SpinHex className="w-4 h-4" />Saving...</> : <><Save className="w-4 h-4" />Save Changes</>}
+                {isSavingKBChanges ? <><Loader className="w-4 h-4 animate-spin" />Saving...</> : <><Save className="w-4 h-4" />Save Changes</>}
               </button>
               <div className="flex items-center gap-3">
                 <button onClick={() => handleRejectKBFile(previewFile.fileId)} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 flex items-center gap-2"><Trash2 className="w-4 h-4" />Reject & Delete</button>
@@ -915,7 +863,7 @@ export function ResearcherModes({
               </div>
               {selectedKBFiles.size > 0 && (
                 <button onClick={handleProcessSelectedFiles} disabled={isProcessing} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 flex items-center gap-2">
-                  {isProcessing ? <><SpinHex className="w-5 h-5" />Processing {selectedKBFiles.size}...</> : <><Sparkles className="w-5 h-5" />Process Selected ({selectedKBFiles.size})</>}
+                  {isProcessing ? <><img src={gemIcon} alt="" className="w-5 h-5 animate-spin" />Processing {selectedKBFiles.size}...</> : <><Sparkles className="w-5 h-5" />Process Selected ({selectedKBFiles.size})</>}
                 </button>
               )}
             </div>
@@ -939,7 +887,7 @@ export function ResearcherModes({
                             </div>
                           </div>
                           {status && <div className="flex-shrink-0">
-                            {status === 'processing' && <SpinHex className="w-6 h-6" />}
+                            {status === 'processing' && <img src={gemIcon} alt="" className="w-6 h-6 animate-spin" />}
                             {status === 'success' && <CircleCheck className="w-6 h-6 text-green-600" />}
                             {status === 'error' && <X className="w-6 h-6 text-red-600" />}
                           </div>}
@@ -1044,7 +992,7 @@ export function ResearcherModes({
                 {canApproveResearch && <button onClick={() => onToggleApproval(selectedFile.id)} className={`px-3 py-1 rounded text-xs ${selectedFile.isApproved ? 'bg-yellow-500 text-white' : 'bg-green-600 text-white'}`}>{selectedFile.isApproved ? 'Unapprove' : 'Approve'}</button>}
               </div>
             </div>
-            {isLoadingFileContent ? <div className="flex items-center justify-center py-10"><SpinHex className="w-5 h-5" /><span className="text-gray-500 text-sm">Loading...</span></div>
+            {isLoadingFileContent ? <div className="flex items-center justify-center py-10"><Loader className="w-5 h-5 animate-spin text-gray-400 mr-2" /><span className="text-gray-500 text-sm">Loading...</span></div>
               : fileLoadError ? <div className="bg-red-50 border-2 border-red-200 rounded p-4 text-red-700 text-sm">{fileLoadError}</div>
               : <textarea className={`w-full min-h-[300px] border-2 rounded p-3 text-gray-700 text-sm font-mono resize-y focus:outline-none ${canApproveResearch ? 'border-gray-300 bg-white focus:border-green-500' : 'border-gray-200 bg-gray-50'}`} value={editContent} onChange={e => canApproveResearch && setEditContent(e.target.value)} readOnly={!canApproveResearch} />
             }
@@ -1067,7 +1015,7 @@ export function ResearcherModes({
                     {renamingFileId === file.id ? (
                       <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
                         <input type="text" value={renameValue} onChange={e => setRenameValue(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') handleRenameFile(file.id, renameValue); if (e.key === 'Escape') { setRenamingFileId(null); setRenameValue(''); } }} className="flex-1 border-2 border-green-400 rounded px-2 py-1 text-sm text-gray-900 focus:outline-none" autoFocus />
-                        <button onClick={() => handleRenameFile(file.id, renameValue)} disabled={isSavingRename || !renameValue.trim()} className="px-3 py-1 bg-green-600 text-white text-xs rounded disabled:bg-gray-300 flex items-center gap-1">{isSavingRename ? <SpinHex className="w-3 h-3" /> : <Save className="w-3 h-3" />}Save</button>
+                        <button onClick={() => handleRenameFile(file.id, renameValue)} disabled={isSavingRename || !renameValue.trim()} className="px-3 py-1 bg-green-600 text-white text-xs rounded disabled:bg-gray-300 flex items-center gap-1">{isSavingRename ? <Loader className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}Save</button>
                         <button onClick={() => { setRenamingFileId(null); setRenameValue(''); }} className="px-3 py-1 border-2 border-gray-300 text-gray-600 text-xs rounded">Cancel</button>
                       </div>
                     ) : (
@@ -1129,7 +1077,7 @@ export function ResearcherModes({
               {[
                 { value: 'new-synthesis', label: 'New Synthesis', desc: 'Start a new synthesis for an existing brand and project type' },
                 { value: 'new-brand', label: 'New Brand', desc: 'Start synthesis for a new brand' },
-                { value: 'new-project-type', label: 'New Project Type (Data Scientists Only)', desc: 'Create a new project type with custom AI prompt' },
+                { value: 'new-project-type', label: 'New Project Type', desc: 'Create a new project type with a custom AI prompt, shared across your workspace' },
                 { value: 'edit-existing', label: 'Edit Existing Synthesis', desc: 'Modify an existing synthesis file' },
                 { value: 'review-edits', label: 'Review Suggested Edits', desc: 'Review and approve suggested edits' },
               ].map(opt => (
@@ -1155,14 +1103,14 @@ export function ResearcherModes({
             </div>
           </div>
         )}
-        {synthesisOption === 'new-project-type' && onAddProjectTypeWithPrompt && userRole === 'data-scientist' && (
+        {synthesisOption === 'new-project-type' && onAddProjectTypeWithPrompt && (
           <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 space-y-3">
             <input type="text" className="w-full border-2 border-gray-300 bg-white rounded p-2 text-gray-700" placeholder="Project type name..." value={newProjectType} onChange={e => setNewProjectType(e.target.value)} />
             <textarea className="w-full border-2 border-gray-300 bg-white rounded p-2 text-gray-700 h-24" placeholder="Project type prompt..." value={newProjectTypePrompt} onChange={e => setNewProjectTypePrompt(e.target.value)} />
             <button onClick={async () => { if (newProjectType.trim() && newProjectTypePrompt.trim()) { await onAddProjectTypeWithPrompt(newProjectType.trim(), newProjectTypePrompt.trim()); setNewProjectType(''); setNewProjectTypePrompt(''); } }} disabled={!newProjectType.trim() || !newProjectTypePrompt.trim()} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400">Add Project Type</button>
           </div>
         )}
-        {synthesisOption === 'new-project-type' && userRole !== 'data-scientist' && <div className="bg-red-50 border-2 border-red-200 rounded p-4"><p className="text-red-900 text-sm">❌ Only Data Scientists can create new project types.</p></div>}
+
         {synthesisOption === 'new-synthesis' && (
           <div className="space-y-4">
             <div className="bg-white border-2 border-gray-300 rounded-lg p-4">
@@ -1184,107 +1132,16 @@ export function ResearcherModes({
             {selectedBrand && selectedProjectType && (
               <div className="bg-white border-2 border-gray-300 rounded-lg p-4">
                 <label className="block text-gray-900 mb-3">4. Select Research Files</label>
-                <p className="text-xs text-gray-500 mb-3">All approved Knowledge Base files are available. Select any files to include in this synthesis.</p>
-
-                {/* Search */}
-                <input
-                  type="text"
-                  placeholder="Search files by name or brand..."
-                  className="w-full border-2 border-gray-300 bg-white rounded p-2 text-gray-700 text-sm mb-3 focus:outline-none focus:border-purple-500"
-                  value={synthesisFileSearch}
-                  onChange={e => setSynthesisFileSearch(e.target.value)}
-                />
-
-                {approvedFilesLoading ? (
-                  <div className="flex items-center gap-2 py-4 text-gray-500 text-sm">
-                    <SpinHex className="w-4 h-4" />Loading approved files...
+                {researchFiles.filter(f => f.isApproved && f.brand === selectedBrand).length > 0 ? (
+                  <div className="space-y-2 max-h-40 overflow-y-auto mb-4">
+                    {researchFiles.filter(f => f.isApproved && f.brand === selectedBrand).map(file => {
+                      const isSel = selectedDatabricksFiles.some(sf => sf.id === file.id);
+                      return <div key={file.id} onClick={() => setSelectedDatabricksFiles(prev => isSel ? prev.filter(sf => sf.id !== file.id) : [...prev, file])} className={`p-3 border-2 rounded cursor-pointer ${isSel ? 'border-purple-500 bg-purple-50' : 'border-gray-300 bg-white hover:border-gray-400'}`}><div className="flex items-center gap-2"><input type="checkbox" checked={isSel} onChange={() => {}} className="w-4 h-4" /><span className="text-sm text-gray-900">{file.fileName}</span></div></div>;
+                    })}
                   </div>
-                ) : (() => {
-                  const search = synthesisFileSearch.toLowerCase();
-                  const filtered = allApprovedFiles.filter(f =>
-                    !search ||
-                    f.fileName.toLowerCase().includes(search) ||
-                    (f.brand || '').toLowerCase().includes(search) ||
-                    (f.projectType || '').toLowerCase().includes(search)
-                  );
-
-                  // Group by brand for display
-                  const groups: Record<string, KnowledgeBaseFile[]> = {};
-                  filtered.forEach(f => {
-                    const key = f.brand || 'General / No Brand';
-                    if (!groups[key]) groups[key] = [];
-                    groups[key].push(f);
-                  });
-
-                  const groupKeys = Object.keys(groups).sort((a, b) => {
-                    // Put selected brand first
-                    if (a === selectedBrand) return -1;
-                    if (b === selectedBrand) return 1;
-                    return a.localeCompare(b);
-                  });
-
-                  return filtered.length === 0 ? (
-                    <p className="text-sm text-gray-500 italic mb-3">
-                      {allApprovedFiles.length === 0 ? 'No approved files in the Knowledge Base.' : 'No files match your search.'}
-                    </p>
-                  ) : (
-                    <div className="space-y-3 max-h-64 overflow-y-auto mb-3 pr-1">
-                      {groupKeys.map(brand => (
-                        <div key={brand}>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className={`text-xs font-semibold uppercase tracking-wide px-2 py-0.5 rounded ${brand === selectedBrand ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-600'}`}>
-                              {brand}
-                            </span>
-                            <button
-                              className="text-xs text-purple-600 hover:text-purple-800"
-                              onClick={() => {
-                                const brandFiles = groups[brand];
-                                const allSelected = brandFiles.every(f => selectedDatabricksFiles.some(sf => sf.id === f.fileId));
-                                if (allSelected) {
-                                  setSelectedDatabricksFiles(prev => prev.filter(sf => !brandFiles.some(f => f.fileId === sf.id)));
-                                } else {
-                                  const toAdd = brandFiles.filter(f => !selectedDatabricksFiles.some(sf => sf.id === f.fileId))
-                                    .map(f => ({ id: f.fileId, fileName: f.fileName, brand: f.brand || '', projectType: f.projectType || '', isApproved: true, uploadDate: Date.now(), fileType: f.fileType }));
-                                  setSelectedDatabricksFiles(prev => [...prev, ...toAdd]);
-                                }
-                              }}
-                            >
-                              {groups[brand].every(f => selectedDatabricksFiles.some(sf => sf.id === f.fileId)) ? 'Deselect all' : 'Select all'}
-                            </button>
-                          </div>
-                          {groups[brand].map(f => {
-                            const isSel = selectedDatabricksFiles.some(sf => sf.id === f.fileId);
-                            const resFile = { id: f.fileId, fileName: f.fileName, brand: f.brand || '', projectType: f.projectType || '', isApproved: true, uploadDate: Date.now(), fileType: f.fileType };
-                            return (
-                              <div
-                                key={f.fileId}
-                                onClick={() => setSelectedDatabricksFiles(prev => isSel ? prev.filter(sf => sf.id !== f.fileId) : [...prev, resFile])}
-                                className={`p-2.5 border-2 rounded cursor-pointer flex items-center gap-2 ${isSel ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white hover:border-gray-400'}`}
-                              >
-                                <input type="checkbox" checked={isSel} onChange={() => {}} className="w-4 h-4 flex-shrink-0" />
-                                <div className="min-w-0">
-                                  <span className="text-sm text-gray-900 truncate block">{f.fileName}</span>
-                                  <span className="text-xs text-gray-500">
-                                    {f.projectType}{f.projectType && f.contentYear ? ' · ' : ''}{f.contentYear ? f.contentYear : ''}
-                                  </span>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
-
-                {selectedDatabricksFiles.length > 0 && (
-                  <p className="text-xs text-purple-700 font-medium mb-3">
-                    {selectedDatabricksFiles.length} file{selectedDatabricksFiles.length !== 1 ? 's' : ''} selected
-                  </p>
-                )}
-
+                ) : <p className="text-sm text-gray-500 italic mb-4">No approved files for {selectedBrand}</p>}
                 <label className="w-full px-4 py-3 bg-green-600 text-white rounded hover:bg-green-700 flex items-center justify-center gap-2 cursor-pointer">
-                  <Upload className="w-5 h-5" />Upload New File
+                  <Upload className="w-5 h-5" />Upload Files
                   <input type="file" accept=".pdf,.doc,.docx,.xlsx,.xls,.csv,.txt,.ppt,.pptx" multiple className="hidden" onChange={handleUploadToDatabricks} />
                 </label>
               </div>
@@ -1293,56 +1150,20 @@ export function ResearcherModes({
               <button onClick={async () => {
                 try {
                   setIsProcessing(true);
-                  // Find year metadata for each selected file from allApprovedFiles
-                  const fileYearMap: Record<string, { year: number | null; month: number | null }> = {};
-                  allApprovedFiles.forEach(f => { fileYearMap[f.fileId] = { year: f.contentYear ?? null, month: f.contentMonth ?? null }; });
-
-                  const contents = await Promise.all(selectedDatabricksFiles.map(async f => {
-                    try {
-                      const r = await readKnowledgeBaseFile(f.id);
-                      const meta = fileYearMap[f.id] || { year: null, month: null };
-                      const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-                      const dateLabel = meta.year ? (meta.month ? `${monthNames[meta.month - 1]} ${meta.year}` : String(meta.year)) : 'Year unknown';
-                      return { fileName: f.fileName, content: r.content || '', dateLabel };
-                    } catch {
-                      return { fileName: f.fileName, content: '[unavailable]', dateLabel: 'Year unknown' };
-                    }
-                  }));
-
-                  const temporalInstruction = `TEMPORAL REASONING:
-Newer insights supersede older ones on the same topic. Each source is tagged with its date.
-When sources conflict, favour the more recent one and note the year of the evidence you are using.
-Flag explicitly when you are relying on data 3+ years old.
-
-`;
-                  const resp = await fetch('/api/databricks/ai/prompt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: `Synthesize for ${selectedBrand} - ${selectedProjectType}:\n\n${temporalInstruction}${contents.map((f, i) => `## ${i+1}. ${f.fileName} [${f.dateLabel}]\n\n${f.content}`).join('\n\n---\n\n')}`, modelEndpoint: processingModelEndpoint, maxTokens: 8000, temperature: 0.3, userEmail, userRole }) });
+                  const contents = await Promise.all(selectedDatabricksFiles.map(async f => { try { const r = await readKnowledgeBaseFile(f.id); return { fileName: f.fileName, content: r.content || '' }; } catch { return { fileName: f.fileName, content: '[unavailable]' }; } }));
+                  const resp = await fetch('/api/databricks/ai/prompt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: `Synthesize for ${selectedBrand} - ${selectedProjectType}:\n\n${contents.map((f, i) => `## ${i+1}. ${f.fileName}\n\n${f.content}`).join('\n\n---\n\n')}`, modelEndpoint: processingModelEndpoint, maxTokens: 8000, temperature: 0.3, userEmail, userRole }) });
                   if (!resp.ok) throw new Error(resp.statusText);
                   const result = await resp.json();
-                  const synthesisContent = result.content || result.response || 'Synthesis failed';
-                  const now = new Date();
-                  const suggestedName = `Synthesis_${selectedBrand}_${selectedProjectType}_${now.getFullYear()}.md`;
-                  // Show the synthesis result and metadata confirmation before saving
-                  setAiModal({ isOpen: true, title: `Synthesis: ${selectedBrand} - ${selectedProjectType}`, content: synthesisContent });
-                  setPendingSynthesis({
-                    content: synthesisContent,
-                    fileName: suggestedName,
-                    brand: selectedBrand,
-                    projectType: selectedProjectType,
-                    sourceFiles: selectedDatabricksFiles.map(f => f.fileName),
-                  });
-                  setSynthesisMeta({
-                    fileName: suggestedName,
-                    brand: selectedBrand,
-                    projectType: selectedProjectType,
-                    contentYear: String(now.getFullYear()),
-                    contentMonth: String(now.getMonth() + 1),
-                    tags: 'synthesis, ai-generated',
-                    summary: `AI synthesis of ${selectedDatabricksFiles.length} file(s) for ${selectedBrand} - ${selectedProjectType}`,
-                  });
+                  const content = result.content || result.response || 'Synthesis failed';
+                  setAiModal({ isOpen: true, title: `Synthesis: ${selectedBrand} - ${selectedProjectType}`, content });
+                  const fname = `Synthesis_${selectedBrand}_${selectedProjectType}_${Date.now()}.txt`;
+                  await uploadToKnowledgeBase({ file: new File([content], fname, { type: 'text/plain' }), brand: selectedBrand, projectType: selectedProjectType, fileType: 'Synthesis', scope: 'brand', tags: ['synthesis', 'ai-generated'], userEmail, userRole });
+                  alert(`✅ Synthesis created: ${fname}`);
+                  setSelectedBrand(''); setSelectedProjectType(''); setSelectedDatabricksFiles([]);
                 } catch (e) { alert(`❌ Synthesis failed: ${e instanceof Error ? e.message : 'Unknown'}`); }
                 finally { setIsProcessing(false); }
               }} disabled={isProcessing} className="w-full px-6 py-3 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-gray-400 flex items-center justify-center gap-2">
-                {isProcessing && <SpinHex className="w-5 h-5" />}
+                {isProcessing && <img src={gemIcon} alt="" className="w-5 h-5 animate-spin" />}
                 {isProcessing ? 'Generating...' : 'Execute - New Synthesis'}
               </button>
             )}
@@ -1371,151 +1192,6 @@ Flag explicitly when you are relying on data 3+ years old.
             ))}
           </div>
         )}
-        {/* Synthesis Metadata Confirmation Modal */}
-        {pendingSynthesis && synthesisMeta && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 flex flex-col max-h-[90vh]">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-900">Confirm Synthesis Metadata</h2>
-                <p className="text-sm text-gray-500 mt-0.5">Review and edit before saving to the Knowledge Base</p>
-              </div>
-              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Filename</label>
-                  <input
-                    type="text"
-                    className="w-full border-2 border-gray-300 bg-white rounded p-2 text-gray-700 focus:outline-none focus:border-purple-500"
-                    value={synthesisMeta.fileName}
-                    onChange={e => setSynthesisMeta(prev => prev ? { ...prev, fileName: e.target.value } : null)}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Brand</label>
-                    <input
-                      type="text"
-                      className="w-full border-2 border-gray-300 bg-white rounded p-2 text-gray-700 focus:outline-none focus:border-purple-500"
-                      value={synthesisMeta.brand}
-                      onChange={e => setSynthesisMeta(prev => prev ? { ...prev, brand: e.target.value } : null)}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Project Type</label>
-                    <input
-                      type="text"
-                      className="w-full border-2 border-gray-300 bg-white rounded p-2 text-gray-700 focus:outline-none focus:border-purple-500"
-                      value={synthesisMeta.projectType}
-                      onChange={e => setSynthesisMeta(prev => prev ? { ...prev, projectType: e.target.value } : null)}
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Content Year</label>
-                    <input
-                      type="number"
-                      min="1990"
-                      max="2100"
-                      className="w-full border-2 border-gray-300 bg-white rounded p-2 text-gray-700 focus:outline-none focus:border-purple-500"
-                      value={synthesisMeta.contentYear}
-                      onChange={e => setSynthesisMeta(prev => prev ? { ...prev, contentYear: e.target.value } : null)}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Content Month</label>
-                    <select
-                      className="w-full border-2 border-gray-300 bg-white rounded p-2 text-gray-700 focus:outline-none focus:border-purple-500"
-                      value={synthesisMeta.contentMonth}
-                      onChange={e => setSynthesisMeta(prev => prev ? { ...prev, contentMonth: e.target.value } : null)}
-                    >
-                      {['January','February','March','April','May','June','July','August','September','October','November','December'].map((m, i) => (
-                        <option key={i} value={String(i + 1)}>{m}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Tags (comma-separated)</label>
-                  <input
-                    type="text"
-                    className="w-full border-2 border-gray-300 bg-white rounded p-2 text-gray-700 focus:outline-none focus:border-purple-500"
-                    value={synthesisMeta.tags}
-                    onChange={e => setSynthesisMeta(prev => prev ? { ...prev, tags: e.target.value } : null)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Content Summary</label>
-                  <textarea
-                    className="w-full border-2 border-gray-300 bg-white rounded p-2 text-gray-700 text-sm resize-none focus:outline-none focus:border-purple-500"
-                    rows={3}
-                    value={synthesisMeta.summary}
-                    onChange={e => setSynthesisMeta(prev => prev ? { ...prev, summary: e.target.value } : null)}
-                  />
-                </div>
-                <div className="bg-gray-50 border border-gray-200 rounded p-3">
-                  <p className="text-xs font-medium text-gray-600 mb-1">Source files included in this synthesis:</p>
-                  <ul className="text-xs text-gray-500 space-y-0.5">
-                    {pendingSynthesis.sourceFiles.map((f, i) => <li key={i}>· {f}</li>)}
-                  </ul>
-                </div>
-              </div>
-              <div className="px-6 py-4 border-t border-gray-200 flex gap-3">
-                <button
-                  onClick={() => { setPendingSynthesis(null); setSynthesisMeta(null); }}
-                  className="flex-1 px-4 py-2 border-2 border-gray-300 text-gray-700 rounded hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={async () => {
-                    if (!pendingSynthesis || !synthesisMeta) return;
-                    try {
-                      const fname = synthesisMeta.fileName.endsWith('.md') ? synthesisMeta.fileName : `${synthesisMeta.fileName}.md`;
-                      const tags = synthesisMeta.tags.split(',').map(t => t.trim()).filter(Boolean);
-                      const r = await uploadToKnowledgeBase({
-                        file: new File([pendingSynthesis.content], fname, { type: 'text/markdown' }),
-                        brand: synthesisMeta.brand,
-                        projectType: synthesisMeta.projectType,
-                        fileType: 'Synthesis',
-                        scope: 'brand',
-                        tags,
-                        contentSummary: synthesisMeta.summary,
-                        cleaningStatus: 'processed',
-                        userEmail,
-                        userRole,
-                      });
-                      if (r.success) {
-                        // Update metadata with year and month
-                        if (r.fileId && (synthesisMeta.contentYear || synthesisMeta.contentMonth)) {
-                          await updateKnowledgeBaseMetadata(r.fileId, {
-                            contentMonth: synthesisMeta.contentMonth ? parseInt(synthesisMeta.contentMonth) : undefined,
-                            contentYear: synthesisMeta.contentYear ? parseInt(synthesisMeta.contentYear) : undefined,
-                          } as any, userEmail, userRole);
-                        }
-                        alert(`✅ Synthesis saved to Knowledge Base: ${fname}\n\nStatus: Processed — ready to approve in Read/Edit/Approve.`);
-                        setPendingSynthesis(null);
-                        setSynthesisMeta(null);
-                        setSelectedBrand('');
-                        setSelectedProjectType('');
-                        setSelectedDatabricksFiles([]);
-                        setSynthesisOption(null);
-                        onRefreshFiles?.();
-                      } else {
-                        alert(`❌ Failed to save synthesis: ${r.error || 'Unknown error'}`);
-                      }
-                    } catch (e) {
-                      alert(`❌ Save failed: ${e instanceof Error ? e.message : 'Unknown'}`);
-                    }
-                  }}
-                  className="flex-1 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 font-medium"
-                >
-                  Save to Knowledge Base
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
         <DatabricksFileBrowser open={showDatabricksBrowser} onClose={() => setShowDatabricksBrowser(false)} onFilesSelected={handleDatabricksFilesSelected} userRole={canApproveResearch ? 'researcher' : 'non-researcher'} />
         {showEditPopup && editingFile && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1632,7 +1308,7 @@ Flag explicitly when you are relying on data 3+ years old.
           <div className="bg-white border-2 border-gray-300 rounded-lg p-4"><label className="block text-gray-900 font-semibold text-sm mb-1">Additional Context (optional)</label><textarea value={cpRunInput} onChange={e => setCpRunInput(e.target.value)} rows={3} className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg text-gray-900 text-sm resize-y focus:outline-none focus:border-teal-400" /></div>
           {cpError && <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 flex items-start gap-3"><X className="w-5 h-5 text-red-600 flex-shrink-0" /><p className="text-red-700 text-sm">{cpError}</p></div>}
           <div className="flex gap-3">
-            <button onClick={() => handleCpRunPrompt(cpActivePrompt)} disabled={cpIsRunning || cpSelectedFiles.length === 0} className="flex items-center gap-2 px-6 py-2.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-40 text-sm font-semibold">{cpIsRunning ? <><SpinHex className="w-4 h-4" />Running…</> : <><Bot className="w-4 h-4" />Run Prompt</>}</button>
+            <button onClick={() => handleCpRunPrompt(cpActivePrompt)} disabled={cpIsRunning || cpSelectedFiles.length === 0} className="flex items-center gap-2 px-6 py-2.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-40 text-sm font-semibold">{cpIsRunning ? <><Loader className="w-4 h-4 animate-spin" />Running…</> : <><Bot className="w-4 h-4" />Run Prompt</>}</button>
             {cpResult && <button onClick={() => openAiModal(cpActivePrompt.name, cpResult)} className="flex items-center gap-2 px-5 py-2.5 border-2 border-teal-300 text-teal-700 rounded-lg hover:bg-teal-50 text-sm"><FileText className="w-4 h-4" />View Full</button>}
           </div>
           {cpResult && <div className="bg-white border-2 border-teal-200 rounded-lg p-5"><div className="flex items-center justify-between mb-3"><h4 className="text-gray-900 font-semibold text-sm flex items-center gap-2"><CircleCheck className="w-4 h-4 text-green-600" />Result</h4><button onClick={() => downloadAsMarkdown(cpActivePrompt.name, cpResult)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-teal-600 text-white rounded-lg"><Download className="w-3.5 h-3.5" />Download</button></div><div className="max-h-80 overflow-y-auto">{renderMarkdown(cpResult)}</div></div>}
