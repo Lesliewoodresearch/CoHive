@@ -251,7 +251,8 @@ export const hexPersonas: HexPersonaConfig[] = [
               { id: 'colleagues-ceo', name: 'CEO' },
               { id: 'colleagues-cfo', name: 'CFO' },
               { id: 'colleagues-cmo', name: 'CMO' },
-              { id: 'colleagues-cto', name: 'CTO' }
+              { id: 'colleagues-cto', name: 'CTO' },
+              { id: 'colleagues-creative-director', name: 'Creative Director' }
             ]
           },
           {
