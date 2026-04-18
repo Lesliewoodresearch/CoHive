@@ -76,39 +76,34 @@ export const systemProjectTypes: SystemProjectType[] = [
     isSystem: true,
   },
   {
-    projectType: 'Market Research',
-    prompt: `You are evaluating market research findings. Consider:
-- Consumer insights and behavioral patterns
-- Market trends and emerging opportunities
-- Segmentation and targeting strategies
-- Competitive intelligence and benchmarking
-- Purchase drivers and barriers
-- Channel preferences and shopping behaviors
-- Pricing sensitivity and value perception`,
-    isSystem: true,
-  },
-  {
-    projectType: 'Innovation Pipeline',
-    prompt: `You are assessing innovation and new product development. Analyze:
-- Innovation opportunity spaces and white space
-- Consumer unmet needs and pain points
-- Technology and trend convergence
-- Prototype performance and concept testing results
-- Feasibility and time-to-market considerations
-- Innovation portfolio balance and prioritization
-- Scale potential and commercialization strategy`,
-    isSystem: true,
-  },
-  {
     projectType: 'Big Idea',
-    prompt: `You are evaluating big ideas and core creative concepts. Focus on:
-- Conceptual strength and originality
-- Strategic alignment with brand positioning
-- Cultural relevance and resonance
-- Scalability across channels and touchpoints
-- Memorability and distinctiveness
-- Emotional connection and impact
-- Long-term brand building potential`,
+    prompt: `THE TASK: Generate and debate central brand ideas — the single unifying thought that defines how this brand shows up in the world.
+
+WHAT A BIG IDEA IS:
+A Big Idea is the central organising thought for a brand — not a campaign, not a tagline, not a product feature. It is the one idea that:
+- Defines what the brand uniquely stands for in culture
+- Is true to the brand's authentic positioning and KB evidence
+- Can generate countless executions across channels, years, and contexts
+- Is simple enough to say in one sentence, profound enough to sustain a brand for a decade
+- Creates immediate recognition — people instantly understand why THIS brand and no other could own it
+
+WHAT A BIG IDEA IS NOT:
+- A campaign idea or seasonal activation
+- A product benefit or functional claim
+- A tagline (though a tagline may express it)
+- A visual identity direction
+- A mission statement or values list
+
+HOW THIS SESSION WORKS:
+Round 1 — Generation: Each persona proposes exactly 3 Big Idea candidates for ${brand}. Each idea must be named, described in 2–3 sentences, and grounded in KB evidence. Ideas should be genuinely distinct — not variations on a single theme.
+Round 2+ — Debate and Convergence: Personas challenge, defend, and combine ideas from Round 1. The goal is to identify the 1–2 strongest Big Idea candidates with the most strategic consensus behind them. Score each idea 1–10 for: Brand Truth, Cultural Relevance, Longevity, and Distinctiveness.
+
+CRITERIA FOR A STRONG BIG IDEA:
+- Brand Truth: Is it authentic to what ${brand} actually is, based on KB evidence?
+- Cultural Relevance: Does it connect to something real in culture or human experience?
+- Longevity: Could this organise the brand for 5–10 years?
+- Distinctiveness: Could ONLY ${brand} own this — or could any brand in the category claim it?
+- Generativity: Does it immediately suggest many possible executions?`,
     isSystem: true,
   },
   {
@@ -124,18 +119,6 @@ export const systemProjectTypes: SystemProjectType[] = [
     isSystem: true,
   },
   {
-    projectType: 'Customer Experience',
-    prompt: `You are assessing customer experience strategies. Evaluate:
-- Customer journey mapping and touchpoints
-- Pain points and friction areas
-- Moments of truth and opportunities to delight
-- Omnichannel consistency and integration
-- Service design and operational excellence
-- Personalization and relevance
-- Customer feedback and satisfaction metrics`,
-    isSystem: true,
-  },
-  {
     projectType: 'How Do We Say and Do Things that Make Us Unique',
     prompt: `You are analyzing brand expression and unique communication approaches. Focus on:
 - Distinctive brand voice and tone characteristics
@@ -145,114 +128,6 @@ export const systemProjectTypes: SystemProjectType[] = [
 - Brand personality manifestation across touchpoints
 - Differentiation in customer interactions
 - Consistency of unique expression system-wide`,
-    isSystem: true,
-  },
-  {
-    projectType: 'Retail Strategy',
-    prompt: `You are analyzing retail and distribution strategies. Focus on:
-- Channel strategy and distribution mix
-- Retail partner selection and relationships
-- In-store execution and merchandising
-- Shopper marketing and activation
-- Trade terms and promotional strategy
-- Retail media and co-marketing opportunities
-- Point-of-sale optimization`,
-    isSystem: true,
-  },
-  {
-    projectType: 'Content Strategy',
-    prompt: `You are evaluating content marketing strategies. Consider:
-- Content themes and narrative architecture
-- Audience needs and information seeking behaviors
-- Content formats and distribution channels
-- Editorial calendar and production workflow
-- Influencer and partnership strategies
-- Content performance and engagement metrics
-- SEO optimization and discoverability`,
-    isSystem: true,
-  },
-  {
-    projectType: 'Crisis Management',
-    prompt: `You are assessing crisis management and response strategies. Analyze:
-- Risk identification and scenario planning
-- Response protocols and decision frameworks
-- Communication strategies and messaging
-- Stakeholder management and prioritization
-- Media relations and narrative control
-- Recovery and reputation repair tactics
-- Prevention and monitoring systems`,
-    isSystem: true,
-  },
-  {
-    projectType: 'Partnership Strategy',
-    prompt: `You are evaluating partnership and collaboration strategies. Focus on:
-- Strategic fit and value alignment
-- Partnership structure and governance
-- Co-creation and innovation opportunities
-- Brand alignment and audience overlap
-- Financial terms and value exchange
-- Risk mitigation and exit strategies
-- Integration and activation planning`,
-    isSystem: true,
-  },
-  {
-    projectType: 'Sustainability Initiative',
-    prompt: `You are analyzing sustainability and ESG initiatives. Consider:
-- Environmental impact and carbon footprint
-- Sustainable sourcing and supply chain
-- Circular economy and waste reduction
-- Social responsibility and community impact
-- Governance and ethical standards
-- Consumer communication and transparency
-- Business case and ROI considerations`,
-    isSystem: true,
-  },
-  {
-    projectType: 'Rebranding',
-    prompt: `You are assessing rebranding and brand refresh initiatives. Evaluate:
-- Rationale and strategic necessity
-- Brand equity transfer and risk mitigation
-- Visual identity and design system
-- Naming and nomenclature strategy
-- Stakeholder communication and change management
-- Implementation timeline and phasing
-- Success metrics and tracking framework`,
-    isSystem: true,
-  },
-  {
-    projectType: 'Market Entry',
-    prompt: `You are evaluating market entry and expansion strategies. Analyze:
-- Market attractiveness and opportunity sizing
-- Competitive landscape and barriers to entry
-- Entry mode and partnership strategy
-- Localization and adaptation requirements
-- Regulatory and compliance considerations
-- Resource requirements and investment
-- Risk assessment and mitigation plans`,
-    isSystem: true,
-  },
-  {
-    projectType: 'Customer Segmentation',
-    prompt: `You are analyzing customer segmentation strategies. Focus on:
-- Segmentation criteria and methodology
-- Segment size and growth potential
-- Behavioral and attitudinal differentiation
-- Needs-based clustering and targeting
-- Segment profitability and lifetime value
-- Persona development and activation
-- Measurement and validation approach`,
-    isSystem: true,
-  },
-  {
-    projectType: 'Brand Health Tracking',
-    prompt: `You are evaluating brand health and performance tracking. Consider:
-- Brand awareness and consideration metrics
-- Brand associations and perceptions
-- Competitive positioning and share of voice
-- Purchase intent and loyalty indicators
-- Brand equity trends and drivers
-- Segmentation and cohort analysis
-- Diagnostic insights and action planning`,
     isSystem: true,
   },
 ];

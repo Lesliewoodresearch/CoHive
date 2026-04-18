@@ -9,7 +9,148 @@
  */
 
 import { getDatabricksConfig } from '../../utils/validateEnv.js';
+import {
+  Document, Packer, Paragraph, TextRun, HeadingLevel,
+  AlignmentType, LevelFormat, NumberFormat,
+} from 'docx';
 import { getModel } from '../../models/factory.js';
+
+/**
+ * Converts a markdown string into a docx Document.
+ * Handles: # headings, ## headings, ### headings, - bullets, numbered lists,
+ * **bold**, blank lines (paragraph spacing), and plain text.
+ */
+function markdownToDocx(markdown, title = 'Summary') {
+  const lines = markdown.split('\n');
+
+  const numberingConfig = [
+    {
+      reference: 'bullets',
+      levels: [{
+        level: 0, format: LevelFormat.BULLET, text: '\u2022',
+        alignment: AlignmentType.LEFT,
+        style: { paragraph: { indent: { left: 720, hanging: 360 } } },
+      }],
+    },
+    {
+      reference: 'numbers',
+      levels: [{
+        level: 0, format: LevelFormat.DECIMAL, text: '%1.',
+        alignment: AlignmentType.LEFT,
+        style: { paragraph: { indent: { left: 720, hanging: 360 } } },
+      }],
+    },
+  ];
+
+  function parseInline(text) {
+    // Handle **bold** inline — split on ** markers
+    const runs = [];
+    const parts = text.split(/\*\*(.*?)\*\*/g);
+    parts.forEach((part, i) => {
+      if (!part) return;
+      runs.push(new TextRun({ text: part, bold: i % 2 === 1, font: 'Arial', size: 22 }));
+    });
+    return runs.length > 0 ? runs : [new TextRun({ text: text, font: 'Arial', size: 22 })];
+  }
+
+  const children = [];
+  let numberedCounter = {}; // track numbered list restarts by reference
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // H1
+    if (line.startsWith('# ')) {
+      children.push(new Paragraph({
+        heading: HeadingLevel.HEADING_1,
+        children: [new TextRun({ text: line.slice(2).trim(), bold: true, font: 'Arial', size: 32 })],
+        spacing: { before: 320, after: 160 },
+      }));
+    }
+    // H2
+    else if (line.startsWith('## ')) {
+      children.push(new Paragraph({
+        heading: HeadingLevel.HEADING_2,
+        children: [new TextRun({ text: line.slice(3).trim(), bold: true, font: 'Arial', size: 28 })],
+        spacing: { before: 240, after: 120 },
+      }));
+    }
+    // H3
+    else if (line.startsWith('### ')) {
+      children.push(new Paragraph({
+        heading: HeadingLevel.HEADING_3,
+        children: [new TextRun({ text: line.slice(4).trim(), bold: true, font: 'Arial', size: 24 })],
+        spacing: { before: 200, after: 100 },
+      }));
+    }
+    // Horizontal rule
+    else if (/^[-─━]{3,}$/.test(line.trim())) {
+      children.push(new Paragraph({
+        children: [new TextRun({ text: '' })],
+        border: { bottom: { style: 'single', size: 6, color: '7C3AED', space: 1 } },
+        spacing: { before: 160, after: 160 },
+      }));
+    }
+    // Bullet list item (- or * prefix, or emoji prefix like 💎 · or 🪨 ·)
+    else if (/^[\-\*] /.test(line) || /^[💎✅🪨🧭→] /.test(line)) {
+      const text = line.replace(/^[\-\*] /, '').replace(/^[💎✅🪨🧭→] /, '').trim();
+      children.push(new Paragraph({
+        numbering: { reference: 'bullets', level: 0 },
+        children: parseInline(text),
+        spacing: { before: 60, after: 60 },
+      }));
+    }
+    // Numbered list item
+    else if (/^\d+\.\s/.test(line)) {
+      const text = line.replace(/^\d+\.\s/, '').trim();
+      children.push(new Paragraph({
+        numbering: { reference: 'numbers', level: 0 },
+        children: parseInline(text),
+        spacing: { before: 60, after: 60 },
+      }));
+    }
+    // Blank line → spacing paragraph
+    else if (line.trim() === '') {
+      children.push(new Paragraph({ children: [new TextRun('')], spacing: { before: 80, after: 80 } }));
+    }
+    // Plain text
+    else {
+      children.push(new Paragraph({
+        children: parseInline(line),
+        spacing: { before: 80, after: 80 },
+      }));
+    }
+  }
+
+  return new Document({
+    styles: {
+      default: {
+        document: { run: { font: 'Arial', size: 22 } },
+      },
+      paragraphStyles: [
+        { id: 'Heading1', name: 'Heading 1', basedOn: 'Normal', next: 'Normal', quickFormat: true,
+          run: { size: 32, bold: true, font: 'Arial', color: '2E1065' },
+          paragraph: { spacing: { before: 320, after: 160 }, outlineLevel: 0 } },
+        { id: 'Heading2', name: 'Heading 2', basedOn: 'Normal', next: 'Normal', quickFormat: true,
+          run: { size: 28, bold: true, font: 'Arial', color: '4C1D95' },
+          paragraph: { spacing: { before: 240, after: 120 }, outlineLevel: 1 } },
+        { id: 'Heading3', name: 'Heading 3', basedOn: 'Normal', next: 'Normal', quickFormat: true,
+          run: { size: 24, bold: true, font: 'Arial', color: '6D28D9' },
+          paragraph: { spacing: { before: 200, after: 100 }, outlineLevel: 2 } },
+      ],
+    },
+    numbering: { config: numberingConfig },
+    sections: [{
+      properties: {
+        page: {
+          size: { width: 12240, height: 15840 },
+          margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 },
+        },
+      },
+      children,
+    }],
+  });
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -240,18 +381,55 @@ Your summaries should:
     }
 
     if (outputOptions?.includes('Include Gems')) {
-      sectionsToInclude.push('Gems');
-      userPrompt += `### ${sectionsToInclude.length}. Key Gems & Insights\n`;
-      userPrompt += `Identify and highlight the most valuable insights (gems):\n`;
-      userPrompt += `- Extract particularly noteworthy findings from the iteration data\n`;
-      userPrompt += `- Highlight breakthrough ideas or unexpected discoveries\n`;
-      userPrompt += `- Include strategic insights that stand out\n`;
-      userPrompt += `- Format each gem with context and source reference\n\n`;
+      sectionsToInclude.push('💎 Gems');
+      userPrompt += `### ${sectionsToInclude.length}. 💎 Elements We Really Like (Gems)\n`;
+      if (iterationGems && iterationGems.length > 0) {
+        userPrompt += `The following elements were highlighted by the user as directions to pursue, ranked by importance:\n`;
+        iterationGems.forEach((g, i) => {
+          const text = g.gemText || g.text || '';
+          const src  = g.fileName ? ` [from: ${g.fileName}]` : '';
+          const hex  = g.hexLabel || g.hexId || '';
+          userPrompt += `${i + 1}. "${text}"${src}${hex ? ` — ${hex}` : ''}\n`;
+        });
+        userPrompt += `\nPresent these as a ranked bulleted list with brief context for each. Use the 💎 emoji as a bullet prefix for each item.\n\n`;
+      } else {
+        userPrompt += `No gems were saved in this iteration.\n\n`;
+      }
+    }
+
+    if (outputOptions?.includes('Include Checks')) {
+      sectionsToInclude.push('✅ Checks');
+      userPrompt += `### ${sectionsToInclude.length}. ✅ Elements We're Interested In (Checks)\n`;
+      if (iterationChecks && iterationChecks.length > 0) {
+        userPrompt += `The following elements were flagged as worthy of further exploration, ranked by importance:\n`;
+        iterationChecks.forEach((c, i) => {
+          const hex = c.hexLabel || c.hexId || '';
+          userPrompt += `${i + 1}. "${c.text}"${hex ? ` — ${hex}` : ''}\n`;
+        });
+        userPrompt += `\nPresent these as a ranked bulleted list noting why each warrants further attention. Use the ✅ emoji as a bullet prefix for each item.\n\n`;
+      } else {
+        userPrompt += `No checks were saved in this iteration.\n\n`;
+      }
+    }
+
+    if (outputOptions?.includes('Include Coal')) {
+      sectionsToInclude.push('🪨 Coal');
+      userPrompt += `### ${sectionsToInclude.length}. 🪨 Elements to Avoid (Coal)\n`;
+      if (iterationCoal && iterationCoal.length > 0) {
+        userPrompt += `The following elements were flagged as directions to avoid, ranked by importance:\n`;
+        iterationCoal.forEach((c, i) => {
+          const hex = c.hexLabel || c.hexId || '';
+          userPrompt += `${i + 1}. "${c.text}"${hex ? ` — ${hex}` : ''}\n`;
+        });
+        userPrompt += `\nPresent these as a ranked bulleted list with a brief note on why each should be avoided. Use the 🪨 emoji as a bullet prefix for each item.\n\n`;
+      } else {
+        userPrompt += `No coal was saved in this iteration.\n\n`;
+      }
     }
 
     if (outputOptions?.includes('Include Directions')) {
       sectionsToInclude.push('Directions');
-      userPrompt += `### ${sectionsToInclude.length}. Strategic Directions Added During Iteration\n`;
+      userPrompt += `### ${sectionsToInclude.length}. 🧭 Strategic Directions Added During Iteration\n`;
       if (iterationDirections && iterationDirections.length > 0) {
         userPrompt += `The following focus, insight or direction notes were added by the user during this iteration:\n`;
         iterationDirections.forEach((d, i) => {
@@ -299,9 +477,21 @@ Your summaries should:
 
     console.log(`[AI Summary] SUCCESS — ${result.content.length} chars`);
 
+    // Convert markdown summary to docx and return as base64
+    let docxBase64 = null;
+    try {
+      const doc = markdownToDocx(result.content, fileName || 'CoHive Summary');
+      const buffer = await Packer.toBuffer(doc);
+      docxBase64 = buffer.toString('base64');
+      console.log(`[AI Summary] DOCX generated — ${buffer.length} bytes`);
+    } catch (docxErr) {
+      console.warn('[AI Summary] DOCX generation failed, returning markdown only:', docxErr.message);
+    }
+
     return res.status(200).json({
       success: true,
-      summary: result.content,
+      summary: result.content,          // markdown (kept for MarkdownViewer)
+      docxBase64,                        // base64-encoded .docx (null if conversion failed)
       model: result.modelId,
       usage: result.usage,
       metadata: {

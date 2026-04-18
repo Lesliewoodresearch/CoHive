@@ -598,10 +598,24 @@ Format:
 ### Open Questions
 [What the KB or this session could not resolve]
 
-### Final Recommendations for ${brand}
+${projectType === 'Big Idea' ? `### The Recommended Big Idea(s) for ${brand}
+
+**Frontrunner 1: [Idea Name]**
+[2–3 sentence articulation of the Big Idea]
+*Why it won:* [What the debate established — Brand Truth, Cultural Relevance, Longevity, Distinctiveness scores]
+*KB Evidence:* [Key citations]
+
+**Frontrunner 2 (if applicable): [Idea Name]**
+[Description and rationale]
+
+**Ideas That Were Rejected and Why:**
+[Brief note on strong candidates that didn't survive the debate — what killed them]
+
+**Recommended Next Step:**
+[What ${brand} should do to develop and test the frontrunner(s)]` : `### Final Recommendations for ${brand}
 1. [Specific action] [Source: ...]
 2. [Specific action] [Source: ...]
-3. [Specific action] [Source: ...]
+3. [Specific action] [Source: ...]`}
 ${extraSections}
 
 ---`;
@@ -617,7 +631,23 @@ function buildRound1PersonaPrompt({
   const name = persona.name || persona.identity?.name || 'Expert';
   const personaBlock = buildPersonaIdentityBlock(persona);
 
-  const modeBlock = requestMode === 'get-inspired'
+  // Big Idea has its own structured Round 1 format
+  const isBigIdea = projectType === 'Big Idea';
+
+  const modeBlock = isBigIdea
+    ? `ROUND 1 MODE: BIG IDEA GENERATION
+Your task: Propose exactly 3 Big Idea candidates for ${brand}.
+
+A Big Idea is the central organising thought for the brand — not a campaign, not a tagline. The one idea that defines what the brand uniquely stands for in culture and can sustain it for a decade.
+
+For each of your 3 ideas:
+1. NAME the idea (a short memorable phrase)
+2. DESCRIBE it in 2–3 sentences — what does the brand stand for, what does it mean in the world?
+3. GROUND it — cite 1–2 pieces of KB evidence that make this idea true for ${brand}
+4. STATE what makes it distinctive — why could ONLY ${brand} own this?
+
+Your 3 ideas must be genuinely different — not variations on a single theme. Surprise the room.`
+    : requestMode === 'get-inspired'
     ? `ROUND 1 MODE: GENERATIVE
 Generate 3+ original, specific, actionable ideas. Do not assess or hedge. Be creative and bold.
 Each idea must be different in approach — not variations on a single theme.`
@@ -628,7 +658,19 @@ Be opinionated — diplomatic non-answers are a failure in this session.`
       : `ROUND 1 MODE: CRITICAL ASSESSMENT
 You are assessing a single idea. Be rigorous. Score it 1–10. Ground every judgment in evidence.`;
 
-  const outputFormat = requestMode === 'get-inspired'
+  const outputFormat = isBigIdea
+    ? `**Big Idea 1: [Name]**
+[2–3 sentence description of the central brand idea]
+*Brand Truth:* [KB citation] · *Why only ${brand}:* [What makes it ownable]
+
+**Big Idea 2: [Name]**
+[2–3 sentence description]
+*Brand Truth:* [KB citation] · *Why only ${brand}:* [What makes it ownable]
+
+**Big Idea 3: [Name]**
+[2–3 sentence description]
+*Brand Truth:* [KB citation] · *Why only ${brand}:* [What makes it ownable]`
+    : requestMode === 'get-inspired'
     ? `**Ideas Generated:**
 1. [Idea name]: [Specific description with enough detail to act on] [Source: ...]
 2. [Idea name]: [Specific description] [Source: ...]
@@ -687,13 +729,30 @@ function buildDebatePersonaPrompt({
   persona, kbContext, kbModeInstructions, brand, projectType,
   hexLabel, hexId, taskDescription, assessmentTypeLabel, projectTypePrompt,
   priorTranscript, roundNumber, allPersonaNames, requestMode, ideaElements,
+  projectType = '',
   gemsBlock = '', iterationContextBlock = '',
 }) {
   const name = persona.name || persona.identity?.name || 'Expert';
   const personaBlock = buildPersonaIdentityBlock(persona);
   const othersNames = allPersonaNames.filter(n => n !== name);
+  const isBigIdea = projectType === 'Big Idea';
 
-  const modeBlock = requestMode === 'get-inspired'
+  const modeBlock = isBigIdea
+    ? `ROUND ${roundNumber} MODE: BIG IDEA CONVERGENCE
+Round 1 produced Big Idea candidates from all personas. Your task: debate and converge on the strongest 1–2 ideas.
+
+FOR EACH KEY IDEA YOU ADDRESS:
+- Score it 1–10 across: Brand Truth · Cultural Relevance · Longevity · Distinctiveness
+- State: ADVANCE / REJECT / COMBINE with another idea — and why
+- If you see a stronger synthesis of two ideas, NAME IT and describe it in 2–3 sentences
+
+DEBATE RULES:
+- Kill ideas any brand in the category could claim — generic = dead
+- Fight for ideas with genuine KB grounding — defend them with evidence
+- Propose combinations when you see complementary strengths
+- By the end of this round the room should converge on 1–2 frontrunners
+- Address other personas by name when agreeing or challenging`
+    : requestMode === 'get-inspired'
     ? `ROUND ${roundNumber} MODE: IDEA DEBATE & REFINEMENT
 Build on, challenge, or reject specific ideas from prior rounds — name the persona each time.
 Which ideas are strongest? Which are flawed? Can you combine ideas into something better?`
@@ -750,7 +809,16 @@ Format:
 **What No One Has Said Yet:**
 [Your original contribution — the blind spot you're flagging]
 
-${requestMode !== 'get-inspired' ? `**My Updated Scores:**\n[Revised scores/rankings with rationale based on the debate so far]\n\n` : ''}**Question for [Specific Persona Name]:**
+${isBigIdea ? `**My Big Idea Scores:**
+[For each idea you addressed: Name — Brand Truth X/10 · Cultural Relevance X/10 · Longevity X/10 · Distinctiveness X/10 — ADVANCE/REJECT/COMBINE]
+
+**My Recommended Frontrunner(s):**
+[Name the 1–2 ideas you think should advance, and why]
+
+` : requestMode !== 'get-inspired' ? `**My Updated Scores:**
+[Revised scores/rankings with rationale based on the debate so far]
+
+` : ''}**Question for [Specific Persona Name]:**
 [Your probing question — not rhetorical, genuinely demands an answer]
 
 ---`;
@@ -1556,6 +1624,7 @@ ${iterationDirections.map((d, i) => `${i + 1}. ${d}`).join('\n')}
                 persona, ...promptCtx,
                 priorTranscript: fullTranscript,
                 roundNumber, allPersonaNames,
+                projectType,
               }),
             }],
             maxTokens: 2000, temperature: 0.85,

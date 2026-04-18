@@ -1118,7 +1118,7 @@ export function CentralHexView({
                 disabled={!directionText.trim()}
                 className="flex-1 px-4 py-2.5 bg-purple-600 text-white rounded-xl hover:bg-purple-700 disabled:opacity-50 text-sm font-medium"
               >
-                Add to iteration
+                Add to prompts
               </button>
             </div>
           </div>
@@ -1318,30 +1318,6 @@ export function CentralHexView({
           )}
         </div>
 
-        {/* Add Direction / Focus */}
-        <div className="mb-4">
-          <label className="flex items-center gap-2 cursor-pointer" onClick={() => setShowDirectionModal(true)}>
-            <input
-              type="checkbox"
-              checked={iterationDirections.length > 0}
-              onChange={() => setShowDirectionModal(true)}
-              className="w-4 h-4 accent-purple-600"
-              readOnly
-            />
-            <span className="text-gray-900">Add insight, focus or direction to remaining prompts</span>
-          </label>
-          {iterationDirections.length > 0 && (
-            <div className="mt-2 ml-6 space-y-1">
-              {iterationDirections.map((d, i) => (
-                <div key={i} className="flex items-start gap-2 text-xs text-purple-800 bg-purple-50 border border-purple-200 rounded px-2 py-1">
-                  <span className="mt-0.5">→</span>
-                  <span className="flex-1">{d.length > 80 ? d.substring(0, 80) + '…' : d}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
         {/* Coal — Flag an element to avoid */}
         <div className="mb-4">
           <button
@@ -1383,6 +1359,31 @@ export function CentralHexView({
               >
                 Save Coal
               </button>
+            </div>
+          )}
+        </div>
+
+
+        {/* Add Direction / Focus */}
+        <div className="mb-4">
+          <label className="flex items-center gap-2 cursor-pointer" onClick={() => setShowDirectionModal(true)}>
+            <input
+              type="checkbox"
+              checked={iterationDirections.length > 0}
+              onChange={() => setShowDirectionModal(true)}
+              className="w-4 h-4 accent-purple-600"
+              readOnly
+            />
+            <span className="text-gray-900">Add insight, focus or direction to remaining prompts</span>
+          </label>
+          {iterationDirections.length > 0 && (
+            <div className="mt-2 ml-6 space-y-1">
+              {iterationDirections.map((d, i) => (
+                <div key={i} className="flex items-start gap-2 text-xs text-purple-800 bg-purple-50 border border-purple-200 rounded px-2 py-1">
+                  <span className="mt-0.5">→</span>
+                  <span className="flex-1">{d.length > 80 ? d.substring(0, 80) + '…' : d}</span>
+                </div>
+              ))}
             </div>
           )}
         </div>

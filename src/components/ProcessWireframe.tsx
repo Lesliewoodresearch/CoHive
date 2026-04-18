@@ -15,7 +15,7 @@ import { DatabricksFileSaver } from './DatabricksFileSaver';
 import { InterviewDialog } from './InterviewDialog';
 import { AssessmentModal, type IdeaElement, type IterationGem, type KbMode, type RequestMode } from './AssessmentModal';
 import { MarkdownViewer } from './MarkdownViewer';
-import { LoadingGem } from './LoadingGem';
+import { LoadingGem, SpinHex } from './LoadingGem';
 import cohiveLogo from 'figma:asset/88105c0c8621f3d41d65e5be3ae75558f9de1753.png';
 import { uploadToKnowledgeBase, downloadFile, listKnowledgeBaseFiles, type KnowledgeBaseFile, generateSummary, fetchSharedConfig, addSharedConfigItem, fetchProjectTypeConfigs, type ProjectTypeConfig } from '../utils/databricksAPI';
 import { isAuthenticated, getCurrentUserEmail, getValidSession } from '../utils/databricksAuth';
@@ -1635,6 +1635,12 @@ export default function ProcessWireframe() {
                           return (
                             <div key={idx} className="mb-2">
                               <label className="block text-gray-900 mb-1 flex items-start justify-between"><span>{idx + 1}. {question}</span>{hasResponse && <CircleCheck className="w-5 h-5 text-green-600 flex-shrink-0" />}</label>
+                              {isGeneratingSummary && (
+                                <div className="flex items-center gap-3 px-3 py-2.5 mb-2 bg-purple-50 border border-purple-200 rounded-lg">
+                                  <SpinHex className="w-5 h-5 flex-shrink-0" />
+                                  <span className="text-purple-800 text-sm font-medium">Generating summary…</span>
+                                </div>
+                              )}
                               <div className="space-y-1">
                                 <label className="flex items-center gap-2 cursor-pointer">
                                   <input type="radio" name="saveOrDownload" value="Read" checked={responses[activeStepId]?.[idx] === 'Read'}
@@ -1646,7 +1652,22 @@ export default function ProcessWireframe() {
                                           setIsGeneratingSummary(true);
                                           try {
                                             const result = await generateSummary({ brand, projectType, fileName: summaryFileName, selectedFiles: responses[activeStepId]?.[1]?.split(',').filter(Boolean) || [], outputOptions: responses[activeStepId]?.[2]?.split(',').filter(Boolean) || [], hexExecutions, completedSteps: Array.from(completedSteps), responses, userEmail, userRole, modelEndpoint: currentTemplate?.conversationMode === 'incremental' ? currentTemplate?.modelEndpoint : 'databricks-claude-sonnet-4-6', iterationDirections });
-                                            if (result.success && result.summary) { setMarkdownContent(result.summary); setMarkdownTitle(summaryFileName); setShowMarkdownViewer(true); }
+                                            if (result.success && result.summary) {
+                                              setMarkdownContent(result.summary);
+                                              setMarkdownTitle(summaryFileName);
+                                              setShowMarkdownViewer(true);
+                                              // Also auto-download the docx if available
+                                              if (result.docxBase64) {
+                                                const bytes = atob(result.docxBase64);
+                                                const arr = new Uint8Array(bytes.length);
+                                                for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+                                                const blob = new Blob([arr], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+                                                const url = URL.createObjectURL(blob);
+                                                const a = document.createElement('a');
+                                                a.href = url; a.download = summaryFileName.replace(/\.md$/, '').replace(/\.json$/, '') + '.docx';
+                                                a.click(); URL.revokeObjectURL(url);
+                                              }
+                                            }
                                             else { alert(`Failed to generate summary: ${result.error || 'Unknown error'}`); }
                                           } catch { alert('Failed to generate summary. Please try again.'); }
                                           finally { setIsGeneratingSummary(false); handleResponseChange(idx, ''); }
@@ -1668,8 +1689,12 @@ export default function ProcessWireframe() {
                                           try {
                                             const result = await generateSummary({ brand, projectType, fileName: summaryFileName, selectedFiles: responses[activeStepId]?.[1]?.split(',').filter(Boolean) || [], outputOptions: responses[activeStepId]?.[2]?.split(',').filter(Boolean) || [], hexExecutions, completedSteps: Array.from(completedSteps), responses, userEmail, userRole, modelEndpoint: currentTemplate?.conversationMode === 'incremental' ? currentTemplate?.modelEndpoint : 'databricks-claude-sonnet-4-6', iterationDirections });
                                             if (result.success && result.summary) {
-                                              const mdFileName = summaryFileName.replace(/\.json$/, '').replace(/\.md$/, '') + '.md';
-                                              setFileSaverData({ fileName: mdFileName, content: result.summary });
+                                              const docxFileName = summaryFileName.replace(/\.json$/, '').replace(/\.md$/, '').replace(/\.docx$/, '') + '.docx';
+                                              if (result.docxBase64) {
+                                                setFileSaverData({ fileName: docxFileName, content: result.docxBase64, isBase64: true, mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+                                              } else {
+                                                setFileSaverData({ fileName: docxFileName.replace('.docx', '.md'), content: result.summary });
+                                              }
                                               setShowFileSaver(true);
                                             } else { alert(`Failed to generate summary: ${result.error || 'Unknown error'}`); }
                                           } catch { alert('Failed to generate summary. Please try again.'); }
@@ -1677,9 +1702,9 @@ export default function ProcessWireframe() {
                                         }
                                       }
                                     }}
-                                    className="w-4 h-4"
+                                    className="w-4 h-4" disabled={isGeneratingSummary}
                                   />
-                                  <span className="text-gray-700">Save to Databricks Workspace</span>
+                                  <span className="text-gray-700">{isGeneratingSummary ? "Generating…" : "Save to Databricks Workspace"}</span>
                                 </label>
                                 <label className="flex items-center gap-2 cursor-pointer">
                                   <input type="radio" name="saveOrDownload" value="Download" checked={responses[activeStepId]?.[idx] === 'Download'}
@@ -1692,8 +1717,19 @@ export default function ProcessWireframe() {
                                           try {
                                             const result = await generateSummary({ brand, projectType, fileName: summaryFileName, selectedFiles: responses[activeStepId]?.[1]?.split(',').filter(Boolean) || [], outputOptions: responses[activeStepId]?.[2]?.split(',').filter(Boolean) || [], hexExecutions, completedSteps: Array.from(completedSteps), responses, userEmail, userRole, modelEndpoint: currentTemplate?.conversationMode === 'incremental' ? currentTemplate?.modelEndpoint : 'databricks-claude-sonnet-4-6', iterationDirections });
                                             if (result.success && result.summary) {
-                                              const mdFileName = summaryFileName.replace(/\.json$/, '').replace(/\.md$/, '') + '.md';
-                                              downloadFile(mdFileName, result.summary, 'text/markdown');
+                                              const docxFileName = summaryFileName.replace(/\.json$/, '').replace(/\.md$/, '').replace(/\.docx$/, '') + '.docx';
+                                              if (result.docxBase64) {
+                                                const bytes = atob(result.docxBase64);
+                                                const arr = new Uint8Array(bytes.length);
+                                                for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+                                                const blob = new Blob([arr], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+                                                const url = URL.createObjectURL(blob);
+                                                const a = document.createElement('a');
+                                                a.href = url; a.download = docxFileName;
+                                                a.click(); URL.revokeObjectURL(url);
+                                              } else {
+                                                downloadFile(docxFileName.replace('.docx', '.md'), result.summary, 'text/markdown');
+                                              }
                                               alert('✅ Summary downloaded to your computer!');
                                             } else { alert(`Failed to generate summary: ${result.error || 'Unknown error'}`); }
                                           } catch { alert('Failed to generate summary. Please try again.'); }
@@ -1701,9 +1737,9 @@ export default function ProcessWireframe() {
                                         }
                                       }
                                     }}
-                                    className="w-4 h-4"
+                                    className="w-4 h-4" disabled={isGeneratingSummary}
                                   />
-                                  <span className="text-gray-700">Download to Computer</span>
+                                  <span className="text-gray-700">{isGeneratingSummary ? "Generating…" : "Download to Computer"}</span>
                                 </label>
                               </div>
                             </div>
