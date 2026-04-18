@@ -81,6 +81,8 @@ interface CentralHexViewProps {
   userEmail?: string;
   userRole?: string;
   onContextChange?: (files: string[], step: 1 | 2 | 3) => void;
+  onAddIterationDirection?: (direction: string) => void;
+  iterationDirections?: string[];
 }
 
 export function CentralHexView({
@@ -98,6 +100,8 @@ export function CentralHexView({
   userEmail = 'user@cohive.app',
   userRole = 'user',
   onContextChange,
+  onAddIterationDirection,
+  iterationDirections = [],
 }: CentralHexViewProps) {
   const isPersonaHex = ['Consumers', 'Luminaries', 'Colleagues', 'cultural', 'Grade'].includes(hexId);
   
@@ -121,6 +125,8 @@ export function CentralHexView({
   const [pendingExecuteType, setPendingExecuteType] = useState<string[]>([]);
   const [pendingExecuteAssessment, setPendingExecuteAssessment] = useState('');
   const [showCheckInput, setShowCheckInput] = useState(false);
+  const [showDirectionModal, setShowDirectionModal] = useState(false);
+  const [directionText, setDirectionText] = useState('');
   const [checkText, setCheckText] = useState("");
   const [showCoalInput, setShowCoalInput] = useState(false);
   const [coalText, setCoalText] = useState("");
@@ -1072,6 +1078,53 @@ export function CentralHexView({
         </div>
       )}
 
+      {/* Add Direction / Focus Modal */}
+      {showDirectionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-gray-900 font-semibold text-base">Add insight, focus or direction</h3>
+              <p className="text-gray-500 text-sm mt-1">
+                What additional insight, focus or direction would you like to add to the remaining prompts in this iteration?
+              </p>
+            </div>
+            <div className="px-6 py-4">
+              <textarea
+                autoFocus
+                className="w-full h-32 border-2 border-gray-300 bg-white rounded-lg p-3 text-gray-800 text-sm resize-none focus:outline-none focus:border-purple-500 leading-relaxed"
+                placeholder="e.g. Focus on the 18–24 age group. Lean into the sustainability angle. Keep recommendations budget-conscious for Q1."
+                value={directionText}
+                onChange={e => setDirectionText(e.target.value)}
+              />
+              <p className="text-xs text-gray-400 mt-2">
+                This will be added to all remaining hex prompts in this iteration.
+              </p>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100 flex gap-3">
+              <button
+                onClick={() => { setShowDirectionModal(false); setDirectionText(''); }}
+                className="flex-1 px-4 py-2.5 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 text-sm font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (directionText.trim() && onAddIterationDirection) {
+                    onAddIterationDirection(directionText.trim());
+                  }
+                  setShowDirectionModal(false);
+                  setDirectionText('');
+                }}
+                disabled={!directionText.trim()}
+                className="flex-1 px-4 py-2.5 bg-purple-600 text-white rounded-xl hover:bg-purple-700 disabled:opacity-50 text-sm font-medium"
+              >
+                Add to iteration
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Prior Persona Re-use Modal */}
       {showPriorPersonaModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -1261,6 +1314,30 @@ export function CentralHexView({
               >
                 Save Check
               </button>
+            </div>
+          )}
+        </div>
+
+        {/* Add Direction / Focus */}
+        <div className="mb-4">
+          <label className="flex items-center gap-2 cursor-pointer" onClick={() => setShowDirectionModal(true)}>
+            <input
+              type="checkbox"
+              checked={iterationDirections.length > 0}
+              onChange={() => setShowDirectionModal(true)}
+              className="w-4 h-4 accent-purple-600"
+              readOnly
+            />
+            <span className="text-gray-900">Add insight, focus or direction to remaining prompts</span>
+          </label>
+          {iterationDirections.length > 0 && (
+            <div className="mt-2 ml-6 space-y-1">
+              {iterationDirections.map((d, i) => (
+                <div key={i} className="flex items-start gap-2 text-xs text-purple-800 bg-purple-50 border border-purple-200 rounded px-2 py-1">
+                  <span className="mt-0.5">→</span>
+                  <span className="flex-1">{d.length > 80 ? d.substring(0, 80) + '…' : d}</span>
+                </div>
+              ))}
             </div>
           )}
         </div>

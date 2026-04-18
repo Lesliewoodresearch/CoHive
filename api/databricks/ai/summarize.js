@@ -34,6 +34,7 @@ export default async function handler(req, res) {
       iterationGems = [],
       iterationChecks = [],
       iterationCoal = [],
+      iterationDirections = [],
     } = req.body;
 
     if (!brand || !projectType || !userEmail) {
@@ -240,48 +241,25 @@ Your summaries should:
 
     if (outputOptions?.includes('Include Gems')) {
       sectionsToInclude.push('Gems');
-      userPrompt += `### ${sectionsToInclude.length}. Elements We Really Like (Gems)\n`;
-      if (iterationGems && iterationGems.length > 0) {
-        userPrompt += `The following elements were explicitly highlighted by the user as directions to pursue, ranked by importance:\n`;
-        iterationGems.forEach((g, i) => {
-          const text = g.gemText || g.text || '';
-          const src  = g.fileName ? ` [from: ${g.fileName}]` : '';
-          const hex  = g.hexLabel || g.hexId || '';
-          userPrompt += `${i + 1}. "${text}"${src}${hex ? ` — ${hex}` : ''}\n`;
-        });
-        userPrompt += `\nPresent these as a ranked bulleted list with brief context for each.\n\n`;
-      } else {
-        userPrompt += `No gems were saved in this iteration.\n\n`;
-      }
+      userPrompt += `### ${sectionsToInclude.length}. Key Gems & Insights\n`;
+      userPrompt += `Identify and highlight the most valuable insights (gems):\n`;
+      userPrompt += `- Extract particularly noteworthy findings from the iteration data\n`;
+      userPrompt += `- Highlight breakthrough ideas or unexpected discoveries\n`;
+      userPrompt += `- Include strategic insights that stand out\n`;
+      userPrompt += `- Format each gem with context and source reference\n\n`;
     }
 
-    if (outputOptions?.includes('Include Checks')) {
-      sectionsToInclude.push('Checks');
-      userPrompt += `### ${sectionsToInclude.length}. Elements We're Interested In (Checks)\n`;
-      if (iterationChecks && iterationChecks.length > 0) {
-        userPrompt += `The following elements were flagged by the user as worthy of further exploration, ranked by importance:\n`;
-        iterationChecks.forEach((c, i) => {
-          const hex = c.hexLabel || c.hexId || '';
-          userPrompt += `${i + 1}. "${c.text}"${hex ? ` — ${hex}` : ''}\n`;
+    if (outputOptions?.includes('Include Directions')) {
+      sectionsToInclude.push('Directions');
+      userPrompt += `### ${sectionsToInclude.length}. Strategic Directions Added During Iteration\n`;
+      if (iterationDirections && iterationDirections.length > 0) {
+        userPrompt += `The following focus, insight or direction notes were added by the user during this iteration:\n`;
+        iterationDirections.forEach((d, i) => {
+          userPrompt += `${i + 1}. ${d}\n`;
         });
-        userPrompt += `\nPresent these as a ranked bulleted list noting why each may warrant further attention.\n\n`;
+        userPrompt += `\nPresent these as a numbered list with a brief note on how each influenced the direction of the iteration.\n\n`;
       } else {
-        userPrompt += `No checks were saved in this iteration.\n\n`;
-      }
-    }
-
-    if (outputOptions?.includes('Include Coal')) {
-      sectionsToInclude.push('Coal');
-      userPrompt += `### ${sectionsToInclude.length}. Elements to Avoid (Coal)\n`;
-      if (iterationCoal && iterationCoal.length > 0) {
-        userPrompt += `The following elements were explicitly flagged by the user as directions to avoid, ranked by importance:\n`;
-        iterationCoal.forEach((c, i) => {
-          const hex = c.hexLabel || c.hexId || '';
-          userPrompt += `${i + 1}. "${c.text}"${hex ? ` — ${hex}` : ''}\n`;
-        });
-        userPrompt += `\nPresent these as a ranked bulleted list with a brief note on why each should be avoided.\n\n`;
-      } else {
-        userPrompt += `No coal was saved in this iteration.\n\n`;
+        userPrompt += `No additional directions were added during this iteration.\n\n`;
       }
     }
 

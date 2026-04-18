@@ -1260,6 +1260,7 @@ export default async function handler(req, res) {
       iterationGems = [],           // IterationGem[] accumulated in AssessmentModal
       iterationChecks = [],         // elements of interest
       iterationCoal = [],           // elements to avoid
+      iterationDirections = [],     // user-added focus/direction notes for this iteration
     } = req.body;
 
     // ── Parse prior persona context markers injected by CentralHexView ────────
@@ -1370,7 +1371,17 @@ ${priorSummaryContext}
     const iterationSignalsBlock = buildIterationSignalsBlock({ iterationGems, iterationChecks, iterationCoal });
 
     // Combine: KB gems + iteration signals + prior persona context
-    const combinedSignals = [gemsBlock, iterationSignalsBlock, priorContextBlock].filter(Boolean).join('\n\n');
+    // Build user direction block — additional focus/insight added mid-iteration
+    const directionsBlock = iterationDirections.length > 0 ? `
+ADDITIONAL DIRECTION FROM USER — APPLY TO THIS AND ALL REMAINING PROMPTS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+The user has added the following focus, insight or direction partway through this iteration.
+Apply it to your response — it reflects a refined brief that supersedes or supplements the original.
+${iterationDirections.map((d, i) => `${i + 1}. ${d}`).join('\n')}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+` : '';
+
+    const combinedSignals = [gemsBlock, iterationSignalsBlock, priorContextBlock, directionsBlock].filter(Boolean).join('\n\n');
 
     // Build iteration context from this session's hex results + saved gems
     const iterationContextBlock = buildIterationContextBlock({

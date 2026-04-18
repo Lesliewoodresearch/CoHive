@@ -133,6 +133,9 @@ export default function ProcessWireframe() {
   // Gems accumulated across all modal opens within the current iteration.
   // Cleared when the user saves an iteration or returns to Enter hex.
   const [iterationGems, setIterationGems] = useState<IterationGem[]>([]);
+  const [iterationChecks, setIterationChecks] = useState<Array<{ text: string; hexId: string; hexLabel: string }>>([]);
+  const [iterationCoal, setIterationCoal] = useState<Array<{ text: string; hexId: string; hexLabel: string }>>([]);
+  const [iterationDirections, setIterationDirections] = useState<string[]>([]);
 
   // Assessment Modal state
   const [assessmentModalOpen, setAssessmentModalOpen] = useState(false);
@@ -178,6 +181,8 @@ export default function ProcessWireframe() {
   
   const [wisdomSuccessMessage, setWisdomSuccessMessage] = useState<string | null>(null);
   const [isDatabricksLoading, setIsDatabricksLoading] = useState(false);
+  const [isLoadingKBFiles, setIsLoadingKBFiles] = useState(false);
+  const [isLoadingConfig, setIsLoadingConfig] = useState(false);
   const [databricksLoadingMessage, setDatabricksLoadingMessage] = useState('Communicating with Databricks...');
   const [recordedAudioBlob, setRecordedAudioBlob] = useState<Blob | null>(null);
   const [recordedVideoBlob, setRecordedVideoBlob] = useState<Blob | null>(null);
@@ -266,6 +271,66 @@ export default function ProcessWireframe() {
     return file as File;
   };
 
+  // ── Shared config loader — component scope so it can be called anywhere ──────
+  const loadSharedConfig = async () => {
+    const DEFAULT_BRANDS = ['Nike', 'Adidas'];
+    const systemProjectTypeNames = systemProjectTypes.map(pt => pt.projectType);
+    setIsLoadingConfig(true);
+    try {
+      const result = await fetchSharedConfig();
+      if (result.success && result.brands && result.brands.length > 0) {
+        setAvailableBrands(result.brands);
+        localStorage.setItem('cohive_available_brands', JSON.stringify(result.brands));
+      } else {
+        const savedBrands = localStorage.getItem('cohive_available_brands');
+        if (savedBrands) { setAvailableBrands(JSON.parse(savedBrands)); } else { setAvailableBrands(DEFAULT_BRANDS); localStorage.setItem('cohive_available_brands', JSON.stringify(DEFAULT_BRANDS)); }
+      }
+      let userProjectTypes: string[] = [];
+      if (result.success && result.projectTypes && result.projectTypes.length > 0) {
+        userProjectTypes = result.projectTypes;
+        localStorage.setItem('cohive_available_project_types', JSON.stringify(userProjectTypes));
+      } else {
+        const savedProjectTypes = localStorage.getItem('cohive_available_project_types');
+        if (savedProjectTypes) { userProjectTypes = JSON.parse(savedProjectTypes); }
+      }
+      const allProjectTypes = [...new Set([...systemProjectTypeNames, ...userProjectTypes])].sort();
+      setAvailableProjectTypes(allProjectTypes);
+      try {
+        const configResult = await fetchProjectTypeConfigs();
+        let userConfigs: ProjectTypeConfig[] = [];
+        if (configResult.success && configResult.configs) {
+          userConfigs = configResult.configs;
+          localStorage.setItem('cohive_project_type_configs', JSON.stringify(userConfigs));
+        } else {
+          const savedConfigs = localStorage.getItem('cohive_project_type_configs');
+          if (savedConfigs) { try { userConfigs = JSON.parse(savedConfigs); } catch { userConfigs = []; } }
+        }
+        setProjectTypeConfigs([...systemProjectTypes, ...userConfigs]);
+      } catch (configError) {
+        console.warn('Failed to fetch project type configurations:', configError);
+        const savedConfigs = localStorage.getItem('cohive_project_type_configs');
+        let userConfigs: ProjectTypeConfig[] = [];
+        if (savedConfigs) { try { userConfigs = JSON.parse(savedConfigs); } catch { userConfigs = []; } }
+        setProjectTypeConfigs([...systemProjectTypes, ...userConfigs]);
+      }
+    } catch (error) {
+      console.warn('Failed to fetch shared config from Databricks, using localStorage:', error);
+      const savedBrands = localStorage.getItem('cohive_available_brands');
+      if (savedBrands) { try { setAvailableBrands(JSON.parse(savedBrands)); } catch { setAvailableBrands(DEFAULT_BRANDS); } } else { setAvailableBrands(DEFAULT_BRANDS); localStorage.setItem('cohive_available_brands', JSON.stringify(DEFAULT_BRANDS)); }
+      let userProjectTypes: string[] = [];
+      const savedProjectTypes = localStorage.getItem('cohive_available_project_types');
+      if (savedProjectTypes) { try { userProjectTypes = JSON.parse(savedProjectTypes); } catch { userProjectTypes = []; } }
+      const allProjectTypes = [...new Set([...systemProjectTypeNames, ...userProjectTypes])].sort();
+      setAvailableProjectTypes(allProjectTypes);
+      const savedConfigs = localStorage.getItem('cohive_project_type_configs');
+      let userConfigs: ProjectTypeConfig[] = [];
+      if (savedConfigs) { try { userConfigs = JSON.parse(savedConfigs); } catch { userConfigs = []; } }
+      setProjectTypeConfigs([...systemProjectTypes, ...userConfigs]);
+    } finally {
+      setIsLoadingConfig(false);
+    }
+  };
+
   useEffect(() => {
     const savedResponses = localStorage.getItem('cohive_responses');
     if (savedResponses) {
@@ -327,61 +392,6 @@ export default function ProcessWireframe() {
     const savedSelectedResearchFiles = localStorage.getItem('cohive_selected_research_files');
     if (savedSelectedResearchFiles) { try { setSelectedResearchFiles(JSON.parse(savedSelectedResearchFiles)); } catch (e) { console.error('Failed to load selected research files', e); } }
 
-    const loadSharedConfig = async () => {
-      const DEFAULT_BRANDS = ['Nike', 'Adidas'];
-      const systemProjectTypeNames = systemProjectTypes.map(pt => pt.projectType);
-      try {
-        const result = await fetchSharedConfig();
-        if (result.success && result.brands && result.brands.length > 0) {
-          setAvailableBrands(result.brands);
-          localStorage.setItem('cohive_available_brands', JSON.stringify(result.brands));
-        } else {
-          const savedBrands = localStorage.getItem('cohive_available_brands');
-          if (savedBrands) { setAvailableBrands(JSON.parse(savedBrands)); } else { setAvailableBrands(DEFAULT_BRANDS); localStorage.setItem('cohive_available_brands', JSON.stringify(DEFAULT_BRANDS)); }
-        }
-        let userProjectTypes: string[] = [];
-        if (result.success && result.projectTypes && result.projectTypes.length > 0) {
-          userProjectTypes = result.projectTypes;
-          localStorage.setItem('cohive_available_project_types', JSON.stringify(userProjectTypes));
-        } else {
-          const savedProjectTypes = localStorage.getItem('cohive_available_project_types');
-          if (savedProjectTypes) { userProjectTypes = JSON.parse(savedProjectTypes); }
-        }
-        const allProjectTypes = [...new Set([...systemProjectTypeNames, ...userProjectTypes])].sort();
-        setAvailableProjectTypes(allProjectTypes);
-        try {
-          const configResult = await fetchProjectTypeConfigs();
-          let userConfigs: ProjectTypeConfig[] = [];
-          if (configResult.success && configResult.configs) {
-            userConfigs = configResult.configs;
-            localStorage.setItem('cohive_project_type_configs', JSON.stringify(userConfigs));
-          } else {
-            const savedConfigs = localStorage.getItem('cohive_project_type_configs');
-            if (savedConfigs) { try { userConfigs = JSON.parse(savedConfigs); } catch { userConfigs = []; } }
-          }
-          setProjectTypeConfigs([...systemProjectTypes, ...userConfigs]);
-        } catch (configError) {
-          console.warn('Failed to fetch project type configurations:', configError);
-          const savedConfigs = localStorage.getItem('cohive_project_type_configs');
-          let userConfigs: ProjectTypeConfig[] = [];
-          if (savedConfigs) { try { userConfigs = JSON.parse(savedConfigs); } catch { userConfigs = []; } }
-          setProjectTypeConfigs([...systemProjectTypes, ...userConfigs]);
-        }
-      } catch (error) {
-        console.warn('Failed to fetch shared config from Databricks, using localStorage:', error);
-        const savedBrands = localStorage.getItem('cohive_available_brands');
-        if (savedBrands) { try { setAvailableBrands(JSON.parse(savedBrands)); } catch { setAvailableBrands(DEFAULT_BRANDS); } } else { setAvailableBrands(DEFAULT_BRANDS); localStorage.setItem('cohive_available_brands', JSON.stringify(DEFAULT_BRANDS)); }
-        let userProjectTypes: string[] = [];
-        const savedProjectTypes = localStorage.getItem('cohive_available_project_types');
-        if (savedProjectTypes) { try { userProjectTypes = JSON.parse(savedProjectTypes); } catch { userProjectTypes = []; } }
-        const allProjectTypes = [...new Set([...systemProjectTypeNames, ...userProjectTypes])].sort();
-        setAvailableProjectTypes(allProjectTypes);
-        const savedConfigs = localStorage.getItem('cohive_project_type_configs');
-        let userConfigs: ProjectTypeConfig[] = [];
-        if (savedConfigs) { try { userConfigs = JSON.parse(savedConfigs); } catch { userConfigs = []; } }
-        setProjectTypeConfigs([...systemProjectTypes, ...userConfigs]);
-      }
-    };
     loadSharedConfig();
   }, []);
 
@@ -843,6 +853,10 @@ export default function ProcessWireframe() {
     setIterationGems(prev => [...prev, gem]);
   };
 
+  const handleAddIterationDirection = (direction: string) => {
+    setIterationDirections(prev => [...prev, direction]);
+  };
+
   const handleSaveRecommendation = (recommendation: string, hexId: string) => {
     const brand = responses['Enter']?.[0]?.trim() || 'General';
     const projectType = responses['Enter']?.[1]?.trim() || 'General';
@@ -941,24 +955,36 @@ export default function ProcessWireframe() {
   const handleAddBrand = async (brand: string) => {
     if (!brand.trim() || availableBrands.includes(brand.trim())) return;
     const trimmedBrand = brand.trim();
+    // Optimistic update so the UI responds immediately
     const updated = [...availableBrands, trimmedBrand].sort();
     setAvailableBrands(updated);
     localStorage.setItem('cohive_available_brands', JSON.stringify(updated));
     try {
       const result = await addSharedConfigItem('brand', trimmedBrand, userEmail);
-      if (!result.success) console.warn(`⚠️ Failed to save brand to Databricks: ${result.error}`);
+      if (result.success) {
+        // Re-fetch from Databricks so the list is authoritative for this user
+        // and will match what other workspace members see on their next load
+        await loadSharedConfig();
+      } else {
+        console.warn(`⚠️ Failed to save brand to Databricks: ${result.error}`);
+      }
     } catch (error) { console.warn('Failed to save brand to Databricks:', error); }
   };
 
   const handleAddProjectType = async (projectType: string) => {
     if (!projectType.trim() || availableProjectTypes.includes(projectType.trim())) return;
     const trimmedProjectType = projectType.trim();
+    // Optimistic update
     const updated = [...availableProjectTypes, trimmedProjectType].sort();
     setAvailableProjectTypes(updated);
     localStorage.setItem('cohive_available_project_types', JSON.stringify(updated));
     try {
       const result = await addSharedConfigItem('project_type', trimmedProjectType, userEmail);
-      if (!result.success) console.warn(`⚠️ Failed to save project type to Databricks: ${result.error}`);
+      if (result.success) {
+        await loadSharedConfig();
+      } else {
+        console.warn(`⚠️ Failed to save project type to Databricks: ${result.error}`);
+      }
     } catch (error) { console.warn('Failed to save project type to Databricks:', error); }
   };
 
@@ -1089,6 +1115,9 @@ export default function ProcessWireframe() {
               // Clear iteration gems when navigating to Enter — iteration boundary
               if (stepId === 'Enter') {
                 setIterationGems([]);
+        setIterationChecks([]);
+        setIterationCoal([]);
+        setIterationDirections([]);
               }
               if (stepId === 'Enter' && !iterationSaved) {
                 setResponses(prev => ({ ...prev, 'Findings': { ...prev['Findings'], [0]: '' } }));
@@ -1222,7 +1251,7 @@ export default function ProcessWireframe() {
                          ) : activeStepId === 'review' ? (
                   <ReviewView projectFiles={projectFiles} onDeleteFiles={handleDeleteProjectFiles} />
                          ) : isCentralHex ? (
-                  <CentralHexView key={activeStepId} hexId={activeStepId} hexLabel={currentContent.title} researchFiles={researchFiles} onExecute={handleCentralHexExecute} databricksInstructions={currentTemplate?.databricksInstructions?.[activeStepId] || ''} previousExecutions={hexExecutions[activeStepId] || []} onSaveRecommendation={handleSaveRecommendation} projectType={responses['Enter']?.[1] || ''} userBrand={responses['Enter']?.[0] || ''} lastResults={lastAssessmentResults} conversationMode={currentTemplate?.conversationSettings?.conversationMode || 'multi-round'} modelEndpoint={currentTemplate?.conversationSettings?.modelEndpoint || 'databricks-claude-haiku-4-5'} requestMode={deriveRequestMode()} userEmail={userEmail} userRole={userRole} onContextChange={(files, step) => setHexWidgetContext({ files, step })} />
+                  <CentralHexView key={activeStepId} hexId={activeStepId} hexLabel={currentContent.title} researchFiles={researchFiles} onExecute={handleCentralHexExecute} databricksInstructions={currentTemplate?.databricksInstructions?.[activeStepId] || ''} previousExecutions={hexExecutions[activeStepId] || []} onSaveRecommendation={handleSaveRecommendation} projectType={responses['Enter']?.[1] || ''} userBrand={responses['Enter']?.[0] || ''} lastResults={lastAssessmentResults} conversationMode={currentTemplate?.conversationSettings?.conversationMode || 'multi-round'} modelEndpoint={currentTemplate?.conversationSettings?.modelEndpoint || 'databricks-claude-haiku-4-5'} requestMode={deriveRequestMode()} userEmail={userEmail} userRole={userRole} onContextChange={(files, step) => setHexWidgetContext({ files, step })} onAddIterationDirection={handleAddIterationDirection} iterationDirections={iterationDirections} />
                         ) : (
                     <>
                     {wisdomSuccessMessage && activeStepId === 'Wisdom' && (
@@ -1525,7 +1554,7 @@ export default function ProcessWireframe() {
                                           const { updatedSession } = generateIterationFileName(sessionVersions, brand, projectType);
                                           setSessionVersions(prev => ({ ...prev, [updatedSession.sessionKey]: updatedSession }));
                                           const newFile: ProjectFile = { brand, projectType, fileName: userEnteredFileName, timestamp: Date.now() };
-                                          const content = JSON.stringify({ responses, hexExecutions, completedSteps: Array.from(completedSteps) });
+                                          const content = JSON.stringify({ responses, hexExecutions, completedSteps: Array.from(completedSteps), iterationDirections });
                                           const blob = new Blob([content], { type: 'application/json' });
                                           const file = createFileFromBlob(blob, userEnteredFileName);
                                           let scope: 'general' | 'category' | 'brand' = 'brand';
@@ -1539,7 +1568,10 @@ export default function ProcessWireframe() {
                                             setIterationSaved(true);
                                             localStorage.setItem('cohive_iteration_saved', 'true');
                                             setLastAssessmentResults(null);
-                                            setIterationGems([]); // iteration boundary — clear gems
+                                            setIterationGems([]);
+        setIterationChecks([]);
+        setIterationCoal([]);
+        setIterationDirections([]); // iteration boundary — clear gems
                                           } else { alert(`Failed to save to Databricks: ${result.error || 'Unknown error'}`); }
                                         }
                                       }}
@@ -1584,7 +1616,7 @@ export default function ProcessWireframe() {
                         }
                         if (idx === 2 && question === 'Output Options') {
                           const selectedOptions = responses[activeStepId]?.[idx]?.split(',').filter(Boolean) || [];
-                          const options = ['Executive Summary', 'Share all Ideas as a list', 'Provide a grid with all "final" ideas with their scores', 'Include Gems', 'Include Checks', 'Include Coal', 'Include User Notes from all iterations as an Appendix'];
+                          const options = ['Executive Summary', 'Share all Ideas as a list', 'Provide a grid with all "final" ideas with their scores', 'Include Gems', 'Include Checks', 'Include Coal', 'Include Directions', 'Include User Notes from all iterations as an Appendix'];
                           return (
                             <div key={idx} className="mb-2">
                               <label className="block text-gray-900 mb-1 flex items-start justify-between"><span>{idx + 1}. {question}</span>{hasResponse && <CircleCheck className="w-5 h-5 text-green-600 flex-shrink-0" />}</label>
@@ -1613,7 +1645,7 @@ export default function ProcessWireframe() {
                                         if (summaryFileName) {
                                           setIsGeneratingSummary(true);
                                           try {
-                                            const result = await generateSummary({ brand, projectType, fileName: summaryFileName, selectedFiles: responses[activeStepId]?.[1]?.split(',').filter(Boolean) || [], outputOptions: responses[activeStepId]?.[2]?.split(',').filter(Boolean) || [], hexExecutions, completedSteps: Array.from(completedSteps), responses, userEmail, userRole, modelEndpoint: currentTemplate?.conversationMode === 'incremental' ? currentTemplate?.modelEndpoint : 'databricks-claude-sonnet-4-6' });
+                                            const result = await generateSummary({ brand, projectType, fileName: summaryFileName, selectedFiles: responses[activeStepId]?.[1]?.split(',').filter(Boolean) || [], outputOptions: responses[activeStepId]?.[2]?.split(',').filter(Boolean) || [], hexExecutions, completedSteps: Array.from(completedSteps), responses, userEmail, userRole, modelEndpoint: currentTemplate?.conversationMode === 'incremental' ? currentTemplate?.modelEndpoint : 'databricks-claude-sonnet-4-6', iterationDirections });
                                             if (result.success && result.summary) { setMarkdownContent(result.summary); setMarkdownTitle(summaryFileName); setShowMarkdownViewer(true); }
                                             else { alert(`Failed to generate summary: ${result.error || 'Unknown error'}`); }
                                           } catch { alert('Failed to generate summary. Please try again.'); }
@@ -1627,11 +1659,22 @@ export default function ProcessWireframe() {
                                 </label>
                                 <label className="flex items-center gap-2 cursor-pointer">
                                   <input type="radio" name="saveOrDownload" value="SaveWorkspace" checked={responses[activeStepId]?.[idx] === 'SaveWorkspace'}
-                                    onChange={(e) => {
+                                    onChange={async (e) => {
                                       handleResponseChange(idx, e.target.value);
                                       if (e.target.value === 'SaveWorkspace' && brand && projectType) {
                                         const summaryFileName = responses[activeStepId]?.['summaryFileName'] || getSummaryFileName(currentFileName || '');
-                                        if (summaryFileName) { const summaryData = { brand, projectType, fileName: summaryFileName, timestamp: Date.now(), responses, selectedFiles: responses[activeStepId]?.[1]?.split(',').filter(Boolean) || [], outputOptions: responses[activeStepId]?.[2]?.split(',').filter(Boolean) || [], hexExecutions, completedSteps: Array.from(completedSteps) }; const fileName = summaryFileName.endsWith('.json') ? summaryFileName : `${summaryFileName}.json`; setFileSaverData({ fileName, content: JSON.stringify(summaryData, null, 2) }); setShowFileSaver(true); handleResponseChange(idx, ''); }
+                                        if (summaryFileName) {
+                                          setIsGeneratingSummary(true);
+                                          try {
+                                            const result = await generateSummary({ brand, projectType, fileName: summaryFileName, selectedFiles: responses[activeStepId]?.[1]?.split(',').filter(Boolean) || [], outputOptions: responses[activeStepId]?.[2]?.split(',').filter(Boolean) || [], hexExecutions, completedSteps: Array.from(completedSteps), responses, userEmail, userRole, modelEndpoint: currentTemplate?.conversationMode === 'incremental' ? currentTemplate?.modelEndpoint : 'databricks-claude-sonnet-4-6', iterationDirections });
+                                            if (result.success && result.summary) {
+                                              const mdFileName = summaryFileName.replace(/\.json$/, '').replace(/\.md$/, '') + '.md';
+                                              setFileSaverData({ fileName: mdFileName, content: result.summary });
+                                              setShowFileSaver(true);
+                                            } else { alert(`Failed to generate summary: ${result.error || 'Unknown error'}`); }
+                                          } catch { alert('Failed to generate summary. Please try again.'); }
+                                          finally { setIsGeneratingSummary(false); handleResponseChange(idx, ''); }
+                                        }
                                       }
                                     }}
                                     className="w-4 h-4"
@@ -1640,11 +1683,22 @@ export default function ProcessWireframe() {
                                 </label>
                                 <label className="flex items-center gap-2 cursor-pointer">
                                   <input type="radio" name="saveOrDownload" value="Download" checked={responses[activeStepId]?.[idx] === 'Download'}
-                                    onChange={(e) => {
+                                    onChange={async (e) => {
                                       handleResponseChange(idx, e.target.value);
                                       if (e.target.value === 'Download' && brand && projectType) {
                                         const summaryFileName = responses[activeStepId]?.['summaryFileName'] || getSummaryFileName(currentFileName || '');
-                                        if (summaryFileName) { const summaryData = { brand, projectType, fileName: summaryFileName, timestamp: Date.now(), responses, selectedFiles: responses[activeStepId]?.[1]?.split(',').filter(Boolean) || [], outputOptions: responses[activeStepId]?.[2]?.split(',').filter(Boolean) || [], hexExecutions, completedSteps: Array.from(completedSteps) }; downloadFile(summaryFileName.endsWith('.json') ? summaryFileName : `${summaryFileName}.json`, JSON.stringify(summaryData, null, 2), 'application/json'); alert('✅ Summary downloaded to your computer!'); handleResponseChange(idx, ''); }
+                                        if (summaryFileName) {
+                                          setIsGeneratingSummary(true);
+                                          try {
+                                            const result = await generateSummary({ brand, projectType, fileName: summaryFileName, selectedFiles: responses[activeStepId]?.[1]?.split(',').filter(Boolean) || [], outputOptions: responses[activeStepId]?.[2]?.split(',').filter(Boolean) || [], hexExecutions, completedSteps: Array.from(completedSteps), responses, userEmail, userRole, modelEndpoint: currentTemplate?.conversationMode === 'incremental' ? currentTemplate?.modelEndpoint : 'databricks-claude-sonnet-4-6', iterationDirections });
+                                            if (result.success && result.summary) {
+                                              const mdFileName = summaryFileName.replace(/\.json$/, '').replace(/\.md$/, '') + '.md';
+                                              downloadFile(mdFileName, result.summary, 'text/markdown');
+                                              alert('✅ Summary downloaded to your computer!');
+                                            } else { alert(`Failed to generate summary: ${result.error || 'Unknown error'}`); }
+                                          } catch { alert('Failed to generate summary. Please try again.'); }
+                                          finally { setIsGeneratingSummary(false); handleResponseChange(idx, ''); }
+                                        }
                                       }
                                     }}
                                     className="w-4 h-4"
@@ -1769,6 +1823,9 @@ export default function ProcessWireframe() {
           hexExecutions={assessmentModalProps.hexExecutions}
           // Iteration gems — persists across modal opens, cleared at iteration boundary
           iterationGems={iterationGems}
+          iterationChecks={iterationChecks}
+          iterationCoal={iterationCoal}
+          iterationDirections={iterationDirections}
           onGemSaved={handleGemSaved}
         />
       )}

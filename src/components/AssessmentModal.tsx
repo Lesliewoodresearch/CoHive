@@ -189,6 +189,7 @@ interface AssessmentModalProps {
   iterationGems?: IterationGem[];
   iterationChecks?: Array<{ text: string; hexId: string; hexLabel: string }>;
   iterationCoal?: Array<{ text: string; hexId: string; hexLabel: string }>;
+  iterationDirections?: string[];
   /**
    * Called whenever the user saves a new gem — lets ProcessWireframe
    * accumulate it into the iteration-level gems array.
@@ -288,6 +289,7 @@ export function AssessmentModal({
   iterationGems = [],
   iterationChecks = [],
   iterationCoal = [],
+  iterationDirections = [],
   onGemSaved,
   onReviewConfirmed,
 }: AssessmentModalProps) {
@@ -435,6 +437,7 @@ export function AssessmentModal({
           iterationGems,
           iterationChecks,
           iterationCoal,
+          iterationDirections,
         }),
       });
 
