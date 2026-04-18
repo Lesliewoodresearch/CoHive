@@ -726,10 +726,9 @@ ${outputFormat}
 }
 
 function buildDebatePersonaPrompt({
-  persona, kbContext, kbModeInstructions, brand, projectType,
+  persona, kbContext, kbModeInstructions, brand, projectType = '',
   hexLabel, hexId, taskDescription, assessmentTypeLabel, projectTypePrompt,
   priorTranscript, roundNumber, allPersonaNames, requestMode, ideaElements,
-  projectType = '',
   gemsBlock = '', iterationContextBlock = '',
 }) {
   const name = persona.name || persona.identity?.name || 'Expert';
