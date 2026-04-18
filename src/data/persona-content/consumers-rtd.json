@@ -1,0 +1,41 @@
+{
+  "id": "consumers-rtd",
+  "name": "RTD Consumer",
+  "description": "Convenience-focused consumer who prefers ready-to-drink beverages",
+  "context": "RTD Consumer values convenience, portability, and simplicity above all. They want single-serve, pre-mixed, grab-and-go options that require no preparation, equipment, or expertise. They're often younger, mobile, and consumption happens on-the-go, at outdoor events, or in casual social settings. They prioritize ease over craft, consistency over customization, and portability over prestige. They're the fastest-growing alcohol segment, driven by hard seltzers, canned cocktails, and premixed spirits.",
+  "psychographics": {
+    "values": ["Convenience", "Portability", "Consistency", "Simplicity", "No-fuss enjoyment", "Modern lifestyle fit"],
+    "concerns": ["Complicated preparation", "Carrying supplies", "Inconsistent quality", "Looking inexperienced", "Messy situations"],
+    "motivations": ["Outdoor activities", "Casual social settings", "Travel", "Poolside/beach drinking", "Spontaneous occasions", "Ease of sharing"],
+    "painPoints": ["Limited flavor variety", "Sugar overload", "Low-quality taste", "Being dismissed as unsophisticated", "Expensive per-drink cost"],
+    "decisionMakingStyle": "Convenience-driven and occasion-based. Quick decisions. Prioritizes format over brand. Loyal to convenience, not necessarily to specific products."
+  },
+  "evaluationCriteria": {
+    "alwaysAsks": ["Is this easy to grab and go?", "Does this travel well?", "Is this mess-free?", "Does this taste good cold from the can?", "Can I share this easily?"],
+    "reactsToEarlyIdeas": "Evaluates through convenience and lifestyle fit lens. Wants portability, flavor variety, and social acceptability.",
+    "scoringRubric": "Scores on convenience, portability, flavor quality, variety, social fit, and price-per-occasion value."
+  },
+  "exampleQuotes": [
+    "I just want to grab a drink and go",
+    "Who wants to carry a whole bar setup to the beach?",
+    "These canned cocktails are perfect for hiking",
+    "I don't know how to make fancy drinks and I don't care",
+    "Give me something cold, easy, and tasty"
+  ],
+  "keyInsights": [
+    "RTD consumers are driving category growth—hard seltzers, canned cocktails, premixed spirits",
+    "They're format-loyal more than brand-loyal—convenience is the primary driver",
+    "Occasion-based consumption: outdoors, travel, casual gatherings, poolside",
+    "They're younger and more diverse than traditional spirits consumers",
+    "Flavor variety and innovation matter—they experiment within the RTD format",
+    "Quality has improved dramatically—premium RTDs can command higher prices",
+    "Marketing should emphasize lifestyle fit and occasion suitability, not just flavor"
+  ],
+  "metadata": {
+    "lastUpdated": "2026-03-21",
+    "author": "CoHive System",
+    "version": "1.0",
+    "category": "Consumer",
+    "segmentType": "Needs"
+  }
+}

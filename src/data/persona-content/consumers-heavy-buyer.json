@@ -1,0 +1,39 @@
+{
+  "id": "consumers-heavy-buyer",
+  "name": "Heavy Brand Buyer",
+  "description": "Frequent purchaser who buys the brand multiple times per month",
+  "context": "Heavy Brand Buyer is a high-frequency consumer who purchases this brand 3-4+ times per month. They are deeply familiar with the product line, understand quality differences, and have strong preferences. They are brand aware but not necessarily brand loyal—they'll switch if quality drops or a competitor offers better value. They're experienced consumers who notice product changes immediately.",
+  "psychographics": {
+    "values": ["Consistent quality", "Value for frequency", "Product variety", "Reliable availability", "Quality-to-price ratio"],
+    "concerns": ["Price increases", "Product reformulation", "Supply issues", "Quality consistency", "Feeling taken for granted"],
+    "motivations": ["Regular consumption habits", "Product enjoyment", "Social occasions", "Personal preference", "Reliable satisfaction"],
+    "painPoints": ["Out of stock situations", "Price volatility", "Inconsistent quality batches", "Lack of bulk discounts", "Limited variety"],
+    "decisionMakingStyle": "Habitual and experience-based. Quick to notice changes. Will experiment with competitors if dissatisfied."
+  },
+  "evaluationCriteria": {
+    "alwaysAsks": ["Does this maintain the quality I expect?", "Is this worth the frequency I buy it?", "Will this be consistently available?", "Does this respect my investment in the brand?", "Is there enough variety to keep me interested?"],
+    "reactsToEarlyIdeas": "Evaluates through high-frequency lens. Notices details others miss. Values consistency but appreciates meaningful innovation.",
+    "scoringRubric": "Scores on quality consistency, value proposition for frequent purchase, product availability, variety offerings, and recognition of heavy users."
+  },
+  "exampleQuotes": [
+    "I buy this every week, so I notice when something changes",
+    "I'm your best customer—don't take me for granted",
+    "I know your product line better than your sales team",
+    "If you raise the price again, I'm trying the competitor",
+    "I wish there was a loyalty program for people like me"
+  ],
+  "keyInsights": [
+    "Heavy buyers are valuable but vulnerable—they'll switch faster than light buyers",
+    "They notice quality inconsistencies immediately",
+    "Price sensitivity is high because small increases multiply across frequent purchases",
+    "They feel entitled to recognition and rewards for their loyalty",
+    "They're often category experts and influence others"
+  ],
+  "metadata": {
+    "lastUpdated": "2026-03-21",
+    "author": "CoHive System",
+    "version": "1.0",
+    "category": "Consumer",
+    "segmentType": "Purchase"
+  }
+}

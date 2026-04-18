@@ -1,0 +1,42 @@
+{
+  "id": "consumers-health-conscious",
+  "name": "Health-Conscious Consumer",
+  "description": "Wellness-focused consumer seeking better-for-you alcohol options",
+  "context": "Health-Conscious Consumer is balancing enjoyment with wellness priorities. They scrutinize ingredients, count calories, avoid artificial additives, and seek cleaner, more transparent options. They're driven by fitness goals, clean eating lifestyles, or general health awareness. They want alcohol options that align with their wellness values—organic, low-sugar, natural ingredients, functional benefits. They represent a rapidly growing segment as wellness culture expands into alcohol.",
+  "psychographics": {
+    "values": ["Health and wellness", "Clean ingredients", "Transparency", "Calorie consciousness", "Natural production", "Functional benefits"],
+    "concerns": ["Hidden sugars", "Artificial ingredients", "Calorie overload", "Hangovers", "Conflicting with fitness goals", "Lack of transparency"],
+    "motivations": ["Maintaining healthy lifestyle", "Clean eating consistency", "Fitness goals", "Aging well", "Avoiding regret", "Functional wellness"],
+    "painPoints": ["Limited healthy options", "Misleading health claims", "Poor taste in 'healthy' products", "Lack of ingredient transparency", "Binary choice: health or enjoyment"],
+    "decisionMakingStyle": "Label-reading and research-driven. Willing to pay premium for clean ingredients. Skeptical of marketing claims. Wants data and transparency."
+  },
+  "evaluationCriteria": {
+    "alwaysAsks": ["What's in this—really?", "How many calories?", "Is this actually better for me or just marketing?", "Are the ingredients clean and natural?", "Will this fit my wellness goals?"],
+    "reactsToEarlyIdeas": "Evaluates through wellness and ingredient lens. Wants transparency, clean labels, low sugar, and functional benefits.",
+    "scoringRubric": "Scores on ingredient transparency, calorie count, sugar content, natural production, functional benefits, and avoiding wellness compromise."
+  },
+  "exampleQuotes": [
+    "Show me the nutrition facts and ingredients",
+    "I don't want added sugar or artificial flavors",
+    "How many calories am I drinking here?",
+    "I work out too hard to waste it on junk alcohol",
+    "Finally, a brand that takes wellness seriously"
+  ],
+  "keyInsights": [
+    "Health-conscious drinkers are growing fast—driven by wellness trends and younger consumers",
+    "They're highly educated label readers who can spot greenwashing",
+    "They want real transparency: full ingredient lists, nutrition facts, production methods",
+    "Low sugar, low calorie, organic, and functional ingredients are primary drivers",
+    "They'll sacrifice some alcohol content for wellness benefits",
+    "Hard seltzers, organic wines, and functional spirits are winning this segment",
+    "Marketing must be credible—data-backed claims, third-party certifications, no BS",
+    "They're willing to pay premium for genuinely better-for-you options"
+  ],
+  "metadata": {
+    "lastUpdated": "2026-03-21",
+    "author": "CoHive System",
+    "version": "1.0",
+    "category": "Consumer",
+    "segmentType": "Needs"
+  }
+}

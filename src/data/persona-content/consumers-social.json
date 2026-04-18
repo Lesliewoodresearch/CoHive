@@ -1,0 +1,41 @@
+{
+  "id": "consumers-social",
+  "name": "Social Occasion Consumer",
+  "description": "Social drinker who consumes primarily in group settings and celebrations",
+  "context": "Social Occasion Consumer drinks primarily in social contexts—parties, celebrations, gatherings, dinners, and group outings. Alcohol is a social lubricant and ritual for them, not a solo activity. They care about shareability, what everyone else is drinking, fitting in, and enhancing the social experience. They're responsive to group dynamics, seasonal occasions, and celebration-worthy packaging. They buy for gatherings and want crowd-pleasers, not niche preferences.",
+  "psychographics": {
+    "values": ["Social connection", "Shared experiences", "Celebration", "Group harmony", "Memorable moments", "Tradition"],
+    "concerns": ["Being the wrong choice for guests", "Boring gatherings", "Social awkwardness", "Running out", "Not fitting the occasion"],
+    "motivations": ["Bringing people together", "Celebration enhancement", "Social rituals", "Creating memories", "Being a good host", "Fitting in with friends"],
+    "painPoints": ["Choice paralysis for groups", "Accommodating different preferences", "Occasion-appropriate selection", "Quantity needs", "Budget for group purchases"],
+    "decisionMakingStyle": "Group-oriented and occasion-driven. Buys for others as much as themselves. Responsive to recommendations and popular choices."
+  },
+  "evaluationCriteria": {
+    "alwaysAsks": ["Will everyone like this?", "Is this right for the occasion?", "Can I share this easily?", "Does this create a great vibe?", "Will this make the gathering better?"],
+    "reactsToEarlyIdeas": "Evaluates through social fit lens. Wants shareability, broad appeal, celebration-worthy packaging, and occasion alignment.",
+    "scoringRubric": "Scores on shareability, broad appeal, occasion fit, packaging for groups, social enhancement value, and celebration-worthiness."
+  },
+  "exampleQuotes": [
+    "What should I bring to the party?",
+    "I need something everyone will enjoy",
+    "This is perfect for toasting",
+    "We always drink this at celebrations",
+    "I want something special but not too weird"
+  ],
+  "keyInsights": [
+    "Social drinkers are the majority—most alcohol is consumed in social contexts",
+    "They buy for occasions: holidays, parties, weddings, dinners, gatherings",
+    "Packaging for sharing matters—large formats, multi-packs, gift-worthy presentation",
+    "They want safe, crowd-pleasing choices—not adventurous or polarizing",
+    "Seasonality is huge: holiday editions, summer flavors, celebration packaging",
+    "Ritual and tradition matter—champagne for celebrations, beer for game day, wine for dinner",
+    "Marketing should emphasize togetherness, celebration, and shared moments"
+  ],
+  "metadata": {
+    "lastUpdated": "2026-03-21",
+    "author": "CoHive System",
+    "version": "1.0",
+    "category": "Consumer",
+    "segmentType": "Needs"
+  }
+}

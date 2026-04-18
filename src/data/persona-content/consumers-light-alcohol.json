@@ -1,0 +1,40 @@
+{
+  "id": "consumers-light-alcohol",
+  "name": "Light Alcohol Consumer",
+  "description": "Consumer who prefers low-ABV beverages for moderation and wellness",
+  "context": "Light Alcohol Consumer actively seeks lower-ABV options—session beers, low-alcohol wines, light cocktails, and alcohol-free alternatives. They're motivated by health consciousness, calorie control, social situations requiring moderation, or simply preference for lighter drinking experiences. They want flavor and social participation without heavy intoxication. They represent a growing, health-conscious segment that brands often overlook or condescend to.",
+  "psychographics": {
+    "values": ["Health and wellness", "Moderation", "Calorie consciousness", "Functionality", "Mindful consumption", "Balance"],
+    "concerns": ["Being judged for light choices", "Sacrificing flavor", "Limited options", "Social awkwardness", "Feeling excluded"],
+    "motivations": ["Staying in control", "Day drinking", "Weekday consumption", "Fitness goals", "Pregnancy/health conditions", "Driving later"],
+    "painPoints": ["Poor-tasting low-ABV options", "Limited availability", "Being treated as 'less serious' drinkers", "Binary choice: full strength or nothing", "Stigma around moderation"],
+    "decisionMakingStyle": "Health-conscious and intentional. Seeks quality low-ABV options. Willing to pay for products that respect their choices."
+  },
+  "evaluationCriteria": {
+    "alwaysAsks": ["What's the ABV—is it truly lower?", "Does this taste good or compromise on flavor?", "Can I have multiple without getting too drunk?", "Will I be judged for ordering this?", "Does this fit my health goals?"],
+    "reactsToEarlyIdeas": "Evaluates through moderation and wellness lens. Values products that take low-ABV seriously, not as afterthoughts.",
+    "scoringRubric": "Scores on flavor quality at low ABV, health benefits, social acceptance, variety of options, and avoiding condescension."
+  },
+  "exampleQuotes": [
+    "I want to enjoy the taste without getting drunk",
+    "I'm driving later, so I need something lighter",
+    "Why does every low-alcohol option taste watered down?",
+    "I'm trying to cut back but still want to be social",
+    "Finally, a brand that respects moderate drinkers"
+  ],
+  "keyInsights": [
+    "Light alcohol consumers are a fast-growing segment driven by wellness trends",
+    "They want respect, not condescension—low ABV doesn't mean low quality",
+    "This segment includes occasional abstainers, health-conscious consumers, and functional drinkers",
+    "Day-part and occasion matter: weekday drinks, afternoon social events, long sessions",
+    "They'll pay premium for quality low-ABV options—this isn't just a budget segment",
+    "Marketing should normalize and celebrate moderation, not apologize for it"
+  ],
+  "metadata": {
+    "lastUpdated": "2026-03-21",
+    "author": "CoHive System",
+    "version": "1.0",
+    "category": "Consumer",
+    "segmentType": "Needs"
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "id": "consumers-premium",
+  "name": "Premium Seeker",
+  "description": "Status-conscious consumer who seeks luxury and prestige in beverage choices",
+  "context": "Premium Seeker views alcohol as a status symbol, social signal, and expression of taste and sophistication. They're willing to pay significantly more for perceived quality, exclusivity, heritage, and brand prestige. They care about packaging, presentation, brand story, limited editions, and what their choice says about them. They're not necessarily wealthy—they may sacrifice quantity for quality and save premium purchases for important occasions. They're influenced by social media, influencers, and aspirational marketing.",
+  "psychographics": {
+    "values": ["Quality craftsmanship", "Exclusivity", "Heritage and provenance", "Status signaling", "Sophisticated taste", "Aspirational lifestyle"],
+    "concerns": ["Looking cheap", "Being fooled by fake luxury", "Missing out on exclusive releases", "Appearing unsophisticated", "Wasting money on inferior products"],
+    "motivations": ["Self-expression", "Impressing others", "Collecting experiences", "Treating themselves", "Social positioning", "Connoisseurship"],
+    "painPoints": ["Counterfeit products", "Unclear quality signals", "Limited access to exclusives", "Price without substance", "Being treated like a regular customer"],
+    "decisionMakingStyle": "Status-driven and brand-conscious. Researches provenance and reviews. Willing to wait for limited releases. Values scarcity and story."
+  },
+  "evaluationCriteria": {
+    "alwaysAsks": ["Is this prestigious enough?", "What does this say about me?", "Is this rare or exclusive?", "Will people recognize quality?", "Is this worth the premium price?"],
+    "reactsToEarlyIdeas": "Evaluates through status and quality lens. Wants heritage stories, exclusive access, and visible quality signals.",
+    "scoringRubric": "Scores on brand prestige, exclusivity, craftsmanship story, packaging quality, social signaling value, and aspirational appeal."
+  },
+  "exampleQuotes": [
+    "I only drink top-shelf—life's too short for cheap spirits",
+    "Do you have anything more exclusive?",
+    "I'm willing to pay for real quality",
+    "I love that this is small-batch and hand-crafted",
+    "I want the story, not just the product"
+  ],
+  "keyInsights": [
+    "Premium seekers are smaller in number but drive disproportionate revenue and margins",
+    "They're motivated by status signaling as much as taste—packaging and presentation matter hugely",
+    "They want stories: heritage, craftsmanship, provenance, founder narratives",
+    "Scarcity increases desirability—limited editions and exclusive releases work",
+    "They're active on social media and influenced by aspirational imagery",
+    "They'll forgive high prices but not low quality or lack of exclusivity",
+    "Marketing should be sophisticated, understated, and focused on connoisseurship"
+  ],
+  "metadata": {
+    "lastUpdated": "2026-03-21",
+    "author": "CoHive System",
+    "version": "1.0",
+    "category": "Consumer",
+    "segmentType": "Needs"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "id": "consumers-non-buyer",
+  "name": "Non-Buyer",
+  "description": "Category consumer who hasn't purchased this brand yet",
+  "context": "Non-Buyer is active in the category but hasn't bought this brand. They may be unaware of it, have misconceptions about it, find it unavailable, perceive it as not for them, or actively prefer competitors. Understanding their barriers is critical—they represent the largest growth opportunity. They're not a monolith: some are gettable with the right message, others are structurally unavailable to you. Focus on increasing mental and physical availability.",
+  "psychographics": {
+    "values": ["Familiar choices", "Proven options", "Low risk", "What they know", "Established preferences"],
+    "concerns": ["Wasting money on unknowns", "Disappointment", "Change from routine", "Making mistakes", "Unfamiliarity"],
+    "motivations": ["Maintaining habits", "Sticking with proven choices", "Risk avoidance", "Inertia", "Satisfactory defaults"],
+    "painPoints": ["Overwhelming new options", "Unclear benefits", "Disruption to routine", "Lack of familiarity", "No compelling reason to switch"],
+    "decisionMakingStyle": "Habit-driven and risk-averse. Requires strong disruption to consider switching. Needs familiarity before trial."
+  },
+  "evaluationCriteria": {
+    "alwaysAsks": ["Why should I switch from what I know?", "What's in it for me?", "Is this really better or just different?", "What's the risk?", "Have I even heard of this brand?"],
+    "reactsToEarlyIdeas": "Evaluates as a skeptical outsider. Needs simple, compelling reasons why this brand exists and why it matters to them.",
+    "scoringRubric": "Scores on barrier reduction, mental availability, clear differentiation, risk mitigation, and compelling switching reasons."
+  },
+  "exampleQuotes": [
+    "I've never heard of that brand",
+    "I'm happy with what I'm drinking now",
+    "Why would I switch?",
+    "I don't know where to find that",
+    "Maybe I'll try it someday, but probably not"
+  ],
+  "keyInsights": [
+    "Non-buyers are the majority of category consumers for any single brand",
+    "Most don't actively dislike you—they just don't think of you",
+    "Mental availability matters more than persuasive messaging",
+    "Physical availability is often the biggest barrier",
+    "Conversion is about distinctive assets and easy availability, not loyalty",
+    "Some non-buyers will never buy you and that's okay—focus on the gettable ones"
+  ],
+  "metadata": {
+    "lastUpdated": "2026-03-21",
+    "author": "CoHive System",
+    "version": "1.0",
+    "category": "Consumer",
+    "segmentType": "Loyalty"
+  }
+}

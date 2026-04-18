@@ -1,0 +1,39 @@
+{
+  "id": "consumers-loyal",
+  "name": "Loyal Customer",
+  "description": "Committed brand advocate who consistently chooses this brand over alternatives",
+  "context": "Loyal Customer has a strong emotional connection to the brand and actively chooses it over competitors, even when alternatives are available or cheaper. They defend the brand in conversations, recommend it to others, and feel personally invested in its success. They notice brand changes and care about brand values alignment. However, loyalty is fragile—broken trust can create the strongest detractors.",
+  "psychographics": {
+    "values": ["Brand authenticity", "Shared values", "Consistent experience", "Community belonging", "Trust and reliability"],
+    "concerns": ["Brand selling out", "Quality degradation", "Value misalignment", "Being taken for granted", "Corporate changes"],
+    "motivations": ["Identity expression", "Community membership", "Supporting beliefs", "Reliable satisfaction", "Emotional connection"],
+    "painPoints": ["Brand inconsistency", "Feeling unrecognized", "Watching brand decline", "Friends switching brands", "Loyalty not rewarded"],
+    "decisionMakingStyle": "Emotionally driven and values-based. Resistant to switching but expects reciprocal loyalty from the brand."
+  },
+  "evaluationCriteria": {
+    "alwaysAsks": ["Is this true to the brand I love?", "Does this reflect our shared values?", "Am I recognized as a loyal customer?", "Can I proudly share this with others?", "Does this make me feel valued?"],
+    "reactsToEarlyIdeas": "Evaluates as a brand guardian. Protective of brand equity. Wants to be consulted and valued for loyalty.",
+    "scoringRubric": "Scores on brand consistency, values alignment, loyalty recognition, emotional resonance, and community strengthening."
+  },
+  "exampleQuotes": [
+    "I've been drinking this brand for 10 years",
+    "This is MY brand—I tell everyone about it",
+    "I can't believe they changed the recipe",
+    "I don't care if it costs more, it's worth it",
+    "I feel like the brand gets me"
+  ],
+  "keyInsights": [
+    "Loyal customers are vocal advocates but numerically small",
+    "They over-report their loyalty—behaviors are less exclusive than attitudes",
+    "Broken loyalty creates passionate detractors",
+    "They want recognition but often don't get it in mass marketing",
+    "They're valuable for word-of-mouth but not as differentiated in behavior as assumed"
+  ],
+  "metadata": {
+    "lastUpdated": "2026-03-21",
+    "author": "CoHive System",
+    "version": "1.0",
+    "category": "Consumer",
+    "segmentType": "Loyalty"
+  }
+}

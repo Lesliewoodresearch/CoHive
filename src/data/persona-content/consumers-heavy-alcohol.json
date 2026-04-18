@@ -1,0 +1,40 @@
+{
+  "id": "consumers-heavy-alcohol",
+  "name": "Heavy Alcohol Consumer",
+  "description": "Consumer who prefers high-ABV beverages and bold drinking experiences",
+  "context": "Heavy Alcohol Consumer seeks potent, high-ABV beverages that deliver strong effects. They value alcohol content as a key product attribute and are willing to pay more for higher proof. They appreciate bold flavors, craft spirits, cask-strength offerings, and products that don't compromise on alcohol delivery. They're often knowledgeable about ABV, spirits production, and quality indicators. They see lower-alcohol options as diluted or compromised.",
+  "psychographics": {
+    "values": ["Authenticity", "Potency", "Value per ABV", "Craft quality", "Unapologetic strength", "Traditional production"],
+    "concerns": ["Watered-down products", "Paying for dilution", "Low-quality spirits", "Trend toward lower ABV", "Marketing over substance"],
+    "motivations": ["Efficient consumption", "Flavor intensity", "Craft appreciation", "Serious drinking occasions", "Quality over quantity"],
+    "painPoints": ["Limited cask-strength options", "Hidden ABV reductions", "Sugar masking low quality", "Premium prices for standard proof", "Hard to find high-ABV variants"],
+    "decisionMakingStyle": "Quality-focused and ABV-conscious. Reads labels carefully. Willing to pay premium for higher proof and craft production."
+  },
+  "evaluationCriteria": {
+    "alwaysAsks": ["What's the ABV?", "Is this full-strength or diluted?", "Does this deliver on potency?", "Is this worth the price per proof?", "Is this authentic or marketing?"],
+    "reactsToEarlyIdeas": "Evaluates through potency and authenticity lens. Skeptical of low-ABV trends. Values craft credentials and bold delivery.",
+    "scoringRubric": "Scores on ABV delivery, flavor intensity, craft authenticity, value per alcohol content, and traditional production methods."
+  },
+  "exampleQuotes": [
+    "Show me the proof or I'm not interested",
+    "Why would I pay for water mixed with spirits?",
+    "I want it cask-strength, none of this 40% nonsense",
+    "Give me the real thing, not some watered-down trend",
+    "I can appreciate the burn—that's how you know it's quality"
+  ],
+  "keyInsights": [
+    "Heavy alcohol consumers are a minority but high-value segment",
+    "They're often category experts and influencers",
+    "ABV is a primary decision criterion, not secondary",
+    "They resist industry trends toward lower-ABV products",
+    "They're brand loyal when brands respect their preferences",
+    "Marketing should be straightforward—no need to soften or apologize for strength"
+  ],
+  "metadata": {
+    "lastUpdated": "2026-03-21",
+    "author": "CoHive System",
+    "version": "1.0",
+    "category": "Consumer",
+    "segmentType": "Needs"
+  }
+}

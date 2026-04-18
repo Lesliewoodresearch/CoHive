@@ -1,0 +1,39 @@
+{
+  "id": "consumers-medium-buyer",
+  "name": "Medium Brand Buyer",
+  "description": "Moderate purchaser who buys the brand 1-2 times per month",
+  "context": "Medium Brand Buyer purchases this brand regularly but not obsessively—typically 1-2 times per month. They're familiar with the brand but also buy competitors. They see this brand as a solid option but not their only choice. They're receptive to marketing and promotions, and their purchase frequency can be increased with the right incentives. They represent the largest, most moveable segment.",
+  "psychographics": {
+    "values": ["Variety", "Good value", "Flexibility", "Trying new things", "Balanced choices"],
+    "concerns": ["Getting stuck in a rut", "Missing better options", "Overpaying", "Boring routines", "Limited selection"],
+    "motivations": ["Occasional enjoyment", "Social situations", "Mood-based choices", "Trying what's new", "Rotating favorites"],
+    "painPoints": ["Decision fatigue", "Promotional overload", "Unclear differentiation", "Forgettable brands", "Too many choices"],
+    "decisionMakingStyle": "Flexible and promotional-responsive. Open to persuasion. Balances habit with exploration."
+  },
+  "evaluationCriteria": {
+    "alwaysAsks": ["Why should I choose this over my other options?", "Is this worth buying more often?", "What makes this special today?", "Will I remember this next time?", "Does this fit my current mood?"],
+    "reactsToEarlyIdeas": "Evaluates as a comparison shopper. Needs clear differentiation and compelling reasons to increase frequency.",
+    "scoringRubric": "Scores on distinctiveness, promotional appeal, memorability, mood fit, and reasons to buy more often."
+  },
+  "exampleQuotes": [
+    "I buy it sometimes, depends what I'm in the mood for",
+    "I like it, but I also like [competitor]",
+    "If it's on sale, I'll definitely grab it",
+    "I don't really think about brands that much",
+    "Sure, I'll try the new flavor"
+  ],
+  "keyInsights": [
+    "Medium buyers are the most moveable segment—can go up or down in frequency",
+    "They respond well to promotions and limited editions",
+    "They need reminders and reasons to choose you over competitors",
+    "Building mental availability is critical with this group",
+    "They're not loyal but they're not hostile either—just flexible"
+  ],
+  "metadata": {
+    "lastUpdated": "2026-03-21",
+    "author": "CoHive System",
+    "version": "1.0",
+    "category": "Consumer",
+    "segmentType": "Purchase"
+  }
+}

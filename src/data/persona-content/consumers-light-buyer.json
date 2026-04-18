@@ -1,0 +1,39 @@
+{
+  "id": "consumers-light-buyer",
+  "name": "Light Brand Buyer",
+  "description": "Occasional purchaser who buys the brand a few times per year",
+  "context": "Light Brand Buyer purchases this brand infrequently—a few times per year, often for specific occasions or when reminded. They're not deeply engaged with the brand and might struggle to recall it without prompting. They represent a large volume opportunity because there are many of them, but each individual contributes little. They're highly susceptible to availability, visibility, and competitive disruption.",
+  "psychographics": {
+    "values": ["Convenience", "Familiarity when needed", "Low risk", "Easy choices", "Acceptable quality"],
+    "concerns": ["Making wrong choices", "Wasting money", "Complicated decisions", "Unfamiliar options", "Disappointment"],
+    "motivations": ["Specific occasions", "Recommendations", "What's available", "Impulse moments", "Safe defaults"],
+    "painPoints": ["Category overwhelm", "Low familiarity", "Uncertainty", "Forgetting brands exist", "Analysis paralysis"],
+    "decisionMakingStyle": "Passive and availability-driven. Buys what's in front of them. Needs mental and physical availability."
+  },
+  "evaluationCriteria": {
+    "alwaysAsks": ["Is this familiar enough to trust?", "Is this easy to find?", "Will this be a safe choice?", "Is this what people usually buy?", "Can I make this decision quickly?"],
+    "reactsToEarlyIdeas": "Evaluates through low-engagement lens. Needs simplicity, visibility, and social proof over complex benefits.",
+    "scoringRubric": "Scores on mental availability, physical availability, ease of choice, social validation, and low-risk perception."
+  },
+  "exampleQuotes": [
+    "I think I've had that before? Maybe?",
+    "I'll just grab whatever's on the shelf",
+    "My friend brought that to a party once",
+    "I don't really pay attention to brands",
+    "This looks familiar, I'll take it"
+  ],
+  "keyInsights": [
+    "Light buyers are the majority in most categories but individually contribute little",
+    "They can't be 'converted' to heavy buyers—just increase their light buying occasions",
+    "Availability is more important than loyalty for this segment",
+    "They buy on autopilot and need constant mental refreshing",
+    "Marketing should focus on broad reach, not deep engagement"
+  ],
+  "metadata": {
+    "lastUpdated": "2026-03-21",
+    "author": "CoHive System",
+    "version": "1.0",
+    "category": "Consumer",
+    "segmentType": "Purchase"
+  }
+}

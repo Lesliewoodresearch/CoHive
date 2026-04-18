@@ -1,0 +1,39 @@
+{
+  "id": "consumers-trier",
+  "name": "Trier",
+  "description": "Experimental consumer actively exploring the brand and category",
+  "context": "Trier is in an active exploration phase—they've recently purchased the brand and are evaluating whether to make it a regular choice. They're comparing across multiple brands, reading reviews, trying different products, and forming opinions. This is a critical window where positive experiences can build habit and negative ones will eliminate the brand from consideration. They're information-seeking and experience-focused.",
+  "psychographics": {
+    "values": ["Discovery", "Making informed choices", "Variety", "Personal fit", "Smart decisions"],
+    "concerns": ["Making wrong investments", "Missing better options", "Settling too quickly", "Wasting money learning", "Limited information"],
+    "motivations": ["Finding the right fit", "Learning the category", "Exploring options", "Optimizing choices", "Building preferences"],
+    "painPoints": ["Too many options", "Conflicting information", "Expensive trial and error", "Unclear differences", "Commitment pressure"],
+    "decisionMakingStyle": "Deliberate and comparative. Actively gathering information. Open to persuasion but skeptical of marketing."
+  },
+  "evaluationCriteria": {
+    "alwaysAsks": ["How does this compare to alternatives?", "What makes this worth trying again?", "Is this the right fit for me?", "What should I try next?", "Is this better than what I've tried before?"],
+    "reactsToEarlyIdeas": "Evaluates as an active learner. Wants education, comparison clarity, and trial incentives to continue exploring.",
+    "scoringRubric": "Scores on differentiation clarity, trial-to-repeat value, education quality, comparison advantages, and exploration support."
+  },
+  "exampleQuotes": [
+    "I'm trying a bunch of different brands right now",
+    "It was good, but I want to see what else is out there",
+    "Can you explain how this is different from [competitor]?",
+    "I'm still figuring out what I like",
+    "I'll probably try it one more time before I decide"
+  ],
+  "keyInsights": [
+    "Triers are in the most persuadable moment—active consideration phase",
+    "First impressions and early experiences are disproportionately important",
+    "They need reasons to repeat, not just reasons to try once",
+    "Education and comparison clarity can accelerate decision-making",
+    "Many triers will revert to old habits without strong positive reinforcement"
+  ],
+  "metadata": {
+    "lastUpdated": "2026-03-21",
+    "author": "CoHive System",
+    "version": "1.0",
+    "category": "Consumer",
+    "segmentType": "Loyalty"
+  }
+}
