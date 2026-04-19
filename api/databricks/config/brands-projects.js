@@ -169,13 +169,14 @@ export default async function handler(req, res) {
             warehouse_id: warehouseId,
             statement: `
               INSERT INTO knowledge_base.${schema}.shared_config
-              (config_id, config_type, config_value, display_order, created_by)
+              (config_id, config_type, config_value, display_order, created_by, is_active)
               VALUES (
                 '${configId}',
                 '${type}',
                 '${configValue.replace(/'/g, "''")}',
                 ${displayOrder},
-                '${(userEmail || 'unknown').replace(/'/g, "''")}'
+                '${(userEmail || 'unknown').replace(/'/g, "''")}',
+                TRUE
               )
             `,
             wait_timeout: '30s',

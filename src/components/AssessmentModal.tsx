@@ -211,7 +211,7 @@ const KB_MODE_OPTIONS: {
 }[] = [
   {
     value: "hard-forbidden",
-    label: "KB Only",
+    label: "Knowledge Base Only",
     description: "General knowledge strictly forbidden — every claim must come from the KB files",
     color: "text-red-700",
     borderColor: "border-red-300",
@@ -219,16 +219,16 @@ const KB_MODE_OPTIONS: {
   },
   {
     value: "strong-preference",
-    label: "KB Preferred",
-    description: "Strongly prefer KB — general knowledge only when KB is completely silent",
+    label: "Knowledge Base Preferred",
+    description: "Strongly prefer Knowledge Base — general knowledge only when Knowledge Base is completely silent",
     color: "text-amber-700",
     borderColor: "border-amber-300",
     activeClasses: "bg-amber-50 border-amber-400 text-amber-800",
   },
   {
     value: "equal-weight",
-    label: "KB + General",
-    description: "KB and general knowledge equally weighted — all claims must be cited",
+    label: "Knowledge Base + General",
+    description: "Knowledge Base and general knowledge equally weighted — all claims must be cited",
     color: "text-blue-700",
     borderColor: "border-blue-300",
     activeClasses: "bg-blue-50 border-blue-400 text-blue-800",
@@ -1030,7 +1030,7 @@ export function AssessmentModal({
               </div>
             )}
 
-            {/* ── KB Mode ── */}
+            {/* ── Knowledge Base Mode ── */}
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <BookOpen className="w-4 h-4 text-gray-500" />
@@ -1264,12 +1264,18 @@ export function AssessmentModal({
                 {currentRound > 0 ? (() => {
                   const lastRound = rounds[rounds.length - 1];
                   const lbl = (lastRound as any)?.label || `Round ${currentRound}`;
-                  const sub = getRoundSubtitle(lbl);
-                  // Show the label of the just-completed round, then what's coming next
-                  const nextNum = currentRound + 1;
+                  // Determine if this is a final housekeeping round (not a user-visible debate round)
                   const isFinal = lbl.toLowerCase().includes('moderator') || lbl.toLowerCase().includes('fact');
-                  const nextHint = isFinal ? '' : ` — starting Round ${nextNum}…`;
-                  return sub ? `${lbl} complete${nextHint}` : `${lbl} complete${nextHint}`;
+                  if (isFinal) return `${lbl} complete…`;
+                  // Count how many user-visible debate/persona rounds have completed
+                  // (exclude Moderator Opening roundNumber=0, Fact-Checker, Moderator Synthesis)
+                  const completedDebateRounds = rounds.filter(r =>
+                    r.roundNumber > 0 &&
+                    !(r as any).label?.toLowerCase().includes('moderator') &&
+                    !(r as any).label?.toLowerCase().includes('fact')
+                  ).length;
+                  const nextRoundNum = completedDebateRounds + 1;
+                  return `${lbl} complete — starting Round ${nextRoundNum}…`;
                 })() : "Starting collaboration…"}
               </span>
               <div className="flex gap-1 ml-2">
@@ -1420,6 +1426,13 @@ export function AssessmentModal({
                   const roundLabel = (round as any).label || `Round ${round.roundNumber}`;
                   const isModerator = roundLabel.toLowerCase().includes("moderator");
                   const isFactChecker = roundLabel.toLowerCase().includes("fact");
+                  // Compute a display-friendly round number (1-based, counting only debate rounds)
+                  const debateRoundIndex = rounds
+                    .slice(0, idx + 1)
+                    .filter(r => {
+                      const l = ((r as any).label || '').toLowerCase();
+                      return r.roundNumber > 0 && !l.includes('moderator') && !l.includes('fact');
+                    }).length;
 
                   const borderClass = isModerator
                     ? "border-green-300"
@@ -1450,12 +1463,12 @@ export function AssessmentModal({
                           <span
                             className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white ${badgeClass}`}
                           >
-                            {round.roundNumber}
+                            {isModerator || isFactChecker ? (isModerator ? 'M' : 'F') : debateRoundIndex}
                           </span>
                           <div className="flex flex-col items-start">
                             <span className={`font-medium text-sm ${isLast ? "text-purple-900" : isModerator ? "text-green-900" : isFactChecker ? "text-amber-900" : "text-gray-700"}`}>
                               {!isModerator && !isFactChecker && (
-                                <span className="text-gray-400 font-normal mr-1.5">Round {round.roundNumber} ·</span>
+                                <span className="text-gray-400 font-normal mr-1.5">Round {debateRoundIndex} ·</span>
                               )}
                               {/* Strip "Round N — " prefix from label since we show it separately */}
                               {roundLabel.replace(/^Round \d+ — /, '')}

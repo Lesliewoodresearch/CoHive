@@ -18,7 +18,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { ChevronUp, ChevronDown, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { SpinHex } from './LoadingGem';
 import { saveGem } from '../utils/databricksAPI';
 import gemIcon from 'figma:asset/53dc6cf554f69e479cfbd60a46741f158d11dd21.png';
@@ -333,26 +333,28 @@ export function GemCheckCoalReviewPanel({
                             onChange={e => changeType(item.id, e.target.value as ItemType)}
                             className="text-xs border border-gray-200 rounded px-1 py-0.5 bg-white text-gray-600 focus:outline-none"
                           >
-                            <option value="gem">💎 Gem</option>
+                            <option value="gem">⬡ Gem</option>
                             <option value="check">✓ Check</option>
                             <option value="coal">🪨 Coal</option>
                           </select>
 
-                          {/* Up/down */}
-                          <div className="flex flex-col">
+                          {/* Up/down rank */}
+                          <div className="flex flex-col gap-0.5">
                             <button
                               onClick={() => moveItem(item.id, 'up')}
                               disabled={idx === 0}
-                              className="p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-20"
+                              title="Rank higher"
+                              className="w-6 h-6 flex items-center justify-center text-xs font-bold text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded disabled:opacity-20 leading-none"
                             >
-                              <ChevronUp className="w-3.5 h-3.5" />
+                              ^
                             </button>
                             <button
                               onClick={() => moveItem(item.id, 'down')}
                               disabled={idx === group.length - 1}
-                              className="p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-20"
+                              title="Rank lower"
+                              className="w-6 h-6 flex items-center justify-center text-xs font-bold text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded disabled:opacity-20 leading-none"
                             >
-                              <ChevronDown className="w-3.5 h-3.5" />
+                              v
                             </button>
                           </div>
                         </div>
