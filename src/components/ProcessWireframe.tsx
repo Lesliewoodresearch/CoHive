@@ -332,17 +332,27 @@ export default function ProcessWireframe() {
       const systemProjectTypeNames = systemProjectTypes.map(pt => pt.projectType);
       try {
         const result = await fetchSharedConfig();
-        if (result.success && result.brands && result.brands.length > 0) {
-          setAvailableBrands(result.brands);
-          localStorage.setItem('cohive_available_brands', JSON.stringify(result.brands));
+        // Trust Databricks as authoritative — only fall back to localStorage if fetch fails
+        if (result.success) {
+          const brands = result.brands || [];
+          if (brands.length > 0) {
+            setAvailableBrands(brands);
+            localStorage.setItem('cohive_available_brands', JSON.stringify(brands));
+          } else {
+            // Databricks returned empty — keep localStorage so UI isn't blank
+            const savedBrands = localStorage.getItem('cohive_available_brands');
+            if (savedBrands) setAvailableBrands(JSON.parse(savedBrands));
+            else setAvailableBrands(DEFAULT_BRANDS);
+          }
         } else {
           const savedBrands = localStorage.getItem('cohive_available_brands');
-          if (savedBrands) { setAvailableBrands(JSON.parse(savedBrands)); } else { setAvailableBrands(DEFAULT_BRANDS); localStorage.setItem('cohive_available_brands', JSON.stringify(DEFAULT_BRANDS)); }
+          if (savedBrands) { setAvailableBrands(JSON.parse(savedBrands)); }
+          else { setAvailableBrands(DEFAULT_BRANDS); localStorage.setItem('cohive_available_brands', JSON.stringify(DEFAULT_BRANDS)); }
         }
         let userProjectTypes: string[] = [];
-        if (result.success && result.projectTypes && result.projectTypes.length > 0) {
-          userProjectTypes = result.projectTypes;
-          localStorage.setItem('cohive_available_project_types', JSON.stringify(userProjectTypes));
+        if (result.success) {
+          userProjectTypes = result.projectTypes || [];
+          if (userProjectTypes.length > 0) localStorage.setItem('cohive_available_project_types', JSON.stringify(userProjectTypes));
         } else {
           const savedProjectTypes = localStorage.getItem('cohive_available_project_types');
           if (savedProjectTypes) { userProjectTypes = JSON.parse(savedProjectTypes); }
@@ -450,6 +460,9 @@ export default function ProcessWireframe() {
         } catch (error) {
           setUserEmail('unknown@databricks.com');
         }
+        // Re-fetch shared config now that auth is confirmed —
+        // the on-mount call may have run before auth was ready and got empty results
+        await loadSharedConfig();
       }
     };
     fetchUserEmail();
@@ -945,9 +958,23 @@ export default function ProcessWireframe() {
     setAvailableBrands(updated);
     localStorage.setItem('cohive_available_brands', JSON.stringify(updated));
     try {
+      console.log(`[AddBrand] Posting brand "${trimmedBrand}" to Databricks...`);
       const result = await addSharedConfigItem('brand', trimmedBrand, userEmail);
-      if (!result.success) console.warn(`⚠️ Failed to save brand to Databricks: ${result.error}`);
-    } catch (error) { console.warn('Failed to save brand to Databricks:', error); }
+      if (result.success) {
+        console.log(`[AddBrand] ✅ Brand "${trimmedBrand}" saved to Databricks`);
+        // Re-fetch to confirm it's visible to all users
+        await loadSharedConfig();
+      } else {
+        console.error(`[AddBrand] ❌ Failed: ${result.error}`);
+        alert(`Failed to save brand to workspace: ${result.error}
+
+The brand was added locally but will not be visible to other users.`);
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error('[AddBrand] ❌ Exception:', msg);
+      alert(`Error saving brand to workspace: ${msg}`);
+    }
   };
 
   const handleAddProjectType = async (projectType: string) => {
@@ -1430,17 +1457,6 @@ export default function ProcessWireframe() {
                         if (idx === 1 && question === 'Share Your Wisdom') {
                           const inputMethod = responses[activeStepId]?.[0];
                           if (!inputMethod) return null;
-
-                          // Shared filename helper — Wisdom_email_DDMMYY.ext
-                          const wisdomFileName = (ext: string) => {
-                            const d = new Date();
-                            const dd = String(d.getDate()).padStart(2, '0');
-                            const mm = String(d.getMonth() + 1).padStart(2, '0');
-                            const yy = String(d.getFullYear()).slice(-2);
-                            return `Wisdom_${userEmail.replace(/[@.]/g, '_')}_${dd}${mm}${yy}.${ext}`;
-                          };
-
-                          // TEXT — textarea + microphone (speech-to-text)
                           if (inputMethod === 'Text') {
                             return (
                               <div key={idx} className="mb-2">
@@ -1448,156 +1464,14 @@ export default function ProcessWireframe() {
                                   <span>Share Your Wisdom</span>
                                   {hasResponse && <CircleCheck className="w-5 h-5 text-green-600 flex-shrink-0" />}
                                 </label>
-                                <div className="relative">
-                                  <textarea className="w-full border-2 border-gray-300 bg-white rounded p-2 pr-10 text-gray-700 focus:outline-none focus:border-blue-500" placeholder={`Share your ${insightType.toLowerCase()} insight here...`} rows={6} value={responses[activeStepId]?.[idx] || ''} onChange={(e) => handleResponseChange(idx, e.target.value)} />
-                                  <button
-                                    type="button"
-                                    title="Dictate (speech to text)"
-                                    className="absolute bottom-3 right-2 p-1.5 rounded-full bg-gray-100 hover:bg-blue-100 text-gray-500 hover:text-blue-600"
-                                    onClick={() => {
-                                      const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-                                      if (!SR) { alert('Speech recognition is not supported in this browser.'); return; }
-                                      const rec = new SR();
-                                      rec.continuous = true; rec.interimResults = false; rec.lang = 'en-US';
-                                      rec.onresult = (e: any) => {
-                                        const transcript = Array.from(e.results).map((r: any) => r[0].transcript).join(' ');
-                                        handleResponseChange(idx, (responses[activeStepId]?.[idx] || '') + ' ' + transcript);
-                                      };
-                                      rec.start();
-                                      setTimeout(() => rec.stop(), 30000);
-                                    }}
-                                  >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
-                                  </button>
-                                </div>
+                                <textarea className="w-full border-2 border-gray-300 bg-white rounded p-2 text-gray-700 focus:outline-none focus:border-blue-500" placeholder={`Share your ${insightType.toLowerCase()} insight here...`} rows={6} value={responses[activeStepId]?.[idx] || ''} onChange={(e) => handleResponseChange(idx, e.target.value)} />
                                 {hasResponse && (
-                                  <button onClick={async () => { const wisdom = responses[activeStepId]?.[idx]; if (!wisdom) return; await handleSaveWisdomToDatabricks(wisdomFileName('txt'), wisdom, insightType, 'Text', brand, projectType); }} className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Save to Knowledge Base</button>
+                                  <button onClick={async () => { const wisdom = responses[activeStepId]?.[idx]; if (!wisdom) return; const fileName = `Wisdom_${insightType}_${Date.now()}.txt`; await handleSaveWisdomToDatabricks(fileName, wisdom, insightType, 'Text', brand, projectType); }} className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Save to Knowledge Base</button>
                                 )}
                               </div>
                             );
                           }
-
-                          // VOICE — microphone recording → save as audio file
-                          if (inputMethod === 'Voice') {
-                            return (
-                              <div key={idx} className="mb-2">
-                                <label className="block text-gray-900 mb-1 flex items-start justify-between">
-                                  <span>Record Your Wisdom</span>
-                                  {hasResponse && <CircleCheck className="w-5 h-5 text-green-600 flex-shrink-0" />}
-                                </label>
-                                <div className="space-y-2">
-                                  <button
-                                    className="w-full px-4 py-3 bg-red-600 text-white rounded hover:bg-red-700 flex items-center justify-center gap-2"
-                                    onClick={async () => {
-                                      try {
-                                        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                                        const recorder = new MediaRecorder(stream);
-                                        const chunks: BlobPart[] = [];
-                                        recorder.ondataavailable = (e) => chunks.push(e.data);
-                                        recorder.onstop = async () => {
-                                          stream.getTracks().forEach(t => t.stop());
-                                          const blob = new Blob(chunks, { type: 'audio/webm' });
-                                          const reader = new FileReader();
-                                          reader.onload = async (ev) => {
-                                            const b64 = ev.target?.result as string;
-                                            await handleSaveWisdomToDatabricks(wisdomFileName('webm'), b64, insightType, 'Voice', brand, projectType);
-                                            handleResponseChange(idx, 'Voice recording saved');
-                                          };
-                                          reader.readAsDataURL(blob);
-                                        };
-                                        recorder.start();
-                                        setWisdomInputMethod('recording');
-                                        setTimeout(() => { recorder.stop(); setWisdomInputMethod(null); }, 120000);
-                                        (window as any)._wisdomRecorder = recorder;
-                                      } catch { alert('Microphone access denied. Please allow microphone access and try again.'); }
-                                    }}
-                                  >
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
-                                    {wisdomInputMethod === 'recording' ? '🔴 Recording… (tap to stop)' : 'Start Recording'}
-                                  </button>
-                                  {wisdomInputMethod === 'recording' && (
-                                    <button className="w-full px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-900"
-                                      onClick={() => { (window as any)._wisdomRecorder?.stop(); setWisdomInputMethod(null); }}>
-                                      Stop Recording
-                                    </button>
-                                  )}
-                                  {responses[activeStepId]?.[idx] && <div className="bg-green-50 border border-green-200 rounded p-2"><p className="text-sm text-green-700">✓ {responses[activeStepId][idx]}</p></div>}
-                                </div>
-                              </div>
-                            );
-                          }
-
-                          // PHOTO — upload or use camera
-                          if (inputMethod === 'Photo') {
-                            return (
-                              <div key={idx} className="mb-2">
-                                <label className="block text-gray-900 mb-1 flex items-start justify-between">
-                                  <span>Share a Photo</span>
-                                  {hasResponse && <CircleCheck className="w-5 h-5 text-green-600 flex-shrink-0" />}
-                                </label>
-                                <div className="space-y-2">
-                                  <label className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 cursor-pointer">
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                                    Upload Photo
-                                    <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
-                                      const file = e.target.files?.[0]; if (!file) return;
-                                      const reader = new FileReader();
-                                      reader.onload = async (ev) => { await handleSaveWisdomToDatabricks(wisdomFileName(file.name.split('.').pop() || 'jpg'), ev.target?.result as string, insightType, 'Photo', brand, projectType); handleResponseChange(idx, `Photo: ${file.name}`); };
-                                      reader.readAsDataURL(file);
-                                    }} />
-                                  </label>
-                                  <label className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-gray-700 text-white rounded hover:bg-gray-900 cursor-pointer">
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                                    Take Photo with Camera
-                                    <input type="file" accept="image/*" capture="environment" className="hidden" onChange={async (e) => {
-                                      const file = e.target.files?.[0]; if (!file) return;
-                                      const reader = new FileReader();
-                                      reader.onload = async (ev) => { await handleSaveWisdomToDatabricks(wisdomFileName('jpg'), ev.target?.result as string, insightType, 'Photo', brand, projectType); handleResponseChange(idx, 'Camera photo saved'); };
-                                      reader.readAsDataURL(file);
-                                    }} />
-                                  </label>
-                                  {responses[activeStepId]?.[idx] && <div className="bg-green-50 border border-green-200 rounded p-2"><p className="text-sm text-green-700">✓ {responses[activeStepId][idx]}</p></div>}
-                                </div>
-                              </div>
-                            );
-                          }
-
-                          // VIDEO — upload or use camera
-                          if (inputMethod === 'Video') {
-                            return (
-                              <div key={idx} className="mb-2">
-                                <label className="block text-gray-900 mb-1 flex items-start justify-between">
-                                  <span>Share a Video</span>
-                                  {hasResponse && <CircleCheck className="w-5 h-5 text-green-600 flex-shrink-0" />}
-                                </label>
-                                <div className="space-y-2">
-                                  <label className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 cursor-pointer">
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                                    Upload Video
-                                    <input type="file" accept="video/*" className="hidden" onChange={async (e) => {
-                                      const file = e.target.files?.[0]; if (!file) return;
-                                      const reader = new FileReader();
-                                      reader.onload = async (ev) => { await handleSaveWisdomToDatabricks(wisdomFileName(file.name.split('.').pop() || 'mp4'), ev.target?.result as string, insightType, 'Video', brand, projectType); handleResponseChange(idx, `Video: ${file.name}`); };
-                                      reader.readAsDataURL(file);
-                                    }} />
-                                  </label>
-                                  <label className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-gray-700 text-white rounded hover:bg-gray-900 cursor-pointer">
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                                    Record Video with Camera
-                                    <input type="file" accept="video/*" capture="environment" className="hidden" onChange={async (e) => {
-                                      const file = e.target.files?.[0]; if (!file) return;
-                                      const reader = new FileReader();
-                                      reader.onload = async (ev) => { await handleSaveWisdomToDatabricks(wisdomFileName('mp4'), ev.target?.result as string, insightType, 'Video', brand, projectType); handleResponseChange(idx, 'Camera video saved'); };
-                                      reader.readAsDataURL(file);
-                                    }} />
-                                  </label>
-                                  {responses[activeStepId]?.[idx] && <div className="bg-green-50 border border-green-200 rounded p-2"><p className="text-sm text-green-700">✓ {responses[activeStepId][idx]}</p></div>}
-                                </div>
-                              </div>
-                            );
-                          }
-
-                          // FILE — upload documents
+                          // File upload for Wisdom
                           if (inputMethod === 'File') {
                             return (
                               <div key={idx} className="mb-2">
@@ -1611,11 +1485,7 @@ export default function ProcessWireframe() {
                                     if (files.length === 0) return;
                                     for (const file of files) {
                                       const reader = new FileReader();
-                                      reader.onload = async (event) => {
-                                        const b64 = event.target?.result as string;
-                                        const ext = file.name.split('.').pop() || 'bin';
-                                        await handleSaveWisdomToDatabricks(wisdomFileName(ext), b64, insightType, 'File', brand, projectType);
-                                      };
+                                      reader.onload = async (event) => { const base64Content = event.target?.result as string; await handleSaveWisdomToDatabricks(`Wisdom_${insightType}_File_${file.name}`, base64Content, insightType, 'File', brand, projectType); };
                                       reader.readAsDataURL(file);
                                     }
                                     handleResponseChange(idx, files.map(f => f.name).join(', '));
@@ -1626,8 +1496,7 @@ export default function ProcessWireframe() {
                               </div>
                             );
                           }
-
-                          // INTERVIEW
+                          // Interview for Wisdom
                           if (inputMethod === 'Interview') {
                             return (
                               <div key={idx} className="mb-2">
@@ -1635,11 +1504,16 @@ export default function ProcessWireframe() {
                                   <span>Share Your Wisdom</span>
                                   {hasResponse && <CircleCheck className="w-5 h-5 text-green-600 flex-shrink-0" />}
                                 </label>
-                                <button
-                                  onClick={() => { setInterviewContext({ insightType, brand, projectType }); setShowInterviewDialog(true); }}
+                                <button 
+                                  onClick={() => {
+                                    setInterviewContext({ insightType, brand, projectType });
+                                    setShowInterviewDialog(true);
+                                  }}
                                   className="w-full px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 flex items-center justify-center gap-2"
                                 >
-                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                                  </svg>
                                   Start Interview
                                 </button>
                                 {responses[activeStepId]?.[idx] && <div className="bg-green-50 border border-green-200 rounded p-2 mt-2"><p className="text-sm text-green-700">✓ {responses[activeStepId][idx]}</p></div>}

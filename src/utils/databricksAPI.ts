@@ -303,24 +303,17 @@ export async function downloadKnowledgeBaseFile(
   fileId: string, fileName: string
 ): Promise<{ success: boolean; content?: string; error?: string }> {
   try {
-    // Uses the read endpoint — /download doesn't exist, read.js handles both preview and download
     const auth = await getAuthData();
-    const response = await fetch('/api/databricks/knowledge-base/read', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fileId }),
+    const queryParams = new URLSearchParams();
+    queryParams.append('fileId', fileId);
+    const response = await fetch(`/api/databricks/knowledge-base/download?${queryParams}`, {
+      method: 'GET', headers: { 'Content-Type': 'application/json' },
     });
     if (!response.ok) { const errorData = await response.json().catch(() => ({})); throw new Error(errorData.error || `Download failed: ${response.statusText}`); }
     const result = await response.json();
     const content = result.content || '';
-    const ext = fileName.split('.').pop()?.toLowerCase() || '';
-    const mimeTypes: Record<string, string> = {
-      'txt': 'text/plain', 'md': 'text/markdown', 'csv': 'text/csv',
-      'pdf': 'application/pdf', 'json': 'application/json',
-      'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    };
-    const mimeType = mimeTypes[ext] || 'text/plain';
-    if (content) downloadFile(fileName, content, mimeType);
+    const mimeType = result.mimeType || 'application/octet-stream';
+    downloadFile(fileName, content, mimeType);
     return { success: true, content };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Download failed' };
@@ -528,11 +521,8 @@ export async function generateSummary(params: {
   brand: string; projectType: string; fileName: string; selectedFiles?: string[];
   outputOptions?: string[]; hexExecutions?: any; completedSteps?: string[];
   responses?: any; userEmail: string; userRole: string; modelEndpoint?: string;
-  iterationGems?: any[]; iterationChecks?: any[]; iterationCoal?: any[];
-  iterationDirections?: string[];
 }): Promise<{ 
-  success: boolean; summary?: string; docxBase64?: string | null;
-  model?: string;
+  success: boolean; summary?: string; model?: string;
   usage?: { promptTokens: number; completionTokens: number; totalTokens: number; };
   metadata?: any; error?: string;
 }> {
@@ -548,14 +538,12 @@ export async function generateSummary(params: {
         hexExecutions: params.hexExecutions, completedSteps: params.completedSteps,
         responses: params.responses, userEmail: params.userEmail, userRole: params.userRole,
         modelEndpoint: params.modelEndpoint,
-        iterationGems: params.iterationGems, iterationChecks: params.iterationChecks,
-        iterationCoal: params.iterationCoal, iterationDirections: params.iterationDirections,
       }),
     });
     if (!response.ok) { const errorData = await response.json().catch(() => ({})); throw new Error(errorData.error || `Summary generation failed: ${response.statusText}`); }
     const result = await response.json();
-    console.log('✅ Summary generated:', result.summary?.length, 'chars', result.docxBase64 ? '+ docx' : '');
-    return { success: true, summary: result.summary, docxBase64: result.docxBase64, model: result.model, usage: result.usage, metadata: result.metadata };
+    console.log('✅ Summary generated:', result.summary.length, 'chars');
+    return { success: true, summary: result.summary, model: result.model, usage: result.usage, metadata: result.metadata };
   } catch (error) {
     console.error('❌ Generate summary error:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Summary generation failed' };
@@ -571,8 +559,8 @@ export async function fetchSharedConfig(): Promise<{
   try {
     console.log('📋 Fetching shared brands and project types...');
     if (isFigmaMake()) return { success: true, brands: [], projectTypes: [] };
-    // No client-side auth guard — the server uses env credentials for this endpoint,
-    // so it works for all workspace members regardless of individual auth state.
+    // No client-side auth guard — the server uses env credentials for this endpoint
+    // so all workspace members can fetch brands regardless of individual auth state.
     const response = await fetch('/api/databricks/config/brands-projects', {
       method: 'GET', headers: { 'Content-Type': 'application/json' },
     });
