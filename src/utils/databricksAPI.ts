@@ -303,17 +303,24 @@ export async function downloadKnowledgeBaseFile(
   fileId: string, fileName: string
 ): Promise<{ success: boolean; content?: string; error?: string }> {
   try {
+    // Uses the read endpoint — /download doesn't exist, read.js handles both preview and download
     const auth = await getAuthData();
-    const queryParams = new URLSearchParams();
-    queryParams.append('fileId', fileId);
-    const response = await fetch(`/api/databricks/knowledge-base/download?${queryParams}`, {
-      method: 'GET', headers: { 'Content-Type': 'application/json' },
+    const response = await fetch('/api/databricks/knowledge-base/read', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fileId }),
     });
     if (!response.ok) { const errorData = await response.json().catch(() => ({})); throw new Error(errorData.error || `Download failed: ${response.statusText}`); }
     const result = await response.json();
     const content = result.content || '';
-    const mimeType = result.mimeType || 'application/octet-stream';
-    downloadFile(fileName, content, mimeType);
+    const ext = fileName.split('.').pop()?.toLowerCase() || '';
+    const mimeTypes: Record<string, string> = {
+      'txt': 'text/plain', 'md': 'text/markdown', 'csv': 'text/csv',
+      'pdf': 'application/pdf', 'json': 'application/json',
+      'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    };
+    const mimeType = mimeTypes[ext] || 'text/plain';
+    if (content) downloadFile(fileName, content, mimeType);
     return { success: true, content };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Download failed' };
