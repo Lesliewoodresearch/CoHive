@@ -41,7 +41,15 @@ export default async function handler(req, res) {
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
-        throw new Error(error.message || `Query failed: ${response.statusText}`);
+        const msg = error.message || response.statusText || '';
+        // If table doesn't exist yet, return empty lists rather than crashing
+        if (msg.toLowerCase().includes('table or view not found') ||
+            msg.toLowerCase().includes('does not exist') ||
+            msg.toLowerCase().includes('table not found')) {
+          console.warn('[Config] shared_config table not found — returning empty config');
+          return res.status(200).json({ success: true, brands: [], projectTypes: [] });
+        }
+        throw new Error(msg || `Query failed: ${response.statusText}`);
       }
 
       const result = await response.json();
@@ -71,6 +79,27 @@ export default async function handler(req, res) {
     // ── POST: Add a new brand or project type ───────────────────────────────
     if (req.method === 'POST') {
       const { type, value, userEmail } = req.body;
+
+      // Ensure the table exists — auto-create without column defaults
+      // (Delta requires 'allowColumnDefaults' feature to be enabled separately)
+      await fetch(`https://${workspaceHost}/api/2.0/sql/statements`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          warehouse_id: warehouseId,
+          statement: `CREATE TABLE IF NOT EXISTS knowledge_base.${schema}.shared_config (
+            config_id     STRING  NOT NULL,
+            config_type   STRING  NOT NULL,
+            config_value  STRING  NOT NULL,
+            display_order INT,
+            is_active     BOOLEAN,
+            created_by    STRING,
+            created_at    TIMESTAMP,
+            updated_at    TIMESTAMP
+          )`,
+          wait_timeout: '30s',
+        }),
+      }).catch(e => console.warn('[Config] Table auto-create skipped:', e.message));
 
       if (!type || !value) {
         return res.status(400).json({
@@ -184,12 +213,15 @@ export default async function handler(req, res) {
         }
       );
 
+      const insertResult = await insertResponse.json().catch(() => ({}));
       if (!insertResponse.ok) {
-        const error = await insertResponse.json().catch(() => ({}));
-        throw new Error(error.message || `Insert failed: ${insertResponse.statusText}`);
+        const errMsg = insertResult.message || insertResult.error || `Insert failed: ${insertResponse.statusText}`;
+        console.error(`[Config] ❌ INSERT failed for ${type} "${configValue}":`, errMsg);
+        console.error('[Config] Full response:', JSON.stringify(insertResult));
+        throw new Error(errMsg);
       }
 
-      console.log(`[Config] ✅ Added ${type}: "${configValue}"`);
+      console.log(`[Config] ✅ Added ${type}: "${configValue}" — statement state: ${insertResult.status?.state || 'unknown'}`);
 
       return res.status(201).json({
         success: true,
