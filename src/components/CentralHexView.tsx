@@ -7,38 +7,6 @@ import {
   Cpu,
 } from "lucide-react";
 import gemIcon from "figma:asset/53dc6cf554f69e479cfbd60a46741f158d11dd21.png";
-
-// Inline SVG gem hexagon — used as fallback/primary when figma:asset doesn't resolve correctly
-const GemHexIcon = ({ className = "w-7 h-7" }: { className?: string }) => (
-  <svg
-    viewBox="0 0 100 100"
-    className={className}
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    {/* Hexagon outline */}
-    <polygon
-      points="50,4 93,27 93,73 50,96 7,73 7,27"
-      fill="none"
-      stroke="#1a1a1a"
-      strokeWidth="5"
-    />
-    {/* Outer facets */}
-    <polygon points="50,4 93,27 50,50"   fill="#4FC3F7" opacity="0.85" />
-    <polygon points="93,27 93,73 50,50"  fill="#9C27B0" opacity="0.85" />
-    <polygon points="93,73 50,96 50,50"  fill="#E91E63" opacity="0.85" />
-    <polygon points="50,96 7,73 50,50"   fill="#FF9800" opacity="0.85" />
-    <polygon points="7,73 7,27 50,50"    fill="#4CAF50" opacity="0.85" />
-    <polygon points="7,27 50,4 50,50"    fill="#2196F3" opacity="0.85" />
-    {/* Inner hexagon highlight */}
-    <polygon
-      points="50,22 72,35 72,65 50,78 28,65 28,35"
-      fill="#FDD835"
-      opacity="0.9"
-    />
-    {/* Centre sparkle */}
-    <circle cx="50" cy="50" r="8" fill="#FFFFFF" opacity="0.7" />
-  </svg>
-);
 import { getPersonasForHex, type PersonaLevel1, type PersonaLevel2, type PersonaLevel3 } from "../data/personas";
 import { isBrandInCategory } from "../data/brandCategoryMapping";
 import { availableModels } from "./ModelTemplateManager";
@@ -73,6 +41,7 @@ interface CentralHexViewProps {
   ) => void;
   databricksInstructions?: string;
   previousExecutions: HexExecution[];
+  anyPriorPersonaRun?: boolean;
   onSaveRecommendation?: (recommendation: string, hexId: string) => void;
   projectType?: string;
   userBrand?: string;
@@ -92,6 +61,7 @@ export function CentralHexView({
   onExecute,
   databricksInstructions,
   previousExecutions,
+  anyPriorPersonaRun = false,
   onSaveRecommendation,
   projectType,
   userBrand,
@@ -117,13 +87,11 @@ export function CentralHexView({
   const [assessment, setAssessment] = useState("");
   const [showHistory, setShowHistory] = useState(false);
   const [sendToKnowledgeBase, setSendToKnowledgeBase] = useState(false);
-  const [recommendationText, setRecommendationText] = useState("");
-  const [showPriorPersonaModal, setShowPriorPersonaModal] = useState(false);
-  const [pendingExecuteFiles, setPendingExecuteFiles] = useState<string[]>([]);
-  const [pendingExecuteType, setPendingExecuteType] = useState<string[]>([]);
-  const [pendingExecuteAssessment, setPendingExecuteAssessment] = useState('');
   const [showDirectionModal, setShowDirectionModal] = useState(false);
   const [directionText, setDirectionText] = useState('');
+  const [recommendationText, setRecommendationText] = useState("");
+  const [showGemInput, setShowGemInput] = useState(false);
+  const [gemText, setGemText] = useState("");
 
   // Competitors-specific state
   const [selectedCompetitor, setSelectedCompetitor] = useState<string>("");
@@ -153,7 +121,8 @@ export function CentralHexView({
   );
 
   // Determine if "assess" should be disabled (persona hexes only)
-  const isAssessDisabled = isPersonaHex && requestMode === 'get-inspired' && !hasRecommendBeenDone;
+  // Allow assess if this hex has prior runs OR if any other persona hex has been run
+  const isAssessDisabled = isPersonaHex && requestMode === 'get-inspired' && !hasRecommendBeenDone && !anyPriorPersonaRun;
 
   const handleFileToggle = (fileName: string) => {
     if (selectedFiles.includes(fileName)) {
@@ -328,17 +297,6 @@ export function CentralHexView({
           return;
         }
       }
-    }
-
-    // If there are prior executions on a persona hex, ask user what to include
-    const personaHexIds = ['Consumers', 'Luminaries', 'Colleagues', 'cultural', 'Grade', 'panelist'];
-    const isPersonaHexType = personaHexIds.includes(hexId);
-    if (isPersonaHexType && previousExecutions.length > 0) {
-      setPendingExecuteFiles(selectedFiles);
-      setPendingExecuteType(assessmentType);
-      setPendingExecuteAssessment(assessment);
-      setShowPriorPersonaModal(true);
-      return;
     }
 
     onExecute(selectedFiles, assessmentType, assessment);
@@ -1072,141 +1030,6 @@ export function CentralHexView({
         </div>
       )}
 
-      {/* Add Direction / Focus Modal */}
-      {showDirectionModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-gray-900 font-semibold text-base">Add insight, focus or direction</h3>
-              <p className="text-gray-500 text-sm mt-1">
-                What additional insight, focus or direction would you like to add to the remaining prompts in this iteration?
-              </p>
-            </div>
-            <div className="px-6 py-4">
-              <textarea
-                autoFocus
-                className="w-full h-32 border-2 border-gray-300 bg-white rounded-lg p-3 text-gray-800 text-sm resize-none focus:outline-none focus:border-purple-500 leading-relaxed"
-                placeholder="e.g. Focus on the 18–24 age group. Lean into the sustainability angle. Keep recommendations budget-conscious for Q1."
-                value={directionText}
-                onChange={e => setDirectionText(e.target.value)}
-              />
-              <p className="text-xs text-gray-400 mt-2">
-                This will be added to all remaining hex prompts in this iteration.
-              </p>
-            </div>
-            <div className="px-6 py-4 border-t border-gray-100 flex gap-3">
-              <button
-                onClick={() => { setShowDirectionModal(false); setDirectionText(''); }}
-                className="flex-1 px-4 py-2.5 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 text-sm font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  if (directionText.trim() && onAddIterationDirection) {
-                    onAddIterationDirection(directionText.trim());
-                  }
-                  setShowDirectionModal(false);
-                  setDirectionText('');
-                }}
-                disabled={!directionText.trim()}
-                className="flex-1 px-4 py-2.5 bg-purple-600 text-white rounded-xl hover:bg-purple-700 disabled:opacity-50 text-sm font-medium"
-              >
-                Add to prompts
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Prior Persona Re-use Modal */}
-      {showPriorPersonaModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-gray-900 font-semibold text-base">Previous results available</h3>
-              <p className="text-gray-500 text-sm mt-0.5">
-                You have {previousExecutions.length} prior run{previousExecutions.length !== 1 ? 's' : ''} in this hex.
-                How would you like to proceed?
-              </p>
-            </div>
-            <div className="px-6 py-4 space-y-3">
-              {/* Option 1: Include prior personas in full */}
-              <button
-                onClick={() => {
-                  setShowPriorPersonaModal(false);
-                  // Pass prior context flag via assessment field augmentation
-                  const priorPersonaNames = previousExecutions
-                    .flatMap(ex => (ex.selectedFiles || []))
-                    .filter((v, i, a) => a.indexOf(v) === i);
-                  const augmented = pendingExecuteAssessment +
-                    (priorPersonaNames.length > 0
-                      ? `
-
-[PRIOR_PERSONAS: ${priorPersonaNames.join(', ')}]`
-                      : '');
-                  onExecute(pendingExecuteFiles, pendingExecuteType, augmented);
-                  setPendingExecuteFiles([]); setPendingExecuteType([]); setPendingExecuteAssessment('');
-                  setCurrentStep(hexId === 'competitors' ? 3 : 1); setSelectedFiles([]); setAssessmentType(['recommend']); setAssessment('');
-                }}
-                className="w-full text-left px-4 py-3 border-2 border-gray-200 rounded-xl hover:border-purple-400 hover:bg-purple-50 transition-all"
-              >
-                <div className="font-medium text-gray-900 text-sm">Include previous personas in this run</div>
-                <div className="text-gray-500 text-xs mt-0.5">
-                  Previous personas join this session and can build on or challenge prior results
-                </div>
-              </button>
-
-              {/* Option 2: Include summary only */}
-              <button
-                onClick={() => {
-                  setShowPriorPersonaModal(false);
-                  // Build a brief summary of prior rounds to inject as context
-                  const summaryLines = previousExecutions.map((ex, i) => {
-                    const preview = (ex.assessment || '').substring(0, 200).replace(/\n/g, ' ');
-                    return `Run ${i + 1}: ${preview}${preview.length === 200 ? '...' : ''}`;
-                  });
-                  const summaryBlock = `\n\n[PRIOR_SUMMARY:\n${summaryLines.join('\n')}\n]`;
-                  onExecute(pendingExecuteFiles, pendingExecuteType, pendingExecuteAssessment + summaryBlock);
-                  setPendingExecuteFiles([]); setPendingExecuteType([]); setPendingExecuteAssessment('');
-                  setCurrentStep(hexId === 'competitors' ? 3 : 1); setSelectedFiles([]); setAssessmentType(['recommend']); setAssessment('');
-                }}
-                className="w-full text-left px-4 py-3 border-2 border-gray-200 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-all"
-              >
-                <div className="font-medium text-gray-900 text-sm">Include summary of previous results only</div>
-                <div className="text-gray-500 text-xs mt-0.5">
-                  A brief summary of prior rounds is shared as context — not the full personas
-                </div>
-              </button>
-
-              {/* Option 3: Fresh run */}
-              <button
-                onClick={() => {
-                  setShowPriorPersonaModal(false);
-                  onExecute(pendingExecuteFiles, pendingExecuteType, pendingExecuteAssessment);
-                  setPendingExecuteFiles([]); setPendingExecuteType([]); setPendingExecuteAssessment('');
-                  setCurrentStep(hexId === 'competitors' ? 3 : 1); setSelectedFiles([]); setAssessmentType(['recommend']); setAssessment('');
-                }}
-                className="w-full text-left px-4 py-3 border-2 border-gray-200 rounded-xl hover:border-gray-400 hover:bg-gray-50 transition-all"
-              >
-                <div className="font-medium text-gray-900 text-sm">Start fresh — don't include previous results</div>
-                <div className="text-gray-500 text-xs mt-0.5">
-                  Run this session independently with no context from prior runs
-                </div>
-              </button>
-            </div>
-            <div className="px-6 py-3 border-t border-gray-100">
-              <button
-                onClick={() => setShowPriorPersonaModal(false)}
-                className="w-full text-center text-sm text-gray-400 hover:text-gray-600"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Send Recommendations to Knowledge base */}
       <div className="p-3 border-t-2 border-gray-300 mt-4">
         {/* Gem — display only, interaction happens in assessment modal */}
@@ -1215,7 +1038,7 @@ export function CentralHexView({
           <span className="text-gray-900">Highlight an element that you like</span>
         </div>
 
-        {/* Check — display only, interaction happens in assessment modal */}
+        {/* Check — display only */}
         <div className="mb-3 flex items-center gap-2">
           <svg viewBox="0 0 32 32" className="w-7 h-7 flex-shrink-0" xmlns="http://www.w3.org/2000/svg">
             <defs>
@@ -1236,12 +1059,11 @@ export function CentralHexView({
           <span className="text-gray-900">Check elements of interest</span>
         </div>
 
-        {/* Coal — display only, interaction happens in assessment modal */}
+        {/* Coal — display only */}
         <div className="mb-3 flex items-center gap-2">
           <span className="text-2xl leading-none w-7 flex items-center justify-center">🪨</span>
           <span className="text-gray-900">Flag an element you want to avoid</span>
         </div>
-
 
         {/* Add Direction / Focus */}
         <div className="mb-4">
@@ -1306,6 +1128,51 @@ export function CentralHexView({
           </div>
         )}
       </div>
+
+      {/* Direction Modal */}
+      {showDirectionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-gray-900 font-semibold text-base">Add insight, focus or direction</h3>
+              <p className="text-gray-500 text-sm mt-1">
+                What additional insight, focus or direction would you like to add to the remaining prompts in this iteration?
+              </p>
+            </div>
+            <div className="px-6 py-4">
+              <textarea
+                autoFocus
+                className="w-full h-32 border-2 border-gray-300 bg-white rounded-lg p-3 text-gray-800 text-sm resize-none focus:outline-none focus:border-purple-500 leading-relaxed"
+                placeholder="e.g. Focus on the 18–24 age group. Lean into the sustainability angle. Keep recommendations budget-conscious for Q1."
+                value={directionText}
+                onChange={e => setDirectionText(e.target.value)}
+              />
+              <p className="text-xs text-gray-400 mt-2">This will be added to all remaining hex prompts in this iteration.</p>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100 flex gap-3">
+              <button
+                onClick={() => { setShowDirectionModal(false); setDirectionText(''); }}
+                className="flex-1 px-4 py-2.5 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 text-sm font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (directionText.trim() && onAddIterationDirection) {
+                    onAddIterationDirection(directionText.trim());
+                  }
+                  setShowDirectionModal(false);
+                  setDirectionText('');
+                }}
+                disabled={!directionText.trim()}
+                className="flex-1 px-4 py-2.5 bg-purple-600 text-white rounded-xl hover:bg-purple-700 disabled:opacity-50 text-sm font-medium"
+              >
+                Add to prompts
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

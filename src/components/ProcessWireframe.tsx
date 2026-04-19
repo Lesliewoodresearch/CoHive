@@ -133,6 +133,9 @@ export default function ProcessWireframe() {
   // Gems accumulated across all modal opens within the current iteration.
   // Cleared when the user saves an iteration or returns to Enter hex.
   const [iterationGems, setIterationGems] = useState<IterationGem[]>([]);
+  const [iterationChecks, setIterationChecks] = useState<Array<{ text: string; hexId: string; hexLabel: string }>>([]);
+  const [iterationCoal, setIterationCoal] = useState<Array<{ text: string; hexId: string; hexLabel: string }>>([]);
+  const [iterationDirections, setIterationDirections] = useState<string[]>([]);
 
   // Assessment Modal state
   const [assessmentModalOpen, setAssessmentModalOpen] = useState(false);
@@ -327,6 +330,61 @@ export default function ProcessWireframe() {
     const savedSelectedResearchFiles = localStorage.getItem('cohive_selected_research_files');
     if (savedSelectedResearchFiles) { try { setSelectedResearchFiles(JSON.parse(savedSelectedResearchFiles)); } catch (e) { console.error('Failed to load selected research files', e); } }
 
+    const loadSharedConfig = async () => {
+      const DEFAULT_BRANDS = ['Nike', 'Adidas'];
+      const systemProjectTypeNames = systemProjectTypes.map(pt => pt.projectType);
+      try {
+        const result = await fetchSharedConfig();
+        if (result.success && result.brands && result.brands.length > 0) {
+          setAvailableBrands(result.brands);
+          localStorage.setItem('cohive_available_brands', JSON.stringify(result.brands));
+        } else {
+          const savedBrands = localStorage.getItem('cohive_available_brands');
+          if (savedBrands) { setAvailableBrands(JSON.parse(savedBrands)); } else { setAvailableBrands(DEFAULT_BRANDS); localStorage.setItem('cohive_available_brands', JSON.stringify(DEFAULT_BRANDS)); }
+        }
+        let userProjectTypes: string[] = [];
+        if (result.success && result.projectTypes && result.projectTypes.length > 0) {
+          userProjectTypes = result.projectTypes;
+          localStorage.setItem('cohive_available_project_types', JSON.stringify(userProjectTypes));
+        } else {
+          const savedProjectTypes = localStorage.getItem('cohive_available_project_types');
+          if (savedProjectTypes) { userProjectTypes = JSON.parse(savedProjectTypes); }
+        }
+        const allProjectTypes = [...new Set([...systemProjectTypeNames, ...userProjectTypes])].sort();
+        setAvailableProjectTypes(allProjectTypes);
+        try {
+          const configResult = await fetchProjectTypeConfigs();
+          let userConfigs: ProjectTypeConfig[] = [];
+          if (configResult.success && configResult.configs) {
+            userConfigs = configResult.configs;
+            localStorage.setItem('cohive_project_type_configs', JSON.stringify(userConfigs));
+          } else {
+            const savedConfigs = localStorage.getItem('cohive_project_type_configs');
+            if (savedConfigs) { try { userConfigs = JSON.parse(savedConfigs); } catch { userConfigs = []; } }
+          }
+          setProjectTypeConfigs([...systemProjectTypes, ...userConfigs]);
+        } catch (configError) {
+          console.warn('Failed to fetch project type configurations:', configError);
+          const savedConfigs = localStorage.getItem('cohive_project_type_configs');
+          let userConfigs: ProjectTypeConfig[] = [];
+          if (savedConfigs) { try { userConfigs = JSON.parse(savedConfigs); } catch { userConfigs = []; } }
+          setProjectTypeConfigs([...systemProjectTypes, ...userConfigs]);
+        }
+      } catch (error) {
+        console.warn('Failed to fetch shared config from Databricks, using localStorage:', error);
+        const savedBrands = localStorage.getItem('cohive_available_brands');
+        if (savedBrands) { try { setAvailableBrands(JSON.parse(savedBrands)); } catch { setAvailableBrands(DEFAULT_BRANDS); } } else { setAvailableBrands(DEFAULT_BRANDS); localStorage.setItem('cohive_available_brands', JSON.stringify(DEFAULT_BRANDS)); }
+        let userProjectTypes: string[] = [];
+        const savedProjectTypes = localStorage.getItem('cohive_available_project_types');
+        if (savedProjectTypes) { try { userProjectTypes = JSON.parse(savedProjectTypes); } catch { userProjectTypes = []; } }
+        const allProjectTypes = [...new Set([...systemProjectTypeNames, ...userProjectTypes])].sort();
+        setAvailableProjectTypes(allProjectTypes);
+        const savedConfigs = localStorage.getItem('cohive_project_type_configs');
+        let userConfigs: ProjectTypeConfig[] = [];
+        if (savedConfigs) { try { userConfigs = JSON.parse(savedConfigs); } catch { userConfigs = []; } }
+        setProjectTypeConfigs([...systemProjectTypes, ...userConfigs]);
+      }
+    };
     loadSharedConfig();
   }, []);
 
@@ -395,9 +453,6 @@ export default function ProcessWireframe() {
         } catch (error) {
           setUserEmail('unknown@databricks.com');
         }
-        // Re-fetch shared config now auth is confirmed —
-        // the on-mount call runs before auth and may have returned empty
-        await loadSharedConfig();
       }
     };
     fetchUserEmail();
@@ -414,69 +469,6 @@ export default function ProcessWireframe() {
     };
     loadResearchFilesFromDatabricks();
   }, [isDatabricksAuthenticated, isCheckingAuth, currentTemplate]);
-
-  // ── Component-scope so handleAddBrand, useEffect, and auth confirm can all call it ──
-  const loadSharedConfig = async () => {
-    const DEFAULT_BRANDS = ['Nike', 'Adidas'];
-    const systemProjectTypeNames = systemProjectTypes.map(pt => pt.projectType);
-    try {
-      const result = await fetchSharedConfig();
-      if (result.success) {
-        const brands = result.brands || [];
-        if (brands.length > 0) {
-          setAvailableBrands(brands);
-          localStorage.setItem('cohive_available_brands', JSON.stringify(brands));
-        } else {
-          const savedBrands = localStorage.getItem('cohive_available_brands');
-          if (savedBrands) setAvailableBrands(JSON.parse(savedBrands));
-          else setAvailableBrands(DEFAULT_BRANDS);
-        }
-        const userProjectTypes = result.projectTypes || [];
-        if (userProjectTypes.length > 0) {
-          localStorage.setItem('cohive_available_project_types', JSON.stringify(userProjectTypes));
-        }
-        const saved = localStorage.getItem('cohive_available_project_types');
-        const merged = [...new Set([...systemProjectTypeNames, ...(userProjectTypes.length > 0 ? userProjectTypes : (saved ? JSON.parse(saved) : []))])].sort();
-        setAvailableProjectTypes(merged);
-      } else {
-        const savedBrands = localStorage.getItem('cohive_available_brands');
-        if (savedBrands) { setAvailableBrands(JSON.parse(savedBrands)); }
-        else { setAvailableBrands(DEFAULT_BRANDS); }
-        const savedPT = localStorage.getItem('cohive_available_project_types');
-        const merged = [...new Set([...systemProjectTypeNames, ...(savedPT ? JSON.parse(savedPT) : [])])].sort();
-        setAvailableProjectTypes(merged);
-      }
-      try {
-        const configResult = await fetchProjectTypeConfigs();
-        let userConfigs: ProjectTypeConfig[] = [];
-        if (configResult.success && configResult.configs) {
-          userConfigs = configResult.configs;
-          localStorage.setItem('cohive_project_type_configs', JSON.stringify(userConfigs));
-        } else {
-          const savedConfigs = localStorage.getItem('cohive_project_type_configs');
-          if (savedConfigs) { try { userConfigs = JSON.parse(savedConfigs); } catch { userConfigs = []; } }
-        }
-        setProjectTypeConfigs([...systemProjectTypes, ...userConfigs]);
-      } catch {
-        const savedConfigs = localStorage.getItem('cohive_project_type_configs');
-        let userConfigs: ProjectTypeConfig[] = [];
-        if (savedConfigs) { try { userConfigs = JSON.parse(savedConfigs); } catch { userConfigs = []; } }
-        setProjectTypeConfigs([...systemProjectTypes, ...userConfigs]);
-      }
-    } catch (error) {
-      console.warn('Failed to fetch shared config from Databricks, using localStorage:', error);
-      const savedBrands = localStorage.getItem('cohive_available_brands');
-      if (savedBrands) { try { setAvailableBrands(JSON.parse(savedBrands)); } catch { setAvailableBrands(DEFAULT_BRANDS); } }
-      else { setAvailableBrands(DEFAULT_BRANDS); }
-      const savedPT = localStorage.getItem('cohive_available_project_types');
-      const merged = [...new Set([...systemProjectTypeNames, ...(savedPT ? JSON.parse(savedPT) : [])])].sort();
-      setAvailableProjectTypes(merged);
-      const savedConfigs = localStorage.getItem('cohive_project_type_configs');
-      let userConfigs: ProjectTypeConfig[] = [];
-      if (savedConfigs) { try { userConfigs = JSON.parse(savedConfigs); } catch { userConfigs = []; } }
-      setProjectTypeConfigs([...systemProjectTypes, ...userConfigs]);
-    }
-  };
 
   const getExistingFiles = (brand: string, projectType: string): ProjectFile[] => {
     if (!brand || !projectType) return [];
@@ -854,6 +846,10 @@ export default function ProcessWireframe() {
     setIterationGems(prev => [...prev, gem]);
   };
 
+  const handleAddIterationDirection = (direction: string) => {
+    setIterationDirections(prev => [...prev, direction]);
+  };
+
   const handleSaveRecommendation = (recommendation: string, hexId: string) => {
     const brand = responses['Enter']?.[0]?.trim() || 'General';
     const projectType = responses['Enter']?.[1]?.trim() || 'General';
@@ -952,17 +948,12 @@ export default function ProcessWireframe() {
   const handleAddBrand = async (brand: string) => {
     if (!brand.trim() || availableBrands.includes(brand.trim())) return;
     const trimmedBrand = brand.trim();
-    // Optimistic local update
-    setAvailableBrands(prev => [...prev, trimmedBrand].sort());
-    localStorage.setItem('cohive_available_brands', JSON.stringify([...availableBrands, trimmedBrand].sort()));
+    const updated = [...availableBrands, trimmedBrand].sort();
+    setAvailableBrands(updated);
+    localStorage.setItem('cohive_available_brands', JSON.stringify(updated));
     try {
       const result = await addSharedConfigItem('brand', trimmedBrand, userEmail);
-      if (result.success) {
-        // Re-fetch from Databricks so list is authoritative for this user
-        await loadSharedConfig();
-      } else {
-        console.warn(`⚠️ Failed to save brand to Databricks: ${result.error}`);
-      }
+      if (!result.success) console.warn(`⚠️ Failed to save brand to Databricks: ${result.error}`);
     } catch (error) { console.warn('Failed to save brand to Databricks:', error); }
   };
 
@@ -1105,6 +1096,9 @@ export default function ProcessWireframe() {
               // Clear iteration gems when navigating to Enter — iteration boundary
               if (stepId === 'Enter') {
                 setIterationGems([]);
+        setIterationChecks([]);
+        setIterationCoal([]);
+        setIterationDirections([]);
               }
               if (stepId === 'Enter' && !iterationSaved) {
                 setResponses(prev => ({ ...prev, 'Findings': { ...prev['Findings'], [0]: '' } }));
@@ -1238,7 +1232,7 @@ export default function ProcessWireframe() {
                          ) : activeStepId === 'review' ? (
                   <ReviewView projectFiles={projectFiles} onDeleteFiles={handleDeleteProjectFiles} />
                          ) : isCentralHex ? (
-                  <CentralHexView key={activeStepId} hexId={activeStepId} hexLabel={currentContent.title} researchFiles={researchFiles} onExecute={handleCentralHexExecute} databricksInstructions={currentTemplate?.databricksInstructions?.[activeStepId] || ''} previousExecutions={hexExecutions[activeStepId] || []} onSaveRecommendation={handleSaveRecommendation} projectType={responses['Enter']?.[1] || ''} userBrand={responses['Enter']?.[0] || ''} lastResults={lastAssessmentResults} conversationMode={currentTemplate?.conversationSettings?.conversationMode || 'multi-round'} modelEndpoint={currentTemplate?.conversationSettings?.modelEndpoint || 'databricks-claude-haiku-4-5'} requestMode={deriveRequestMode()} userEmail={userEmail} userRole={userRole} onContextChange={(files, step) => setHexWidgetContext({ files, step })} />
+                  <CentralHexView key={activeStepId} hexId={activeStepId} hexLabel={currentContent.title} researchFiles={researchFiles} onExecute={handleCentralHexExecute} databricksInstructions={currentTemplate?.databricksInstructions?.[activeStepId] || ''} previousExecutions={hexExecutions[activeStepId] || []} anyPriorPersonaRun={['Consumers', 'Luminaries', 'Colleagues', 'cultural', 'Grade'].some(h => hexExecutions[h]?.length > 0)} onSaveRecommendation={handleSaveRecommendation} projectType={responses['Enter']?.[1] || ''} userBrand={responses['Enter']?.[0] || ''} lastResults={lastAssessmentResults} conversationMode={currentTemplate?.conversationSettings?.conversationMode || 'multi-round'} modelEndpoint={currentTemplate?.conversationSettings?.modelEndpoint || 'databricks-claude-haiku-4-5'} requestMode={deriveRequestMode()} userEmail={userEmail} userRole={userRole} onContextChange={(files, step) => setHexWidgetContext({ files, step })} onAddIterationDirection={handleAddIterationDirection} iterationDirections={iterationDirections} />
                         ) : (
                     <>
                     {wisdomSuccessMessage && activeStepId === 'Wisdom' && (
@@ -1555,7 +1549,10 @@ export default function ProcessWireframe() {
                                             setIterationSaved(true);
                                             localStorage.setItem('cohive_iteration_saved', 'true');
                                             setLastAssessmentResults(null);
-                                            setIterationGems([]); // iteration boundary — clear gems
+                                            setIterationGems([]);
+        setIterationChecks([]);
+        setIterationCoal([]);
+        setIterationDirections([]); // iteration boundary — clear gems
                                           } else { alert(`Failed to save to Databricks: ${result.error || 'Unknown error'}`); }
                                         }
                                       }}
@@ -1785,6 +1782,9 @@ export default function ProcessWireframe() {
           hexExecutions={assessmentModalProps.hexExecutions}
           // Iteration gems — persists across modal opens, cleared at iteration boundary
           iterationGems={iterationGems}
+          iterationChecks={iterationChecks}
+          iterationCoal={iterationCoal}
+          iterationDirections={iterationDirections}
           onGemSaved={handleGemSaved}
         />
       )}

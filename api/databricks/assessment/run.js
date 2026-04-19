@@ -130,15 +130,15 @@ EXAMPLE FILES (cross-brand reference only): ${exampleFileNames.join(', ')}
 KNOWLEDGE MODE: KNOWLEDGE BASE ONLY — GENERAL KNOWLEDGE HARD FORBIDDEN
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🚫 You are STRICTLY FORBIDDEN from using general knowledge.
-🚫 Every single claim MUST be sourced from the KB files listed below.
-🚫 If the KB files do not contain evidence for a claim, DO NOT MAKE IT.
+🚫 Every single claim MUST be sourced from the Knowledge Base files listed below.
+🚫 If the Knowledge Base files do not contain evidence for a claim, DO NOT MAKE IT.
 🚫 If you cannot cite it, you cannot say it. No exceptions whatsoever.
 ✅ Cite every claim as [Source: exact_filename.ext]
 
-AUTHORISED KB FILES (copy filenames exactly — case matters):
+AUTHORISED KNOWLEDGE BASE FILES (copy filenames exactly — case matters):
 ${fileList}
 
-HALLUCINATION RULE: If you cannot find the answer in the KB files,
+HALLUCINATION RULE: If you cannot find the answer in the Knowledge Base files,
 write: "The Knowledge Base does not contain sufficient information on this point."${exampleNote}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
   }
@@ -148,15 +148,15 @@ write: "The Knowledge Base does not contain sufficient information on this point
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 KNOWLEDGE MODE: KNOWLEDGE BASE STRONGLY PREFERRED
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚠️  STRONGLY prefer KB files over general knowledge at all times.
-⚠️  Only use general knowledge when the KB files are completely silent on a point.
+⚠️  STRONGLY prefer Knowledge Base files over general knowledge at all times.
+⚠️  Only use general knowledge when the Knowledge Base files are completely silent on a point.
 ⚠️  When you do use general knowledge, you MUST:
-    (a) Flag it as [General Knowledge — KB silent on this point]
-    (b) Explain why the KB files did not cover it
-✅ Cite KB claims as [Source: exact_filename.ext]
-✅ Never fabricate — if the KB is silent and you lack certainty, say so.
+    (a) Flag it as [General Knowledge — Knowledge Base silent on this point]
+    (b) Explain why the Knowledge Base files did not cover it
+✅ Cite Knowledge Base claims as [Source: exact_filename.ext]
+✅ Never fabricate — if the Knowledge Base is silent and you lack certainty, say so.
 
-AUTHORISED KB FILES:
+AUTHORISED KNOWLEDGE BASE FILES:
 ${fileList}${exampleNote}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
   }
@@ -164,15 +164,15 @@ ${fileList}${exampleNote}
   // equal-weight (default)
   return `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-KNOWLEDGE MODE: KB + GENERAL KNOWLEDGE (EQUAL WEIGHT)
+KNOWLEDGE MODE: KNOWLEDGE BASE + GENERAL KNOWLEDGE (EQUAL WEIGHT)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✅ You may draw on both KB files AND general knowledge.
+✅ You may draw on both Knowledge Base files AND general knowledge.
 ✅ ALL claims — from either source — MUST be cited. No uncited assertions ever.
-✅ Cite KB files as [Source: exact_filename.ext]
+✅ Cite Knowledge Base files as [Source: exact_filename.ext]
 ✅ Cite general knowledge as [General Knowledge]
 ✅ Never fabricate facts — if uncertain, say so explicitly.
 
-AUTHORISED KB FILES:
+AUTHORISED KNOWLEDGE BASE FILES:
 ${fileList}${exampleNote}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 }
@@ -458,7 +458,7 @@ function buildModeratorOpeningPrompt({
   const kbModeLabel = kbMode === 'hard-forbidden'
     ? 'Knowledge Base ONLY — General Knowledge FORBIDDEN'
     : kbMode === 'strong-preference'
-      ? 'Knowledge Base Preferred — General Knowledge only if KB is silent'
+      ? 'Knowledge Base Preferred — General Knowledge only if Knowledge Base is silent'
       : 'Knowledge Base + General Knowledge (equal weight)';
 
   return `You are the Moderator for this ${brand} assessment session.
@@ -596,14 +596,14 @@ Format:
 [Minority positions ${brand} should not ignore — with citations]
 
 ### Open Questions
-[What the KB or this session could not resolve]
+[What the Knowledge Base or this session could not resolve]
 
 ${projectType === 'Big Idea' ? `### The Recommended Big Idea(s) for ${brand}
 
 **Frontrunner 1: [Idea Name]**
 [2–3 sentence articulation of the Big Idea]
 *Why it won:* [What the debate established — Brand Truth, Cultural Relevance, Longevity, Distinctiveness scores]
-*KB Evidence:* [Key citations]
+*Knowledge Base Evidence:* [Key citations]
 
 **Frontrunner 2 (if applicable): [Idea Name]**
 [Description and rationale]
@@ -643,7 +643,7 @@ A Big Idea is the central organising thought for the brand — not a campaign, n
 For each of your 3 ideas:
 1. NAME the idea (a short memorable phrase)
 2. DESCRIBE it in 2–3 sentences — what does the brand stand for, what does it mean in the world?
-3. GROUND it — cite 1–2 pieces of KB evidence that make this idea true for ${brand}
+3. GROUND it — cite 1–2 pieces of Knowledge Base evidence that make this idea true for ${brand}
 4. STATE what makes it distinctive — why could ONLY ${brand} own this?
 
 Your 3 ideas must be genuinely different — not variations on a single theme. Surprise the room.`
@@ -661,15 +661,15 @@ You are assessing a single idea. Be rigorous. Score it 1–10. Ground every judg
   const outputFormat = isBigIdea
     ? `**Big Idea 1: [Name]**
 [2–3 sentence description of the central brand idea]
-*Brand Truth:* [KB citation] · *Why only ${brand}:* [What makes it ownable]
+*Brand Truth:* [Knowledge Base citation] · *Why only ${brand}:* [What makes it ownable]
 
 **Big Idea 2: [Name]**
 [2–3 sentence description]
-*Brand Truth:* [KB citation] · *Why only ${brand}:* [What makes it ownable]
+*Brand Truth:* [Knowledge Base citation] · *Why only ${brand}:* [What makes it ownable]
 
 **Big Idea 3: [Name]**
 [2–3 sentence description]
-*Brand Truth:* [KB citation] · *Why only ${brand}:* [What makes it ownable]`
+*Brand Truth:* [Knowledge Base citation] · *Why only ${brand}:* [What makes it ownable]`
     : requestMode === 'get-inspired'
     ? `**Ideas Generated:**
 1. [Idea name]: [Specific description with enough detail to act on] [Source: ...]
@@ -747,7 +747,7 @@ FOR EACH KEY IDEA YOU ADDRESS:
 
 DEBATE RULES:
 - Kill ideas any brand in the category could claim — generic = dead
-- Fight for ideas with genuine KB grounding — defend them with evidence
+- Fight for ideas with genuine Knowledge Base grounding — defend them with evidence
 - Propose combinations when you see complementary strengths
 - By the end of this round the room should converge on 1–2 frontrunners
 - Address other personas by name when agreeing or challenging`
@@ -757,7 +757,7 @@ Build on, challenge, or reject specific ideas from prior rounds — name the per
 Which ideas are strongest? Which are flawed? Can you combine ideas into something better?`
     : ideaElements?.length > 1
       ? `ROUND ${roundNumber} MODE: SCORING CHALLENGE
-Challenge the scores and rankings from prior rounds. If you disagree with another persona's verdict, say so and back it with KB evidence.
+Challenge the scores and rankings from prior rounds. If you disagree with another persona's verdict, say so and back it with Knowledge Base evidence.
 Can you identify a hybrid element that beats all individual options?`
       : `ROUND ${roundNumber} MODE: CRITICAL DEBATE
 Challenge the assessments from prior rounds. Was someone too harsh? Too generous? Call it out with evidence.
@@ -780,7 +780,7 @@ ${modeBlock}
 ROUND ${roundNumber} DEBATE RULES — ALL MANDATORY:
 1. You MUST reference at least 2 other personas by name: ${othersNames.join(', ')}
 2. For each: either agree-and-extend their specific point OR directly challenge it with evidence
-3. If you think someone is WRONG, say so explicitly and cite KB evidence against their claim
+3. If you think someone is WRONG, say so explicitly and cite Knowledge Base evidence against their claim
 4. Score or rank ideas/elements from prior rounds from your expert perspective
 5. Flag at least 1 BLIND SPOT — something important no one has addressed yet
 6. Ask ONE probing question directed at a specific named persona
@@ -829,14 +829,14 @@ function buildFactCheckerPrompt({ fullTranscript, kbFileNames, kbMode }) {
   const modeNote = kbMode === 'hard-forbidden'
     ? '⚠️ IMPORTANT: [General Knowledge] citations are a VIOLATION in this session — flag every single one.'
     : kbMode === 'strong-preference'
-      ? '⚠️ NOTE: [General Knowledge] citations are allowed but should be rare — flag any where KB evidence clearly exists.'
+      ? '⚠️ NOTE: [General Knowledge] citations are allowed but should be rare — flag any where Knowledge Base evidence clearly exists.'
       : '✅ NOTE: Both [Source: ...] and [General Knowledge] citations are valid in this session.';
 
   return `You are the Fact-Checker. Your ONLY job is citation verification — not analysis, not commentary.
 
 ${modeNote}
 
-AUTHORISED KB FILES (exact names — case matters):
+AUTHORISED KNOWLEDGE BASE FILES (exact names — case matters):
 ${kbFileNames.map(f => `- ${f}`).join('\n')}
 
 FULL TRANSCRIPT TO AUDIT:
@@ -852,8 +852,8 @@ Format:
 ### Fact-Checker
 
 **Citation Audit:**
-- ✅ [Source: filename.ext] — Verified, matches KB
-- ❌ [Source: wrong_name.pdf] — NOT found in KB (used by [Persona Name], Round [N])
+- ✅ [Source: filename.ext] — Verified, matches Knowledge Base
+- ❌ [Source: wrong_name.pdf] — NOT found in Knowledge Base (used by [Persona Name], Round [N])
 ${kbMode === 'hard-forbidden' ? '- 🚫 [General Knowledge] — FORBIDDEN in this session (used by [Persona Name], Round [N])' : ''}
 
 **Uncited Claims Flagged:**
@@ -1588,7 +1588,10 @@ ${iterationDirections.map((d, i) => `${i + 1}. ${d}`).join('\n')}
     console.log(`[Assessment] Round 1 complete (${round1Responses.length} parallel responses)`);
 
     // ── Round 2+: Debate rounds ──────────────────────────────────────────────
-    const actualDebateRounds = Math.max(1, Math.min(numDebateRounds, MAX_DEBATE_ROUNDS));
+    // Skip debate rounds if there is only one persona — a single voice has no one to debate.
+    const actualDebateRounds = shuffledPersonaData.length <= 1
+      ? 0
+      : Math.max(1, Math.min(numDebateRounds, MAX_DEBATE_ROUNDS));
 
     for (let d = 1; d <= actualDebateRounds; d++) {
       const roundNumber = d + 1;
