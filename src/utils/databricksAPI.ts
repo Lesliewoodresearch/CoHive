@@ -564,8 +564,8 @@ export async function fetchSharedConfig(): Promise<{
   try {
     console.log('📋 Fetching shared brands and project types...');
     if (isFigmaMake()) return { success: true, brands: [], projectTypes: [] };
-    const { isAuthenticated: authStatus } = await import('./databricksAuth').then(m => ({ isAuthenticated: m.isAuthenticated }));
-    if (!authStatus()) return { success: true, brands: [], projectTypes: [] };
+    // No client-side auth guard — the server uses env credentials for this endpoint,
+    // so it works for all workspace members regardless of individual auth state.
     const response = await fetch('/api/databricks/config/brands-projects', {
       method: 'GET', headers: { 'Content-Type': 'application/json' },
     });
@@ -634,8 +634,7 @@ export async function fetchProjectTypeConfigs(): Promise<{
   try {
     console.log('📋 Fetching project type configurations...');
     if (isFigmaMake()) return { success: true, configs: [] };
-    const { isAuthenticated: authStatus } = await import('./databricksAuth').then(m => ({ isAuthenticated: m.isAuthenticated }));
-    if (!authStatus()) return { success: true, configs: [] };
+    // No client-side auth guard — server uses env credentials.
     const response = await fetch('/api/databricks/config/project-type-prompts', {
       method: 'GET', headers: { 'Content-Type': 'application/json' },
     });

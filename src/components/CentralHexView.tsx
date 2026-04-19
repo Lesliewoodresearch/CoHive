@@ -118,18 +118,12 @@ export function CentralHexView({
   const [showHistory, setShowHistory] = useState(false);
   const [sendToKnowledgeBase, setSendToKnowledgeBase] = useState(false);
   const [recommendationText, setRecommendationText] = useState("");
-  const [showGemInput, setShowGemInput] = useState(false);
-  const [gemText, setGemText] = useState("");
   const [showPriorPersonaModal, setShowPriorPersonaModal] = useState(false);
   const [pendingExecuteFiles, setPendingExecuteFiles] = useState<string[]>([]);
   const [pendingExecuteType, setPendingExecuteType] = useState<string[]>([]);
   const [pendingExecuteAssessment, setPendingExecuteAssessment] = useState('');
-  const [showCheckInput, setShowCheckInput] = useState(false);
   const [showDirectionModal, setShowDirectionModal] = useState(false);
   const [directionText, setDirectionText] = useState('');
-  const [checkText, setCheckText] = useState("");
-  const [showCoalInput, setShowCoalInput] = useState(false);
-  const [coalText, setCoalText] = useState("");
 
   // Competitors-specific state
   const [selectedCompetitor, setSelectedCompetitor] = useState<string>("");
@@ -1215,152 +1209,37 @@ export function CentralHexView({
 
       {/* Send Recommendations to Knowledge base */}
       <div className="p-3 border-t-2 border-gray-300 mt-4">
-        {/* Gem Highlight Feature */}
-        <div className="mb-4">
-          <button
-            className="flex items-center gap-2 cursor-pointer mb-2"
-            onClick={() => setShowGemInput(!showGemInput)}
-          >
-            <img src={gemIcon} alt="gem" className="w-7 h-7 flex-shrink-0" />
-            <span className="text-gray-900">Highlight an element that you like</span>
-          </button>
-          
-          {showGemInput && (
-            <div className="space-y-2 ml-7">
-              <textarea
-                className="w-full h-24 border-2 border-gray-300 bg-white rounded p-2 text-gray-700 resize-none focus:outline-none focus:border-gray-400"
-                placeholder="Enter the element you would like to highlight as a gem."
-                value={gemText}
-                onChange={(e) => setGemText(e.target.value)}
-              />
-              <button
-                className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={!gemText.trim()}
-                onClick={() => {
-                  if (gemText.trim()) {
-                    const existingGems = JSON.parse(localStorage.getItem('cohive_gems') || '[]');
-                    const newGem = {
-                      id: Date.now().toString(),
-                      text: gemText,
-                      hexId: hexId,
-                      hexLabel: hexLabel,
-                      timestamp: Date.now()
-                    };
-                    const updatedGems = [...existingGems, newGem];
-                    localStorage.setItem('cohive_gems', JSON.stringify(updatedGems));
-                    alert('Gem saved successfully!');
-                    setGemText('');
-                    setShowGemInput(false);
-                  }
-                }}
-              >
-                Save Gem
-              </button>
-            </div>
-          )}
+        {/* Gem — display only, interaction happens in assessment modal */}
+        <div className="mb-3 flex items-center gap-2">
+          <img src={gemIcon} alt="gem" className="w-7 h-7 flex-shrink-0" />
+          <span className="text-gray-900">Highlight an element that you like</span>
         </div>
 
-        {/* Check — Mark an element of interest */}
-        <div className="mb-4">
-          <button
-            className="flex items-center gap-2 cursor-pointer mb-2"
-            onClick={() => setShowCheckInput(!showCheckInput)}
-          >
-            <svg viewBox="0 0 32 32" className="w-7 h-7 flex-shrink-0" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <linearGradient id="chkBg" x1="0%" y1="50%" x2="100%" y2="50%">
-                  <stop offset="0%" stopColor="#0F766E" />
-                  <stop offset="50%" stopColor="#7C3AED" />
-                  <stop offset="100%" stopColor="#DC2626" />
-                </linearGradient>
-                <radialGradient id="chkGold" cx="50%" cy="50%" r="30%">
-                  <stop offset="0%" stopColor="#FBBF24" stopOpacity="0.9" />
-                  <stop offset="100%" stopColor="#FBBF24" stopOpacity="0" />
-                </radialGradient>
-              </defs>
-              <polygon points="16,2 29,9 29,23 16,30 3,23 3,9" fill="url(#chkBg)" />
-              <polygon points="16,2 29,9 29,23 16,30 3,23 3,9" fill="url(#chkGold)" />
-              <path d="M9 16.5l5 5 9.5-10" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-            </svg>
-            <span className="text-gray-900">Check elements of interest</span>
-          </button>
-          {showCheckInput && (
-            <div className="space-y-2 ml-9">
-              <textarea
-                className="w-full h-24 border-2 border-gray-300 bg-white rounded p-2 text-gray-700 resize-none focus:outline-none focus:border-purple-400"
-                placeholder="Describe an element you want to note as interesting or worth exploring."
-                value={checkText}
-                onChange={(e) => setCheckText(e.target.value)}
-              />
-              <button
-                className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={!checkText.trim()}
-                onClick={() => {
-                  if (checkText.trim()) {
-                    const existing = JSON.parse(localStorage.getItem('cohive_checks') || '[]');
-                    const newCheck = {
-                      id: Date.now().toString(),
-                      text: checkText,
-                      hexId: hexId,
-                      hexLabel: hexLabel,
-                      timestamp: Date.now()
-                    };
-                    localStorage.setItem('cohive_checks', JSON.stringify([...existing, newCheck]));
-                    alert('Noted as a check!');
-                    setCheckText('');
-                    setShowCheckInput(false);
-                  }
-                }}
-              >
-                Save Check
-              </button>
-            </div>
-          )}
+        {/* Check — display only, interaction happens in assessment modal */}
+        <div className="mb-3 flex items-center gap-2">
+          <svg viewBox="0 0 32 32" className="w-7 h-7 flex-shrink-0" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="chkBg" x1="0%" y1="50%" x2="100%" y2="50%">
+                <stop offset="0%" stopColor="#0F766E" />
+                <stop offset="50%" stopColor="#7C3AED" />
+                <stop offset="100%" stopColor="#DC2626" />
+              </linearGradient>
+              <radialGradient id="chkGold" cx="50%" cy="50%" r="30%">
+                <stop offset="0%" stopColor="#FBBF24" stopOpacity="0.9" />
+                <stop offset="100%" stopColor="#FBBF24" stopOpacity="0" />
+              </radialGradient>
+            </defs>
+            <polygon points="16,2 29,9 29,23 16,30 3,23 3,9" fill="url(#chkBg)" />
+            <polygon points="16,2 29,9 29,23 16,30 3,23 3,9" fill="url(#chkGold)" />
+            <path d="M9 16.5l5 5 9.5-10" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          </svg>
+          <span className="text-gray-900">Check elements of interest</span>
         </div>
 
-        {/* Coal — Flag an element to avoid */}
-        <div className="mb-4">
-          <button
-            className="flex items-center gap-2 text-gray-700 hover:text-gray-900 cursor-pointer mb-2"
-            onClick={() => setShowCoalInput(!showCoalInput)}
-          >
-            <span className="text-2xl leading-none w-7 flex items-center justify-center">🪨</span>
-            <span className="text-gray-900">Flag an element you want to avoid</span>
-          </button>
-
-          {showCoalInput && (
-            <div className="space-y-2 ml-7">
-              <textarea
-                className="w-full h-24 border-2 border-gray-300 bg-white rounded p-2 text-gray-700 resize-none focus:outline-none focus:border-gray-400"
-                placeholder="Describe the direction, framing, or idea you want future prompts to avoid."
-                value={coalText}
-                onChange={(e) => setCoalText(e.target.value)}
-              />
-              <button
-                className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={!coalText.trim()}
-                onClick={() => {
-                  if (coalText.trim()) {
-                    const existingCoal = JSON.parse(localStorage.getItem('cohive_coal') || '[]');
-                    const newCoal = {
-                      id: Date.now().toString(),
-                      text: coalText,
-                      hexId: hexId,
-                      hexLabel: hexLabel,
-                      timestamp: Date.now()
-                    };
-                    const updatedCoal = [...existingCoal, newCoal];
-                    localStorage.setItem('cohive_coal', JSON.stringify(updatedCoal));
-                    alert('Coal saved — this direction will be avoided in future prompts.');
-                    setCoalText('');
-                    setShowCoalInput(false);
-                  }
-                }}
-              >
-                Save Coal
-              </button>
-            </div>
-          )}
+        {/* Coal — display only, interaction happens in assessment modal */}
+        <div className="mb-3 flex items-center gap-2">
+          <span className="text-2xl leading-none w-7 flex items-center justify-center">🪨</span>
+          <span className="text-gray-900">Flag an element you want to avoid</span>
         </div>
 
 

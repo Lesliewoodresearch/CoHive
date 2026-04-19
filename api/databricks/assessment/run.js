@@ -558,7 +558,7 @@ Format:
 }
 
 function buildModeratorClosingPrompt({
-  allTranscript, brand, taskDescription, assessmentTypeLabel, requestMode, ideaElements,
+  allTranscript, brand, projectType = '', taskDescription, assessmentTypeLabel, requestMode, ideaElements,
 }) {
   const verdictFocus = requestMode === 'get-inspired'
     ? `Synthesize the BEST ideas generated across all rounds. Rank the top 3 for ${brand} to act on. Be decisive.`
@@ -1675,7 +1675,7 @@ ${iterationDirections.map((d, i) => `${i + 1}. ${d}`).join('\n')}
       messages: [{
         role: 'user',
         content: buildModeratorClosingPrompt({
-          allTranscript: fullTranscript, brand, taskDescription,
+          allTranscript: fullTranscript, brand, projectType, taskDescription,
           assessmentTypeLabel, requestMode, ideaElements,
         }),
       }],

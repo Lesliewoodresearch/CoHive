@@ -15,7 +15,7 @@ import { DatabricksFileSaver } from './DatabricksFileSaver';
 import { InterviewDialog } from './InterviewDialog';
 import { AssessmentModal, type IdeaElement, type IterationGem, type KbMode, type RequestMode } from './AssessmentModal';
 import { MarkdownViewer } from './MarkdownViewer';
-import { LoadingGem, SpinHex } from './LoadingGem';
+import { LoadingGem } from './LoadingGem';
 import cohiveLogo from 'figma:asset/88105c0c8621f3d41d65e5be3ae75558f9de1753.png';
 import { uploadToKnowledgeBase, downloadFile, listKnowledgeBaseFiles, type KnowledgeBaseFile, generateSummary, fetchSharedConfig, addSharedConfigItem, fetchProjectTypeConfigs, type ProjectTypeConfig } from '../utils/databricksAPI';
 import { isAuthenticated, getCurrentUserEmail, getValidSession } from '../utils/databricksAuth';
@@ -133,9 +133,6 @@ export default function ProcessWireframe() {
   // Gems accumulated across all modal opens within the current iteration.
   // Cleared when the user saves an iteration or returns to Enter hex.
   const [iterationGems, setIterationGems] = useState<IterationGem[]>([]);
-  const [iterationChecks, setIterationChecks] = useState<Array<{ text: string; hexId: string; hexLabel: string }>>([]);
-  const [iterationCoal, setIterationCoal] = useState<Array<{ text: string; hexId: string; hexLabel: string }>>([]);
-  const [iterationDirections, setIterationDirections] = useState<string[]>([]);
 
   // Assessment Modal state
   const [assessmentModalOpen, setAssessmentModalOpen] = useState(false);
@@ -181,8 +178,6 @@ export default function ProcessWireframe() {
   
   const [wisdomSuccessMessage, setWisdomSuccessMessage] = useState<string | null>(null);
   const [isDatabricksLoading, setIsDatabricksLoading] = useState(false);
-  const [isLoadingKBFiles, setIsLoadingKBFiles] = useState(false);
-  const [isLoadingConfig, setIsLoadingConfig] = useState(false);
   const [databricksLoadingMessage, setDatabricksLoadingMessage] = useState('Communicating with Databricks...');
   const [recordedAudioBlob, setRecordedAudioBlob] = useState<Blob | null>(null);
   const [recordedVideoBlob, setRecordedVideoBlob] = useState<Blob | null>(null);
@@ -271,66 +266,6 @@ export default function ProcessWireframe() {
     return file as File;
   };
 
-  // ── Shared config loader — component scope so it can be called anywhere ──────
-  const loadSharedConfig = async () => {
-    const DEFAULT_BRANDS = ['Nike', 'Adidas'];
-    const systemProjectTypeNames = systemProjectTypes.map(pt => pt.projectType);
-    setIsLoadingConfig(true);
-    try {
-      const result = await fetchSharedConfig();
-      if (result.success && result.brands && result.brands.length > 0) {
-        setAvailableBrands(result.brands);
-        localStorage.setItem('cohive_available_brands', JSON.stringify(result.brands));
-      } else {
-        const savedBrands = localStorage.getItem('cohive_available_brands');
-        if (savedBrands) { setAvailableBrands(JSON.parse(savedBrands)); } else { setAvailableBrands(DEFAULT_BRANDS); localStorage.setItem('cohive_available_brands', JSON.stringify(DEFAULT_BRANDS)); }
-      }
-      let userProjectTypes: string[] = [];
-      if (result.success && result.projectTypes && result.projectTypes.length > 0) {
-        userProjectTypes = result.projectTypes;
-        localStorage.setItem('cohive_available_project_types', JSON.stringify(userProjectTypes));
-      } else {
-        const savedProjectTypes = localStorage.getItem('cohive_available_project_types');
-        if (savedProjectTypes) { userProjectTypes = JSON.parse(savedProjectTypes); }
-      }
-      const allProjectTypes = [...new Set([...systemProjectTypeNames, ...userProjectTypes])].sort();
-      setAvailableProjectTypes(allProjectTypes);
-      try {
-        const configResult = await fetchProjectTypeConfigs();
-        let userConfigs: ProjectTypeConfig[] = [];
-        if (configResult.success && configResult.configs) {
-          userConfigs = configResult.configs;
-          localStorage.setItem('cohive_project_type_configs', JSON.stringify(userConfigs));
-        } else {
-          const savedConfigs = localStorage.getItem('cohive_project_type_configs');
-          if (savedConfigs) { try { userConfigs = JSON.parse(savedConfigs); } catch { userConfigs = []; } }
-        }
-        setProjectTypeConfigs([...systemProjectTypes, ...userConfigs]);
-      } catch (configError) {
-        console.warn('Failed to fetch project type configurations:', configError);
-        const savedConfigs = localStorage.getItem('cohive_project_type_configs');
-        let userConfigs: ProjectTypeConfig[] = [];
-        if (savedConfigs) { try { userConfigs = JSON.parse(savedConfigs); } catch { userConfigs = []; } }
-        setProjectTypeConfigs([...systemProjectTypes, ...userConfigs]);
-      }
-    } catch (error) {
-      console.warn('Failed to fetch shared config from Databricks, using localStorage:', error);
-      const savedBrands = localStorage.getItem('cohive_available_brands');
-      if (savedBrands) { try { setAvailableBrands(JSON.parse(savedBrands)); } catch { setAvailableBrands(DEFAULT_BRANDS); } } else { setAvailableBrands(DEFAULT_BRANDS); localStorage.setItem('cohive_available_brands', JSON.stringify(DEFAULT_BRANDS)); }
-      let userProjectTypes: string[] = [];
-      const savedProjectTypes = localStorage.getItem('cohive_available_project_types');
-      if (savedProjectTypes) { try { userProjectTypes = JSON.parse(savedProjectTypes); } catch { userProjectTypes = []; } }
-      const allProjectTypes = [...new Set([...systemProjectTypeNames, ...userProjectTypes])].sort();
-      setAvailableProjectTypes(allProjectTypes);
-      const savedConfigs = localStorage.getItem('cohive_project_type_configs');
-      let userConfigs: ProjectTypeConfig[] = [];
-      if (savedConfigs) { try { userConfigs = JSON.parse(savedConfigs); } catch { userConfigs = []; } }
-      setProjectTypeConfigs([...systemProjectTypes, ...userConfigs]);
-    } finally {
-      setIsLoadingConfig(false);
-    }
-  };
-
   useEffect(() => {
     const savedResponses = localStorage.getItem('cohive_responses');
     if (savedResponses) {
@@ -392,6 +327,61 @@ export default function ProcessWireframe() {
     const savedSelectedResearchFiles = localStorage.getItem('cohive_selected_research_files');
     if (savedSelectedResearchFiles) { try { setSelectedResearchFiles(JSON.parse(savedSelectedResearchFiles)); } catch (e) { console.error('Failed to load selected research files', e); } }
 
+    const loadSharedConfig = async () => {
+      const DEFAULT_BRANDS = ['Nike', 'Adidas'];
+      const systemProjectTypeNames = systemProjectTypes.map(pt => pt.projectType);
+      try {
+        const result = await fetchSharedConfig();
+        if (result.success && result.brands && result.brands.length > 0) {
+          setAvailableBrands(result.brands);
+          localStorage.setItem('cohive_available_brands', JSON.stringify(result.brands));
+        } else {
+          const savedBrands = localStorage.getItem('cohive_available_brands');
+          if (savedBrands) { setAvailableBrands(JSON.parse(savedBrands)); } else { setAvailableBrands(DEFAULT_BRANDS); localStorage.setItem('cohive_available_brands', JSON.stringify(DEFAULT_BRANDS)); }
+        }
+        let userProjectTypes: string[] = [];
+        if (result.success && result.projectTypes && result.projectTypes.length > 0) {
+          userProjectTypes = result.projectTypes;
+          localStorage.setItem('cohive_available_project_types', JSON.stringify(userProjectTypes));
+        } else {
+          const savedProjectTypes = localStorage.getItem('cohive_available_project_types');
+          if (savedProjectTypes) { userProjectTypes = JSON.parse(savedProjectTypes); }
+        }
+        const allProjectTypes = [...new Set([...systemProjectTypeNames, ...userProjectTypes])].sort();
+        setAvailableProjectTypes(allProjectTypes);
+        try {
+          const configResult = await fetchProjectTypeConfigs();
+          let userConfigs: ProjectTypeConfig[] = [];
+          if (configResult.success && configResult.configs) {
+            userConfigs = configResult.configs;
+            localStorage.setItem('cohive_project_type_configs', JSON.stringify(userConfigs));
+          } else {
+            const savedConfigs = localStorage.getItem('cohive_project_type_configs');
+            if (savedConfigs) { try { userConfigs = JSON.parse(savedConfigs); } catch { userConfigs = []; } }
+          }
+          setProjectTypeConfigs([...systemProjectTypes, ...userConfigs]);
+        } catch (configError) {
+          console.warn('Failed to fetch project type configurations:', configError);
+          const savedConfigs = localStorage.getItem('cohive_project_type_configs');
+          let userConfigs: ProjectTypeConfig[] = [];
+          if (savedConfigs) { try { userConfigs = JSON.parse(savedConfigs); } catch { userConfigs = []; } }
+          setProjectTypeConfigs([...systemProjectTypes, ...userConfigs]);
+        }
+      } catch (error) {
+        console.warn('Failed to fetch shared config from Databricks, using localStorage:', error);
+        const savedBrands = localStorage.getItem('cohive_available_brands');
+        if (savedBrands) { try { setAvailableBrands(JSON.parse(savedBrands)); } catch { setAvailableBrands(DEFAULT_BRANDS); } } else { setAvailableBrands(DEFAULT_BRANDS); localStorage.setItem('cohive_available_brands', JSON.stringify(DEFAULT_BRANDS)); }
+        let userProjectTypes: string[] = [];
+        const savedProjectTypes = localStorage.getItem('cohive_available_project_types');
+        if (savedProjectTypes) { try { userProjectTypes = JSON.parse(savedProjectTypes); } catch { userProjectTypes = []; } }
+        const allProjectTypes = [...new Set([...systemProjectTypeNames, ...userProjectTypes])].sort();
+        setAvailableProjectTypes(allProjectTypes);
+        const savedConfigs = localStorage.getItem('cohive_project_type_configs');
+        let userConfigs: ProjectTypeConfig[] = [];
+        if (savedConfigs) { try { userConfigs = JSON.parse(savedConfigs); } catch { userConfigs = []; } }
+        setProjectTypeConfigs([...systemProjectTypes, ...userConfigs]);
+      }
+    };
     loadSharedConfig();
   }, []);
 
@@ -853,10 +843,6 @@ export default function ProcessWireframe() {
     setIterationGems(prev => [...prev, gem]);
   };
 
-  const handleAddIterationDirection = (direction: string) => {
-    setIterationDirections(prev => [...prev, direction]);
-  };
-
   const handleSaveRecommendation = (recommendation: string, hexId: string) => {
     const brand = responses['Enter']?.[0]?.trim() || 'General';
     const projectType = responses['Enter']?.[1]?.trim() || 'General';
@@ -955,36 +941,24 @@ export default function ProcessWireframe() {
   const handleAddBrand = async (brand: string) => {
     if (!brand.trim() || availableBrands.includes(brand.trim())) return;
     const trimmedBrand = brand.trim();
-    // Optimistic update so the UI responds immediately
     const updated = [...availableBrands, trimmedBrand].sort();
     setAvailableBrands(updated);
     localStorage.setItem('cohive_available_brands', JSON.stringify(updated));
     try {
       const result = await addSharedConfigItem('brand', trimmedBrand, userEmail);
-      if (result.success) {
-        // Re-fetch from Databricks so the list is authoritative for this user
-        // and will match what other workspace members see on their next load
-        await loadSharedConfig();
-      } else {
-        console.warn(`⚠️ Failed to save brand to Databricks: ${result.error}`);
-      }
+      if (!result.success) console.warn(`⚠️ Failed to save brand to Databricks: ${result.error}`);
     } catch (error) { console.warn('Failed to save brand to Databricks:', error); }
   };
 
   const handleAddProjectType = async (projectType: string) => {
     if (!projectType.trim() || availableProjectTypes.includes(projectType.trim())) return;
     const trimmedProjectType = projectType.trim();
-    // Optimistic update
     const updated = [...availableProjectTypes, trimmedProjectType].sort();
     setAvailableProjectTypes(updated);
     localStorage.setItem('cohive_available_project_types', JSON.stringify(updated));
     try {
       const result = await addSharedConfigItem('project_type', trimmedProjectType, userEmail);
-      if (result.success) {
-        await loadSharedConfig();
-      } else {
-        console.warn(`⚠️ Failed to save project type to Databricks: ${result.error}`);
-      }
+      if (!result.success) console.warn(`⚠️ Failed to save project type to Databricks: ${result.error}`);
     } catch (error) { console.warn('Failed to save project type to Databricks:', error); }
   };
 
@@ -1115,9 +1089,6 @@ export default function ProcessWireframe() {
               // Clear iteration gems when navigating to Enter — iteration boundary
               if (stepId === 'Enter') {
                 setIterationGems([]);
-        setIterationChecks([]);
-        setIterationCoal([]);
-        setIterationDirections([]);
               }
               if (stepId === 'Enter' && !iterationSaved) {
                 setResponses(prev => ({ ...prev, 'Findings': { ...prev['Findings'], [0]: '' } }));
@@ -1251,7 +1222,7 @@ export default function ProcessWireframe() {
                          ) : activeStepId === 'review' ? (
                   <ReviewView projectFiles={projectFiles} onDeleteFiles={handleDeleteProjectFiles} />
                          ) : isCentralHex ? (
-                  <CentralHexView key={activeStepId} hexId={activeStepId} hexLabel={currentContent.title} researchFiles={researchFiles} onExecute={handleCentralHexExecute} databricksInstructions={currentTemplate?.databricksInstructions?.[activeStepId] || ''} previousExecutions={hexExecutions[activeStepId] || []} onSaveRecommendation={handleSaveRecommendation} projectType={responses['Enter']?.[1] || ''} userBrand={responses['Enter']?.[0] || ''} lastResults={lastAssessmentResults} conversationMode={currentTemplate?.conversationSettings?.conversationMode || 'multi-round'} modelEndpoint={currentTemplate?.conversationSettings?.modelEndpoint || 'databricks-claude-haiku-4-5'} requestMode={deriveRequestMode()} userEmail={userEmail} userRole={userRole} onContextChange={(files, step) => setHexWidgetContext({ files, step })} onAddIterationDirection={handleAddIterationDirection} iterationDirections={iterationDirections} />
+                  <CentralHexView key={activeStepId} hexId={activeStepId} hexLabel={currentContent.title} researchFiles={researchFiles} onExecute={handleCentralHexExecute} databricksInstructions={currentTemplate?.databricksInstructions?.[activeStepId] || ''} previousExecutions={hexExecutions[activeStepId] || []} onSaveRecommendation={handleSaveRecommendation} projectType={responses['Enter']?.[1] || ''} userBrand={responses['Enter']?.[0] || ''} lastResults={lastAssessmentResults} conversationMode={currentTemplate?.conversationSettings?.conversationMode || 'multi-round'} modelEndpoint={currentTemplate?.conversationSettings?.modelEndpoint || 'databricks-claude-haiku-4-5'} requestMode={deriveRequestMode()} userEmail={userEmail} userRole={userRole} onContextChange={(files, step) => setHexWidgetContext({ files, step })} />
                         ) : (
                     <>
                     {wisdomSuccessMessage && activeStepId === 'Wisdom' && (
@@ -1459,6 +1430,17 @@ export default function ProcessWireframe() {
                         if (idx === 1 && question === 'Share Your Wisdom') {
                           const inputMethod = responses[activeStepId]?.[0];
                           if (!inputMethod) return null;
+
+                          // Shared filename helper
+                          const wisdomFileName = (ext: string) => {
+                            const d = new Date();
+                            const dd = String(d.getDate()).padStart(2,'0');
+                            const mm = String(d.getMonth()+1).padStart(2,'0');
+                            const yy = String(d.getFullYear()).slice(-2);
+                            return `Wisdom_${userEmail.replace(/[@.]/g,'_')}_${dd}${mm}${yy}.${ext}`;
+                          };
+
+                          // TEXT — textarea + microphone (speech-to-text)
                           if (inputMethod === 'Text') {
                             return (
                               <div key={idx} className="mb-2">
@@ -1466,14 +1448,156 @@ export default function ProcessWireframe() {
                                   <span>Share Your Wisdom</span>
                                   {hasResponse && <CircleCheck className="w-5 h-5 text-green-600 flex-shrink-0" />}
                                 </label>
-                                <textarea className="w-full border-2 border-gray-300 bg-white rounded p-2 text-gray-700 focus:outline-none focus:border-blue-500" placeholder={`Share your ${insightType.toLowerCase()} insight here...`} rows={6} value={responses[activeStepId]?.[idx] || ''} onChange={(e) => handleResponseChange(idx, e.target.value)} />
+                                <div className="relative">
+                                  <textarea className="w-full border-2 border-gray-300 bg-white rounded p-2 pr-10 text-gray-700 focus:outline-none focus:border-blue-500" placeholder={`Share your ${insightType.toLowerCase()} insight here...`} rows={6} value={responses[activeStepId]?.[idx] || ''} onChange={(e) => handleResponseChange(idx, e.target.value)} />
+                                  <button
+                                    type="button"
+                                    title="Dictate (speech to text)"
+                                    className="absolute bottom-3 right-2 p-1.5 rounded-full bg-gray-100 hover:bg-blue-100 text-gray-500 hover:text-blue-600"
+                                    onClick={() => {
+                                      const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+                                      if (!SR) { alert('Speech recognition not supported in this browser.'); return; }
+                                      const rec = new SR();
+                                      rec.continuous = true; rec.interimResults = false; rec.lang = 'en-US';
+                                      rec.onresult = (e: any) => {
+                                        const transcript = Array.from(e.results).map((r: any) => r[0].transcript).join(' ');
+                                        handleResponseChange(idx, (responses[activeStepId]?.[idx] || '') + ' ' + transcript);
+                                      };
+                                      rec.start();
+                                      setTimeout(() => rec.stop(), 30000);
+                                    }}
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+                                  </button>
+                                </div>
                                 {hasResponse && (
-                                  <button onClick={async () => { const wisdom = responses[activeStepId]?.[idx]; if (!wisdom) return; const fileName = `Wisdom_${insightType}_${Date.now()}.txt`; await handleSaveWisdomToDatabricks(fileName, wisdom, insightType, 'Text', brand, projectType); }} className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Save to Knowledge Base</button>
+                                  <button onClick={async () => { const wisdom = responses[activeStepId]?.[idx]; if (!wisdom) return; await handleSaveWisdomToDatabricks(wisdomFileName('txt'), wisdom, insightType, 'Text', brand, projectType); }} className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Save to Knowledge Base</button>
                                 )}
                               </div>
                             );
                           }
-                          // File upload for Wisdom
+
+                          // VOICE — microphone recording → save as audio file
+                          if (inputMethod === 'Voice') {
+                            return (
+                              <div key={idx} className="mb-2">
+                                <label className="block text-gray-900 mb-1 flex items-start justify-between">
+                                  <span>Record Your Wisdom</span>
+                                  {hasResponse && <CircleCheck className="w-5 h-5 text-green-600 flex-shrink-0" />}
+                                </label>
+                                <div className="space-y-2">
+                                  <button
+                                    className="w-full px-4 py-3 bg-red-600 text-white rounded hover:bg-red-700 flex items-center justify-center gap-2"
+                                    onClick={async () => {
+                                      try {
+                                        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                                        const recorder = new MediaRecorder(stream);
+                                        const chunks: BlobPart[] = [];
+                                        recorder.ondataavailable = (e) => chunks.push(e.data);
+                                        recorder.onstop = async () => {
+                                          stream.getTracks().forEach(t => t.stop());
+                                          const blob = new Blob(chunks, { type: 'audio/webm' });
+                                          const reader = new FileReader();
+                                          reader.onload = async (ev) => {
+                                            const b64 = ev.target?.result as string;
+                                            await handleSaveWisdomToDatabricks(wisdomFileName('webm'), b64, insightType, 'Voice', brand, projectType);
+                                            handleResponseChange(idx, 'Voice recording saved');
+                                          };
+                                          reader.readAsDataURL(blob);
+                                        };
+                                        recorder.start();
+                                        setWisdomInputMethod('recording');
+                                        setTimeout(() => { recorder.stop(); setWisdomInputMethod(null); }, 120000); // 2min max
+                                        (window as any)._wisdomRecorder = recorder;
+                                      } catch { alert('Microphone access denied. Please allow microphone access and try again.'); }
+                                    }}
+                                  >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+                                    {wisdomInputMethod === 'recording' ? '🔴 Recording… (tap to stop)' : 'Start Recording'}
+                                  </button>
+                                  {wisdomInputMethod === 'recording' && (
+                                    <button className="w-full px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-900"
+                                      onClick={() => { (window as any)._wisdomRecorder?.stop(); setWisdomInputMethod(null); }}>
+                                      Stop Recording
+                                    </button>
+                                  )}
+                                  {responses[activeStepId]?.[idx] && <div className="bg-green-50 border border-green-200 rounded p-2"><p className="text-sm text-green-700">✓ {responses[activeStepId][idx]}</p></div>}
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          // PHOTO — upload file or use camera
+                          if (inputMethod === 'Photo') {
+                            return (
+                              <div key={idx} className="mb-2">
+                                <label className="block text-gray-900 mb-1 flex items-start justify-between">
+                                  <span>Share a Photo</span>
+                                  {hasResponse && <CircleCheck className="w-5 h-5 text-green-600 flex-shrink-0" />}
+                                </label>
+                                <div className="space-y-2">
+                                  <label className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 cursor-pointer">
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                    Upload Photo
+                                    <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                                      const file = e.target.files?.[0]; if (!file) return;
+                                      const reader = new FileReader();
+                                      reader.onload = async (ev) => { await handleSaveWisdomToDatabricks(wisdomFileName(file.name.split('.').pop() || 'jpg'), ev.target?.result as string, insightType, 'Photo', brand, projectType); handleResponseChange(idx, `Photo: ${file.name}`); };
+                                      reader.readAsDataURL(file);
+                                    }} />
+                                  </label>
+                                  <label className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-gray-700 text-white rounded hover:bg-gray-900 cursor-pointer">
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                    Take Photo with Camera
+                                    <input type="file" accept="image/*" capture="environment" className="hidden" onChange={async (e) => {
+                                      const file = e.target.files?.[0]; if (!file) return;
+                                      const reader = new FileReader();
+                                      reader.onload = async (ev) => { await handleSaveWisdomToDatabricks(wisdomFileName('jpg'), ev.target?.result as string, insightType, 'Photo', brand, projectType); handleResponseChange(idx, 'Camera photo saved'); };
+                                      reader.readAsDataURL(file);
+                                    }} />
+                                  </label>
+                                  {responses[activeStepId]?.[idx] && <div className="bg-green-50 border border-green-200 rounded p-2"><p className="text-sm text-green-700">✓ {responses[activeStepId][idx]}</p></div>}
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          // VIDEO — upload file or use camera
+                          if (inputMethod === 'Video') {
+                            return (
+                              <div key={idx} className="mb-2">
+                                <label className="block text-gray-900 mb-1 flex items-start justify-between">
+                                  <span>Share a Video</span>
+                                  {hasResponse && <CircleCheck className="w-5 h-5 text-green-600 flex-shrink-0" />}
+                                </label>
+                                <div className="space-y-2">
+                                  <label className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 cursor-pointer">
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                                    Upload Video
+                                    <input type="file" accept="video/*" className="hidden" onChange={async (e) => {
+                                      const file = e.target.files?.[0]; if (!file) return;
+                                      const reader = new FileReader();
+                                      reader.onload = async (ev) => { await handleSaveWisdomToDatabricks(wisdomFileName(file.name.split('.').pop() || 'mp4'), ev.target?.result as string, insightType, 'Video', brand, projectType); handleResponseChange(idx, `Video: ${file.name}`); };
+                                      reader.readAsDataURL(file);
+                                    }} />
+                                  </label>
+                                  <label className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-gray-700 text-white rounded hover:bg-gray-900 cursor-pointer">
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                                    Record Video with Camera
+                                    <input type="file" accept="video/*" capture="environment" className="hidden" onChange={async (e) => {
+                                      const file = e.target.files?.[0]; if (!file) return;
+                                      const reader = new FileReader();
+                                      reader.onload = async (ev) => { await handleSaveWisdomToDatabricks(wisdomFileName('mp4'), ev.target?.result as string, insightType, 'Video', brand, projectType); handleResponseChange(idx, 'Camera video saved'); };
+                                      reader.readAsDataURL(file);
+                                    }} />
+                                  </label>
+                                  {responses[activeStepId]?.[idx] && <div className="bg-green-50 border border-green-200 rounded p-2"><p className="text-sm text-green-700">✓ {responses[activeStepId][idx]}</p></div>}
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          // FILE — upload documents
                           if (inputMethod === 'File') {
                             return (
                               <div key={idx} className="mb-2">
@@ -1487,7 +1611,11 @@ export default function ProcessWireframe() {
                                     if (files.length === 0) return;
                                     for (const file of files) {
                                       const reader = new FileReader();
-                                      reader.onload = async (event) => { const base64Content = event.target?.result as string; await handleSaveWisdomToDatabricks(`Wisdom_${insightType}_File_${file.name}`, base64Content, insightType, 'File', brand, projectType); };
+                                      reader.onload = async (event) => {
+                                        const b64 = event.target?.result as string;
+                                        const ext = file.name.split('.').pop() || 'bin';
+                                        await handleSaveWisdomToDatabricks(wisdomFileName(ext), b64, insightType, 'File', brand, projectType);
+                                      };
                                       reader.readAsDataURL(file);
                                     }
                                     handleResponseChange(idx, files.map(f => f.name).join(', '));
@@ -1498,7 +1626,8 @@ export default function ProcessWireframe() {
                               </div>
                             );
                           }
-                          // Interview for Wisdom
+
+                          // INTERVIEW
                           if (inputMethod === 'Interview') {
                             return (
                               <div key={idx} className="mb-2">
@@ -1506,16 +1635,11 @@ export default function ProcessWireframe() {
                                   <span>Share Your Wisdom</span>
                                   {hasResponse && <CircleCheck className="w-5 h-5 text-green-600 flex-shrink-0" />}
                                 </label>
-                                <button 
-                                  onClick={() => {
-                                    setInterviewContext({ insightType, brand, projectType });
-                                    setShowInterviewDialog(true);
-                                  }}
+                                <button
+                                  onClick={() => { setInterviewContext({ insightType, brand, projectType }); setShowInterviewDialog(true); }}
                                   className="w-full px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 flex items-center justify-center gap-2"
                                 >
-                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                                  </svg>
+                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
                                   Start Interview
                                 </button>
                                 {responses[activeStepId]?.[idx] && <div className="bg-green-50 border border-green-200 rounded p-2 mt-2"><p className="text-sm text-green-700">✓ {responses[activeStepId][idx]}</p></div>}
@@ -1554,7 +1678,7 @@ export default function ProcessWireframe() {
                                           const { updatedSession } = generateIterationFileName(sessionVersions, brand, projectType);
                                           setSessionVersions(prev => ({ ...prev, [updatedSession.sessionKey]: updatedSession }));
                                           const newFile: ProjectFile = { brand, projectType, fileName: userEnteredFileName, timestamp: Date.now() };
-                                          const content = JSON.stringify({ responses, hexExecutions, completedSteps: Array.from(completedSteps), iterationDirections });
+                                          const content = JSON.stringify({ responses, hexExecutions, completedSteps: Array.from(completedSteps) });
                                           const blob = new Blob([content], { type: 'application/json' });
                                           const file = createFileFromBlob(blob, userEnteredFileName);
                                           let scope: 'general' | 'category' | 'brand' = 'brand';
@@ -1568,10 +1692,7 @@ export default function ProcessWireframe() {
                                             setIterationSaved(true);
                                             localStorage.setItem('cohive_iteration_saved', 'true');
                                             setLastAssessmentResults(null);
-                                            setIterationGems([]);
-        setIterationChecks([]);
-        setIterationCoal([]);
-        setIterationDirections([]); // iteration boundary — clear gems
+                                            setIterationGems([]); // iteration boundary — clear gems
                                           } else { alert(`Failed to save to Databricks: ${result.error || 'Unknown error'}`); }
                                         }
                                       }}
@@ -1616,7 +1737,7 @@ export default function ProcessWireframe() {
                         }
                         if (idx === 2 && question === 'Output Options') {
                           const selectedOptions = responses[activeStepId]?.[idx]?.split(',').filter(Boolean) || [];
-                          const options = ['Executive Summary', 'Share all Ideas as a list', 'Provide a grid with all "final" ideas with their scores', 'Include Gems', 'Include Checks', 'Include Coal', 'Include Directions', 'Include User Notes from all iterations as an Appendix'];
+                          const options = ['Executive Summary', 'Share all Ideas as a list', 'Provide a grid with all "final" ideas with their scores', 'Include Gems', 'Include User Notes from all iterations as an Appendix'];
                           return (
                             <div key={idx} className="mb-2">
                               <label className="block text-gray-900 mb-1 flex items-start justify-between"><span>{idx + 1}. {question}</span>{hasResponse && <CircleCheck className="w-5 h-5 text-green-600 flex-shrink-0" />}</label>
@@ -1635,12 +1756,6 @@ export default function ProcessWireframe() {
                           return (
                             <div key={idx} className="mb-2">
                               <label className="block text-gray-900 mb-1 flex items-start justify-between"><span>{idx + 1}. {question}</span>{hasResponse && <CircleCheck className="w-5 h-5 text-green-600 flex-shrink-0" />}</label>
-                              {isGeneratingSummary && (
-                                <div className="flex items-center gap-3 px-3 py-2.5 mb-2 bg-purple-50 border border-purple-200 rounded-lg">
-                                  <SpinHex className="w-5 h-5 flex-shrink-0" />
-                                  <span className="text-purple-800 text-sm font-medium">Generating summary…</span>
-                                </div>
-                              )}
                               <div className="space-y-1">
                                 <label className="flex items-center gap-2 cursor-pointer">
                                   <input type="radio" name="saveOrDownload" value="Read" checked={responses[activeStepId]?.[idx] === 'Read'}
@@ -1651,23 +1766,8 @@ export default function ProcessWireframe() {
                                         if (summaryFileName) {
                                           setIsGeneratingSummary(true);
                                           try {
-                                            const result = await generateSummary({ brand, projectType, fileName: summaryFileName, selectedFiles: responses[activeStepId]?.[1]?.split(',').filter(Boolean) || [], outputOptions: responses[activeStepId]?.[2]?.split(',').filter(Boolean) || [], hexExecutions, completedSteps: Array.from(completedSteps), responses, userEmail, userRole, modelEndpoint: currentTemplate?.conversationMode === 'incremental' ? currentTemplate?.modelEndpoint : 'databricks-claude-sonnet-4-6', iterationDirections });
-                                            if (result.success && result.summary) {
-                                              setMarkdownContent(result.summary);
-                                              setMarkdownTitle(summaryFileName);
-                                              setShowMarkdownViewer(true);
-                                              // Also auto-download the docx if available
-                                              if (result.docxBase64) {
-                                                const bytes = atob(result.docxBase64);
-                                                const arr = new Uint8Array(bytes.length);
-                                                for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
-                                                const blob = new Blob([arr], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-                                                const url = URL.createObjectURL(blob);
-                                                const a = document.createElement('a');
-                                                a.href = url; a.download = summaryFileName.replace(/\.md$/, '').replace(/\.json$/, '') + '.docx';
-                                                a.click(); URL.revokeObjectURL(url);
-                                              }
-                                            }
+                                            const result = await generateSummary({ brand, projectType, fileName: summaryFileName, selectedFiles: responses[activeStepId]?.[1]?.split(',').filter(Boolean) || [], outputOptions: responses[activeStepId]?.[2]?.split(',').filter(Boolean) || [], hexExecutions, completedSteps: Array.from(completedSteps), responses, userEmail, userRole, modelEndpoint: currentTemplate?.conversationMode === 'incremental' ? currentTemplate?.modelEndpoint : 'databricks-claude-sonnet-4-6' });
+                                            if (result.success && result.summary) { setMarkdownContent(result.summary); setMarkdownTitle(summaryFileName); setShowMarkdownViewer(true); }
                                             else { alert(`Failed to generate summary: ${result.error || 'Unknown error'}`); }
                                           } catch { alert('Failed to generate summary. Please try again.'); }
                                           finally { setIsGeneratingSummary(false); handleResponseChange(idx, ''); }
@@ -1680,66 +1780,29 @@ export default function ProcessWireframe() {
                                 </label>
                                 <label className="flex items-center gap-2 cursor-pointer">
                                   <input type="radio" name="saveOrDownload" value="SaveWorkspace" checked={responses[activeStepId]?.[idx] === 'SaveWorkspace'}
-                                    onChange={async (e) => {
+                                    onChange={(e) => {
                                       handleResponseChange(idx, e.target.value);
                                       if (e.target.value === 'SaveWorkspace' && brand && projectType) {
                                         const summaryFileName = responses[activeStepId]?.['summaryFileName'] || getSummaryFileName(currentFileName || '');
-                                        if (summaryFileName) {
-                                          setIsGeneratingSummary(true);
-                                          try {
-                                            const result = await generateSummary({ brand, projectType, fileName: summaryFileName, selectedFiles: responses[activeStepId]?.[1]?.split(',').filter(Boolean) || [], outputOptions: responses[activeStepId]?.[2]?.split(',').filter(Boolean) || [], hexExecutions, completedSteps: Array.from(completedSteps), responses, userEmail, userRole, modelEndpoint: currentTemplate?.conversationMode === 'incremental' ? currentTemplate?.modelEndpoint : 'databricks-claude-sonnet-4-6', iterationDirections });
-                                            if (result.success && result.summary) {
-                                              const docxFileName = summaryFileName.replace(/\.json$/, '').replace(/\.md$/, '').replace(/\.docx$/, '') + '.docx';
-                                              if (result.docxBase64) {
-                                                setFileSaverData({ fileName: docxFileName, content: result.docxBase64, isBase64: true, mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-                                              } else {
-                                                setFileSaverData({ fileName: docxFileName.replace('.docx', '.md'), content: result.summary });
-                                              }
-                                              setShowFileSaver(true);
-                                            } else { alert(`Failed to generate summary: ${result.error || 'Unknown error'}`); }
-                                          } catch { alert('Failed to generate summary. Please try again.'); }
-                                          finally { setIsGeneratingSummary(false); handleResponseChange(idx, ''); }
-                                        }
+                                        if (summaryFileName) { const summaryData = { brand, projectType, fileName: summaryFileName, timestamp: Date.now(), responses, selectedFiles: responses[activeStepId]?.[1]?.split(',').filter(Boolean) || [], outputOptions: responses[activeStepId]?.[2]?.split(',').filter(Boolean) || [], hexExecutions, completedSteps: Array.from(completedSteps) }; const fileName = summaryFileName.endsWith('.json') ? summaryFileName : `${summaryFileName}.json`; setFileSaverData({ fileName, content: JSON.stringify(summaryData, null, 2) }); setShowFileSaver(true); handleResponseChange(idx, ''); }
                                       }
                                     }}
-                                    className="w-4 h-4" disabled={isGeneratingSummary}
+                                    className="w-4 h-4"
                                   />
-                                  <span className="text-gray-700">{isGeneratingSummary ? "Generating…" : "Save to Databricks Workspace"}</span>
+                                  <span className="text-gray-700">Save to Databricks Workspace</span>
                                 </label>
                                 <label className="flex items-center gap-2 cursor-pointer">
                                   <input type="radio" name="saveOrDownload" value="Download" checked={responses[activeStepId]?.[idx] === 'Download'}
-                                    onChange={async (e) => {
+                                    onChange={(e) => {
                                       handleResponseChange(idx, e.target.value);
                                       if (e.target.value === 'Download' && brand && projectType) {
                                         const summaryFileName = responses[activeStepId]?.['summaryFileName'] || getSummaryFileName(currentFileName || '');
-                                        if (summaryFileName) {
-                                          setIsGeneratingSummary(true);
-                                          try {
-                                            const result = await generateSummary({ brand, projectType, fileName: summaryFileName, selectedFiles: responses[activeStepId]?.[1]?.split(',').filter(Boolean) || [], outputOptions: responses[activeStepId]?.[2]?.split(',').filter(Boolean) || [], hexExecutions, completedSteps: Array.from(completedSteps), responses, userEmail, userRole, modelEndpoint: currentTemplate?.conversationMode === 'incremental' ? currentTemplate?.modelEndpoint : 'databricks-claude-sonnet-4-6', iterationDirections });
-                                            if (result.success && result.summary) {
-                                              const docxFileName = summaryFileName.replace(/\.json$/, '').replace(/\.md$/, '').replace(/\.docx$/, '') + '.docx';
-                                              if (result.docxBase64) {
-                                                const bytes = atob(result.docxBase64);
-                                                const arr = new Uint8Array(bytes.length);
-                                                for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
-                                                const blob = new Blob([arr], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-                                                const url = URL.createObjectURL(blob);
-                                                const a = document.createElement('a');
-                                                a.href = url; a.download = docxFileName;
-                                                a.click(); URL.revokeObjectURL(url);
-                                              } else {
-                                                downloadFile(docxFileName.replace('.docx', '.md'), result.summary, 'text/markdown');
-                                              }
-                                              alert('✅ Summary downloaded to your computer!');
-                                            } else { alert(`Failed to generate summary: ${result.error || 'Unknown error'}`); }
-                                          } catch { alert('Failed to generate summary. Please try again.'); }
-                                          finally { setIsGeneratingSummary(false); handleResponseChange(idx, ''); }
-                                        }
+                                        if (summaryFileName) { const summaryData = { brand, projectType, fileName: summaryFileName, timestamp: Date.now(), responses, selectedFiles: responses[activeStepId]?.[1]?.split(',').filter(Boolean) || [], outputOptions: responses[activeStepId]?.[2]?.split(',').filter(Boolean) || [], hexExecutions, completedSteps: Array.from(completedSteps) }; downloadFile(summaryFileName.endsWith('.json') ? summaryFileName : `${summaryFileName}.json`, JSON.stringify(summaryData, null, 2), 'application/json'); alert('✅ Summary downloaded to your computer!'); handleResponseChange(idx, ''); }
                                       }
                                     }}
-                                    className="w-4 h-4" disabled={isGeneratingSummary}
+                                    className="w-4 h-4"
                                   />
-                                  <span className="text-gray-700">{isGeneratingSummary ? "Generating…" : "Download to Computer"}</span>
+                                  <span className="text-gray-700">Download to Computer</span>
                                 </label>
                               </div>
                             </div>
@@ -1859,9 +1922,6 @@ export default function ProcessWireframe() {
           hexExecutions={assessmentModalProps.hexExecutions}
           // Iteration gems — persists across modal opens, cleared at iteration boundary
           iterationGems={iterationGems}
-          iterationChecks={iterationChecks}
-          iterationCoal={iterationCoal}
-          iterationDirections={iterationDirections}
           onGemSaved={handleGemSaved}
         />
       )}

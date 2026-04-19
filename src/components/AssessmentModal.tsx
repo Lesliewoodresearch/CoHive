@@ -1568,7 +1568,7 @@ export function AssessmentModal({
                 style={{
                   position: "absolute",
                   left: `${floatingBtn.x}px`,
-                  top: `${Math.max(4, floatingBtn.y + (contentRef.current?.scrollTop || 0))}px`,
+                  top: `${Math.max(4, floatingBtn.y + (contentRef.current?.scrollTop || 0) - 140)}px`,
                   transform: "translateX(-50%)",
                   zIndex: 100,
                   pointerEvents: "auto",
@@ -1579,7 +1579,7 @@ export function AssessmentModal({
                   <button
                     onClick={handleSaveGem}
                     disabled={savingGem}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium rounded-full shadow-lg disabled:opacity-60 transition-all whitespace-nowrap"
+                    className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-amber-50 text-gray-900 text-sm font-medium rounded-full shadow-lg border border-amber-400 disabled:opacity-60 transition-all whitespace-nowrap"
                   >
                     {savingGem ? (
                       <SpinHex className="w-4 h-4" />
@@ -1593,7 +1593,7 @@ export function AssessmentModal({
                   <button
                     onClick={handleSaveCheck}
                     disabled={savingCheck}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-full shadow-lg disabled:opacity-60 transition-all whitespace-nowrap"
+                    className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-purple-50 text-gray-900 text-sm font-medium rounded-full shadow-lg border border-purple-400 disabled:opacity-60 transition-all whitespace-nowrap"
                   >
                     {savingCheck ? (
                       <SpinHex className="w-4 h-4" />
@@ -1622,7 +1622,7 @@ export function AssessmentModal({
                   <button
                     onClick={handleSaveCoal}
                     disabled={savingCoal}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-gray-700 hover:bg-gray-900 text-white text-sm font-medium rounded-full shadow-lg disabled:opacity-60 transition-all whitespace-nowrap"
+                    className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-gray-100 text-gray-900 text-sm font-medium rounded-full shadow-lg border border-gray-400 disabled:opacity-60 transition-all whitespace-nowrap"
                   >
                     {savingCoal ? (
                       <SpinHex className="w-4 h-4" />
