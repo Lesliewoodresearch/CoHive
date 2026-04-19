@@ -327,71 +327,6 @@ export default function ProcessWireframe() {
     const savedSelectedResearchFiles = localStorage.getItem('cohive_selected_research_files');
     if (savedSelectedResearchFiles) { try { setSelectedResearchFiles(JSON.parse(savedSelectedResearchFiles)); } catch (e) { console.error('Failed to load selected research files', e); } }
 
-    const loadSharedConfig = async () => {
-      const DEFAULT_BRANDS = ['Nike', 'Adidas'];
-      const systemProjectTypeNames = systemProjectTypes.map(pt => pt.projectType);
-      try {
-        const result = await fetchSharedConfig();
-        // Trust Databricks as authoritative — only fall back to localStorage if fetch fails
-        if (result.success) {
-          const brands = result.brands || [];
-          if (brands.length > 0) {
-            setAvailableBrands(brands);
-            localStorage.setItem('cohive_available_brands', JSON.stringify(brands));
-          } else {
-            // Databricks returned empty — keep localStorage so UI isn't blank
-            const savedBrands = localStorage.getItem('cohive_available_brands');
-            if (savedBrands) setAvailableBrands(JSON.parse(savedBrands));
-            else setAvailableBrands(DEFAULT_BRANDS);
-          }
-        } else {
-          const savedBrands = localStorage.getItem('cohive_available_brands');
-          if (savedBrands) { setAvailableBrands(JSON.parse(savedBrands)); }
-          else { setAvailableBrands(DEFAULT_BRANDS); localStorage.setItem('cohive_available_brands', JSON.stringify(DEFAULT_BRANDS)); }
-        }
-        let userProjectTypes: string[] = [];
-        if (result.success) {
-          userProjectTypes = result.projectTypes || [];
-          if (userProjectTypes.length > 0) localStorage.setItem('cohive_available_project_types', JSON.stringify(userProjectTypes));
-        } else {
-          const savedProjectTypes = localStorage.getItem('cohive_available_project_types');
-          if (savedProjectTypes) { userProjectTypes = JSON.parse(savedProjectTypes); }
-        }
-        const allProjectTypes = [...new Set([...systemProjectTypeNames, ...userProjectTypes])].sort();
-        setAvailableProjectTypes(allProjectTypes);
-        try {
-          const configResult = await fetchProjectTypeConfigs();
-          let userConfigs: ProjectTypeConfig[] = [];
-          if (configResult.success && configResult.configs) {
-            userConfigs = configResult.configs;
-            localStorage.setItem('cohive_project_type_configs', JSON.stringify(userConfigs));
-          } else {
-            const savedConfigs = localStorage.getItem('cohive_project_type_configs');
-            if (savedConfigs) { try { userConfigs = JSON.parse(savedConfigs); } catch { userConfigs = []; } }
-          }
-          setProjectTypeConfigs([...systemProjectTypes, ...userConfigs]);
-        } catch (configError) {
-          console.warn('Failed to fetch project type configurations:', configError);
-          const savedConfigs = localStorage.getItem('cohive_project_type_configs');
-          let userConfigs: ProjectTypeConfig[] = [];
-          if (savedConfigs) { try { userConfigs = JSON.parse(savedConfigs); } catch { userConfigs = []; } }
-          setProjectTypeConfigs([...systemProjectTypes, ...userConfigs]);
-        }
-      } catch (error) {
-        console.warn('Failed to fetch shared config from Databricks, using localStorage:', error);
-        const savedBrands = localStorage.getItem('cohive_available_brands');
-        if (savedBrands) { try { setAvailableBrands(JSON.parse(savedBrands)); } catch { setAvailableBrands(DEFAULT_BRANDS); } } else { setAvailableBrands(DEFAULT_BRANDS); localStorage.setItem('cohive_available_brands', JSON.stringify(DEFAULT_BRANDS)); }
-        let userProjectTypes: string[] = [];
-        const savedProjectTypes = localStorage.getItem('cohive_available_project_types');
-        if (savedProjectTypes) { try { userProjectTypes = JSON.parse(savedProjectTypes); } catch { userProjectTypes = []; } }
-        const allProjectTypes = [...new Set([...systemProjectTypeNames, ...userProjectTypes])].sort();
-        setAvailableProjectTypes(allProjectTypes);
-        const savedConfigs = localStorage.getItem('cohive_project_type_configs');
-        let userConfigs: ProjectTypeConfig[] = [];
-        if (savedConfigs) { try { userConfigs = JSON.parse(savedConfigs); } catch { userConfigs = []; } }
-        setProjectTypeConfigs([...systemProjectTypes, ...userConfigs]);
-      }
-    };
     loadSharedConfig();
   }, []);
 
@@ -460,8 +395,8 @@ export default function ProcessWireframe() {
         } catch (error) {
           setUserEmail('unknown@databricks.com');
         }
-        // Re-fetch shared config now that auth is confirmed —
-        // the on-mount call may have run before auth was ready and got empty results
+        // Re-fetch shared config now auth is confirmed —
+        // the on-mount call runs before auth and may have returned empty
         await loadSharedConfig();
       }
     };
@@ -479,6 +414,69 @@ export default function ProcessWireframe() {
     };
     loadResearchFilesFromDatabricks();
   }, [isDatabricksAuthenticated, isCheckingAuth, currentTemplate]);
+
+  // ── Component-scope so handleAddBrand, useEffect, and auth confirm can all call it ──
+  const loadSharedConfig = async () => {
+    const DEFAULT_BRANDS = ['Nike', 'Adidas'];
+    const systemProjectTypeNames = systemProjectTypes.map(pt => pt.projectType);
+    try {
+      const result = await fetchSharedConfig();
+      if (result.success) {
+        const brands = result.brands || [];
+        if (brands.length > 0) {
+          setAvailableBrands(brands);
+          localStorage.setItem('cohive_available_brands', JSON.stringify(brands));
+        } else {
+          const savedBrands = localStorage.getItem('cohive_available_brands');
+          if (savedBrands) setAvailableBrands(JSON.parse(savedBrands));
+          else setAvailableBrands(DEFAULT_BRANDS);
+        }
+        const userProjectTypes = result.projectTypes || [];
+        if (userProjectTypes.length > 0) {
+          localStorage.setItem('cohive_available_project_types', JSON.stringify(userProjectTypes));
+        }
+        const saved = localStorage.getItem('cohive_available_project_types');
+        const merged = [...new Set([...systemProjectTypeNames, ...(userProjectTypes.length > 0 ? userProjectTypes : (saved ? JSON.parse(saved) : []))])].sort();
+        setAvailableProjectTypes(merged);
+      } else {
+        const savedBrands = localStorage.getItem('cohive_available_brands');
+        if (savedBrands) { setAvailableBrands(JSON.parse(savedBrands)); }
+        else { setAvailableBrands(DEFAULT_BRANDS); }
+        const savedPT = localStorage.getItem('cohive_available_project_types');
+        const merged = [...new Set([...systemProjectTypeNames, ...(savedPT ? JSON.parse(savedPT) : [])])].sort();
+        setAvailableProjectTypes(merged);
+      }
+      try {
+        const configResult = await fetchProjectTypeConfigs();
+        let userConfigs: ProjectTypeConfig[] = [];
+        if (configResult.success && configResult.configs) {
+          userConfigs = configResult.configs;
+          localStorage.setItem('cohive_project_type_configs', JSON.stringify(userConfigs));
+        } else {
+          const savedConfigs = localStorage.getItem('cohive_project_type_configs');
+          if (savedConfigs) { try { userConfigs = JSON.parse(savedConfigs); } catch { userConfigs = []; } }
+        }
+        setProjectTypeConfigs([...systemProjectTypes, ...userConfigs]);
+      } catch {
+        const savedConfigs = localStorage.getItem('cohive_project_type_configs');
+        let userConfigs: ProjectTypeConfig[] = [];
+        if (savedConfigs) { try { userConfigs = JSON.parse(savedConfigs); } catch { userConfigs = []; } }
+        setProjectTypeConfigs([...systemProjectTypes, ...userConfigs]);
+      }
+    } catch (error) {
+      console.warn('Failed to fetch shared config from Databricks, using localStorage:', error);
+      const savedBrands = localStorage.getItem('cohive_available_brands');
+      if (savedBrands) { try { setAvailableBrands(JSON.parse(savedBrands)); } catch { setAvailableBrands(DEFAULT_BRANDS); } }
+      else { setAvailableBrands(DEFAULT_BRANDS); }
+      const savedPT = localStorage.getItem('cohive_available_project_types');
+      const merged = [...new Set([...systemProjectTypeNames, ...(savedPT ? JSON.parse(savedPT) : [])])].sort();
+      setAvailableProjectTypes(merged);
+      const savedConfigs = localStorage.getItem('cohive_project_type_configs');
+      let userConfigs: ProjectTypeConfig[] = [];
+      if (savedConfigs) { try { userConfigs = JSON.parse(savedConfigs); } catch { userConfigs = []; } }
+      setProjectTypeConfigs([...systemProjectTypes, ...userConfigs]);
+    }
+  };
 
   const getExistingFiles = (brand: string, projectType: string): ProjectFile[] => {
     if (!brand || !projectType) return [];
@@ -954,27 +952,18 @@ export default function ProcessWireframe() {
   const handleAddBrand = async (brand: string) => {
     if (!brand.trim() || availableBrands.includes(brand.trim())) return;
     const trimmedBrand = brand.trim();
-    const updated = [...availableBrands, trimmedBrand].sort();
-    setAvailableBrands(updated);
-    localStorage.setItem('cohive_available_brands', JSON.stringify(updated));
+    // Optimistic local update
+    setAvailableBrands(prev => [...prev, trimmedBrand].sort());
+    localStorage.setItem('cohive_available_brands', JSON.stringify([...availableBrands, trimmedBrand].sort()));
     try {
-      console.log(`[AddBrand] Posting brand "${trimmedBrand}" to Databricks...`);
       const result = await addSharedConfigItem('brand', trimmedBrand, userEmail);
       if (result.success) {
-        console.log(`[AddBrand] ✅ Brand "${trimmedBrand}" saved to Databricks`);
-        // Re-fetch to confirm it's visible to all users
+        // Re-fetch from Databricks so list is authoritative for this user
         await loadSharedConfig();
       } else {
-        console.error(`[AddBrand] ❌ Failed: ${result.error}`);
-        alert(`Failed to save brand to workspace: ${result.error}
-
-The brand was added locally but will not be visible to other users.`);
+        console.warn(`⚠️ Failed to save brand to Databricks: ${result.error}`);
       }
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      console.error('[AddBrand] ❌ Exception:', msg);
-      alert(`Error saving brand to workspace: ${msg}`);
-    }
+    } catch (error) { console.warn('Failed to save brand to Databricks:', error); }
   };
 
   const handleAddProjectType = async (projectType: string) => {
