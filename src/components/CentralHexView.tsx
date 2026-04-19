@@ -89,6 +89,10 @@ export function CentralHexView({
   const [sendToKnowledgeBase, setSendToKnowledgeBase] = useState(false);
   const [showDirectionModal, setShowDirectionModal] = useState(false);
   const [directionText, setDirectionText] = useState('');
+  const [showPriorPersonaModal, setShowPriorPersonaModal] = useState(false);
+  const [pendingExecuteFiles, setPendingExecuteFiles] = useState<string[]>([]);
+  const [pendingExecuteType, setPendingExecuteType] = useState<string[]>([]);
+  const [pendingExecuteAssessment, setPendingExecuteAssessment] = useState('');
   const [recommendationText, setRecommendationText] = useState("");
   const [showGemInput, setShowGemInput] = useState(false);
   const [gemText, setGemText] = useState("");
@@ -297,6 +301,16 @@ export function CentralHexView({
           return;
         }
       }
+    }
+
+    // If there are prior executions on a persona hex, ask user what to include
+    const personaHexIds = ['Consumers', 'Luminaries', 'Colleagues', 'cultural', 'Grade', 'panelist'];
+    if (personaHexIds.includes(hexId) && previousExecutions.length > 0) {
+      setPendingExecuteFiles(selectedFiles);
+      setPendingExecuteType(assessmentType);
+      setPendingExecuteAssessment(assessment);
+      setShowPriorPersonaModal(true);
+      return;
     }
 
     onExecute(selectedFiles, assessmentType, assessment);
@@ -1128,6 +1142,67 @@ export function CentralHexView({
           </div>
         )}
       </div>
+
+      {/* Prior Persona Re-use Modal */}
+      {showPriorPersonaModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-gray-900 font-semibold text-base">Previous results available</h3>
+              <p className="text-gray-500 text-sm mt-0.5">
+                You have {previousExecutions.length} prior run{previousExecutions.length !== 1 ? 's' : ''} in this hex. How would you like to proceed?
+              </p>
+            </div>
+            <div className="px-6 py-4 space-y-3">
+              <button
+                onClick={() => {
+                  setShowPriorPersonaModal(false);
+                  const priorPersonaNames = previousExecutions.flatMap(ex => (ex.selectedFiles || [])).filter((v, i, a) => a.indexOf(v) === i);
+                  const augmented = pendingExecuteAssessment + (priorPersonaNames.length > 0 ? `
+
+[PRIOR_PERSONAS: ${priorPersonaNames.join(', ')}]` : '');
+                  onExecute(pendingExecuteFiles, pendingExecuteType, augmented);
+                  setPendingExecuteFiles([]); setPendingExecuteType([]); setPendingExecuteAssessment('');
+                  setCurrentStep(hexId === 'competitors' ? 3 : 1); setSelectedFiles([]); setAssessmentType(['recommend']); setAssessment('');
+                }}
+                className="w-full text-left px-4 py-3 border-2 border-gray-200 rounded-xl hover:border-purple-400 hover:bg-purple-50 transition-all"
+              >
+                <div className="font-medium text-gray-900 text-sm">Include previous personas in this run</div>
+                <div className="text-gray-500 text-xs mt-0.5">Previous personas join this session and can build on or challenge prior results</div>
+              </button>
+              <button
+                onClick={() => {
+                  setShowPriorPersonaModal(false);
+                  const summaryLines = previousExecutions.map((ex, i) => { const preview = (ex.assessment || '').substring(0, 200).replace(/\n/g, ' '); return `Run ${i + 1}: ${preview}${preview.length === 200 ? '...' : ''}`; });
+                  const summaryBlock = `\n\n[PRIOR_SUMMARY:\n${summaryLines.join('\n')}\n]`;
+                  onExecute(pendingExecuteFiles, pendingExecuteType, pendingExecuteAssessment + summaryBlock);
+                  setPendingExecuteFiles([]); setPendingExecuteType([]); setPendingExecuteAssessment('');
+                  setCurrentStep(hexId === 'competitors' ? 3 : 1); setSelectedFiles([]); setAssessmentType(['recommend']); setAssessment('');
+                }}
+                className="w-full text-left px-4 py-3 border-2 border-gray-200 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-all"
+              >
+                <div className="font-medium text-gray-900 text-sm">Include summary of previous results only</div>
+                <div className="text-gray-500 text-xs mt-0.5">A brief summary of prior rounds is shared as context — not the full personas</div>
+              </button>
+              <button
+                onClick={() => {
+                  setShowPriorPersonaModal(false);
+                  onExecute(pendingExecuteFiles, pendingExecuteType, pendingExecuteAssessment);
+                  setPendingExecuteFiles([]); setPendingExecuteType([]); setPendingExecuteAssessment('');
+                  setCurrentStep(hexId === 'competitors' ? 3 : 1); setSelectedFiles([]); setAssessmentType(['recommend']); setAssessment('');
+                }}
+                className="w-full text-left px-4 py-3 border-2 border-gray-200 rounded-xl hover:border-gray-400 hover:bg-gray-50 transition-all"
+              >
+                <div className="font-medium text-gray-900 text-sm">Start fresh — don't include previous results</div>
+                <div className="text-gray-500 text-xs mt-0.5">Run this session independently with no context from prior runs</div>
+              </button>
+            </div>
+            <div className="px-6 py-3 border-t border-gray-100">
+              <button onClick={() => setShowPriorPersonaModal(false)} className="w-full text-center text-sm text-gray-400 hover:text-gray-600">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Direction Modal */}
       {showDirectionModal && (
