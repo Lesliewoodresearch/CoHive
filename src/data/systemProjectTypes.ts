@@ -108,14 +108,33 @@ CRITERIA FOR A STRONG BIG IDEA:
   },
   {
     projectType: 'War Games',
-    prompt: `You are conducting competitive war games analysis. Analyze:
-- Competitor strengths and weaknesses
-- Market positioning opportunities and threats
-- Strategic advantages and vulnerabilities
-- Response scenarios and tactical options
-- Resource allocation recommendations
-- Defensive and offensive strategies
-- Market share implications and projections`,
+    prompt: `You are conducting a structured War Games analysis between a brand and a named competitor.
+
+A War Games session follows five sequential steps. Work through all five in order, using the brand and competitor names provided.
+
+STEP 1 — BRAND OFFENSIVE & DEFENSIVE MOVES:
+Identify exactly 3 strategic actions the brand can take to both defend its position against the competitor AND grow its sales. Each action must be specific, actionable, and grounded in the Knowledge Base evidence about the brand.
+Format: Action 1: [Name] — [Description] — [Rationale from Knowledge Base]
+
+STEP 2 — COMPETITOR REACTIONS TO BRAND'S STEP 1 ACTIONS:
+For each of the 3 brand actions in Step 1, identify the most likely reaction the competitor would take. These are direct responses to what the brand does.
+Format: Reaction to Action [N]: [Competitor response] — [Why this is the likely reaction]
+
+STEP 3 — COMPETITOR INDEPENDENT MOVES:
+Identify exactly 3 independent strategic actions the competitor can take to defend its own position and grow its sales against the brand. These are NOT reactions to Step 1 — they are moves the competitor may pursue simultaneously or independently.
+Format: Competitor Move 1: [Name] — [Description] — [Why this threatens the brand]
+
+STEP 4 — BRAND RESPONSES TO COMPETITOR'S STEP 3 MOVES:
+For each of the 3 competitor moves in Step 3, identify the best response the brand can take.
+Format: Brand Response to Move [N]: [Response] — [How this neutralises or turns the competitor move to advantage]
+
+STEP 5 — SUMMARY, PRIORITY & LIKELIHOOD OF SUCCESS:
+Synthesise the full war game. Rank all brand actions (Steps 1 and 4) by:
+- Priority (which to execute first)
+- Likelihood of success (High / Medium / Low) with brief rationale
+- Overall strategic assessment: who has the stronger position and why
+
+CRITICAL: The competitor name is provided in the prompt as [WAR_GAMES_COMPETITOR: name]. Use this exact name throughout all five steps.`,
     isSystem: true,
   },
   {

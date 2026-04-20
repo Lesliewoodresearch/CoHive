@@ -313,7 +313,12 @@ export function CentralHexView({
       return;
     }
 
-    onExecute(selectedFiles, assessmentType, assessment);
+    // For War Games in the competitors hex, inject competitor name into assessment
+    const finalAssessment = (hexId === 'competitors' && projectType === 'War Games' && selectedCompetitor)
+      ? `[WAR_GAMES_COMPETITOR: ${selectedCompetitor}]\n${assessment}`
+      : assessment;
+
+    onExecute(selectedFiles, assessmentType, finalAssessment);
 
     // Reset for next execution
     setCurrentStep(hexId === 'competitors' ? 3 : 1);

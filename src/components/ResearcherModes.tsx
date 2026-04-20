@@ -389,6 +389,29 @@ export function ResearcherModes({
   const toggleKBFileSelection = (fileId: string) => setSelectedKBFiles(prev => { const s = new Set(prev); if (s.has(fileId)) s.delete(fileId); else s.add(fileId); return s; });
   const togglePairExpand = (fileId: string) => setExpandedPairIds(prev => { const s = new Set(prev); if (s.has(fileId)) s.delete(fileId); else s.add(fileId); return s; });
 
+  const handleDeleteSelectedFiles = async () => {
+    if (selectedKBFiles.size === 0) return;
+    const count = selectedKBFiles.size;
+    const confirmed = confirm(`Delete ${count} selected file${count !== 1 ? 's' : ''}? This cannot be undone.`);
+    if (!confirmed) return;
+    const selectedArray = Array.from(selectedKBFiles);
+    let ok = 0; let fail = 0;
+    for (const fileId of selectedArray) {
+      try {
+        const r = await deleteKnowledgeBaseFile(fileId, userEmail, 'research-leader');
+        if (r.success) ok++;
+        else fail++;
+      } catch { fail++; }
+    }
+    setSelectedKBFiles(new Set());
+    await refreshPendingQueues();
+    alert(ok > 0
+      ? `✅ ${ok} file${ok !== 1 ? 's' : ''} deleted${fail > 0 ? `
+❌ ${fail} failed` : ''}`
+      : `❌ Failed to delete files`
+    );
+  };
+
   const handleProcessSelectedFiles = async () => {
     if (selectedKBFiles.size === 0) { alert('Please select at least one file to process'); return; }
     if (!processingModelEndpoint) { alert('No model configured.\n\nPlease open Model Templates and assign a model to Knowledge Base → Synthesis.'); return; }
@@ -606,6 +629,40 @@ export function ResearcherModes({
       alert(fileArray.length === 1
         ? ok === 1 ? `✅ "${fileArray[0].name}" uploaded. Go to Read/Edit/Approve to process it.` : `❌ Failed to upload "${fileArray[0].name}".`
         : `✅ ${ok} uploaded${fail > 0 ? `, ❌ ${fail} failed:\n${failed.join('\n')}` : ''}\n\nProcess files in Read/Edit/Approve.`
+      );
+      event.target.value = '';
+    } catch { alert('Failed to upload. Please try again.'); event.target.value = ''; }
+  };
+
+  // Upload directly to KB as approved brand-scoped file — bypasses read/edit/approve
+  const handleUploadForNewSynthesis = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+    if (!isAuthenticated()) { alert('⚠️ Please sign in to Databricks first.'); event.target.value = ''; return; }
+    if (!selectedBrand || !selectedProjectType) { alert('⚠️ Please select a brand and project type first.'); event.target.value = ''; return; }
+    const fileArray = Array.from(files);
+    let ok = 0; let fail = 0; const failed: string[] = [];
+    try {
+      for (const file of fileArray) {
+        try {
+          const r = await uploadToKnowledgeBase({
+            file, scope: 'brand', brand: selectedBrand, category: selectedProjectType,
+            projectType: selectedProjectType, fileType: 'Synthesis',
+            tags: ['synthesis', selectedBrand, selectedProjectType], userEmail, userRole,
+          });
+          if (r.success) {
+            ok++;
+            if (r.fileId && onToggleApproval) await onToggleApproval(r.fileId, true, file.name);
+            const reader = new FileReader();
+            reader.onload = e => onCreateResearchFile({ brand: selectedBrand, projectType: selectedProjectType, fileName: file.name, isApproved: true, fileType: 'Synthesis', content: e.target?.result as string, source: r.filePath ? `Databricks: ${r.filePath}` : `Databricks KB: ${file.name}` });
+            reader.readAsDataURL(file);
+          } else { fail++; failed.push(file.name); }
+        } catch { fail++; failed.push(file.name); }
+      }
+      if (ok > 0) await refreshPendingQueues();
+      alert(fileArray.length === 1
+        ? ok === 1 ? `✅ "${fileArray[0].name}" uploaded and ready to use in synthesis.` : `❌ Failed to upload "${fileArray[0].name}".`
+        : `✅ ${ok} file${ok !== 1 ? 's' : ''} uploaded and ready${fail > 0 ? `\n❌ ${fail} failed:\n${failed.join('\n')}` : ''}`
       );
       event.target.value = '';
     } catch { alert('Failed to upload. Please try again.'); event.target.value = ''; }
@@ -862,9 +919,14 @@ export function ResearcherModes({
                 <p className="text-yellow-700 text-sm">Select original files to extract content and suggest metadata</p>
               </div>
               {selectedKBFiles.size > 0 && (
-                <button onClick={handleProcessSelectedFiles} disabled={isProcessing} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 flex items-center gap-2">
-                  {isProcessing ? <><img src={gemIcon} alt="" className="w-5 h-5 animate-spin" />Processing {selectedKBFiles.size}...</> : <><Sparkles className="w-5 h-5" />Process Selected ({selectedKBFiles.size})</>}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button onClick={handleProcessSelectedFiles} disabled={isProcessing} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 flex items-center gap-2">
+                    {isProcessing ? <><img src={gemIcon} alt="" className="w-5 h-5 animate-spin" />Processing {selectedKBFiles.size}...</> : <><Sparkles className="w-5 h-5" />Process Selected ({selectedKBFiles.size})</>}
+                  </button>
+                  <button onClick={handleDeleteSelectedFiles} disabled={isProcessing} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:bg-gray-400 flex items-center gap-2">
+                    <Trash2 className="w-4 h-4" />Delete Selected ({selectedKBFiles.size})
+                  </button>
+                </div>
               )}
             </div>
             <div className="space-y-2 max-h-[400px] overflow-y-auto">
@@ -1077,7 +1139,7 @@ export function ResearcherModes({
               {[
                 { value: 'new-synthesis', label: 'New Synthesis', desc: 'Start a new synthesis for an existing brand and project type' },
                 { value: 'new-brand', label: 'New Brand', desc: 'Start synthesis for a new brand' },
-                { value: 'new-project-type', label: 'New Project Type', desc: 'Create a new project type with a custom AI prompt, shared across your workspace' },
+                { value: 'new-project-type', label: 'New Project Type (Data Scientists Only)', desc: 'Create a new project type with custom AI prompt' },
                 { value: 'edit-existing', label: 'Edit Existing Synthesis', desc: 'Modify an existing synthesis file' },
                 { value: 'review-edits', label: 'Review Suggested Edits', desc: 'Review and approve suggested edits' },
               ].map(opt => (
@@ -1103,14 +1165,14 @@ export function ResearcherModes({
             </div>
           </div>
         )}
-        {synthesisOption === 'new-project-type' && onAddProjectTypeWithPrompt && (
+        {synthesisOption === 'new-project-type' && onAddProjectTypeWithPrompt && userRole === 'data-scientist' && (
           <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 space-y-3">
             <input type="text" className="w-full border-2 border-gray-300 bg-white rounded p-2 text-gray-700" placeholder="Project type name..." value={newProjectType} onChange={e => setNewProjectType(e.target.value)} />
             <textarea className="w-full border-2 border-gray-300 bg-white rounded p-2 text-gray-700 h-24" placeholder="Project type prompt..." value={newProjectTypePrompt} onChange={e => setNewProjectTypePrompt(e.target.value)} />
             <button onClick={async () => { if (newProjectType.trim() && newProjectTypePrompt.trim()) { await onAddProjectTypeWithPrompt(newProjectType.trim(), newProjectTypePrompt.trim()); setNewProjectType(''); setNewProjectTypePrompt(''); } }} disabled={!newProjectType.trim() || !newProjectTypePrompt.trim()} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400">Add Project Type</button>
           </div>
         )}
-
+        {synthesisOption === 'new-project-type' && userRole !== 'data-scientist' && <div className="bg-red-50 border-2 border-red-200 rounded p-4"><p className="text-red-900 text-sm">❌ Only Data Scientists can create new project types.</p></div>}
         {synthesisOption === 'new-synthesis' && (
           <div className="space-y-4">
             <div className="bg-white border-2 border-gray-300 rounded-lg p-4">
@@ -1141,9 +1203,10 @@ export function ResearcherModes({
                   </div>
                 ) : <p className="text-sm text-gray-500 italic mb-4">No approved files for {selectedBrand}</p>}
                 <label className="w-full px-4 py-3 bg-green-600 text-white rounded hover:bg-green-700 flex items-center justify-center gap-2 cursor-pointer">
-                  <Upload className="w-5 h-5" />Upload Files
-                  <input type="file" accept=".pdf,.doc,.docx,.xlsx,.xls,.csv,.txt,.ppt,.pptx" multiple className="hidden" onChange={handleUploadToDatabricks} />
+                  <Upload className="w-5 h-5" />Upload Files Directly
+                  <input type="file" accept=".pdf,.doc,.docx,.xlsx,.xls,.csv,.txt,.ppt,.pptx" multiple className="hidden" onChange={handleUploadForNewSynthesis} />
                 </label>
+                <p className="text-xs text-gray-500 mt-1">Files are uploaded directly as approved — no approval step needed.</p>
               </div>
             )}
             {selectedBrand && selectedProjectType && selectedDatabricksFiles.length > 0 && (

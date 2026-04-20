@@ -1348,6 +1348,14 @@ export default async function handler(req, res) {
       cleanedUserSolution  = cleanedUserSolution.replace(/\[PRIOR_SUMMARY:\n[\s\S]+?\n\]/, '').trim();
     }
 
+    // Extract War Games competitor marker injected by CentralHexView
+    let warGamesCompetitor = '';
+    const wgMatch = cleanedUserSolution.match(/\[WAR_GAMES_COMPETITOR:\s*([^\]]+)\]/);
+    if (wgMatch) {
+      warGamesCompetitor = wgMatch[1].trim();
+      cleanedUserSolution = cleanedUserSolution.replace(/\[WAR_GAMES_COMPETITOR:[^\]]+\]\n?/, '').trim();
+    }
+
     const priorContextBlock = priorPersonasContext
       ? `
 PRIOR ROUND CONTEXT — PERSONAS PREVIOUSLY USED:
@@ -1464,6 +1472,7 @@ ${iterationDirections.map((d, i) => `${i + 1}. ${d}`).join('\n')}
     console.log(`[Assessment] Iteration context: ${priorHexCount} prior hex(es)`);
 
     // ── Step 2: Build shared context ────────────────────────────────────────
+    const taskDescription = warGamesCompetitorBlock + rawTaskDescription;
     const assessmentTypeLabel = assessmentTypes?.includes('recommend') ? 'Recommend'
       : assessmentTypes?.includes('assess') ? 'Assess'
       : 'Unified';
@@ -1500,7 +1509,12 @@ ${iterationDirections.map((d, i) => `${i + 1}. ${d}`).join('\n')}
       ),
     ].join('\n\n');
 
-    const taskDescription = buildTaskDescription({
+    // For War Games, build a competitor context block prepended to the task
+    const warGamesCompetitorBlock = (projectType === 'War Games' && warGamesCompetitor)
+      ? `WAR GAMES SESSION\nBrand: ${brand}\nCompetitor: ${warGamesCompetitor}\n\nWork through all 5 steps of the War Games framework defined in the project type prompt. Use the exact names "${brand}" and "${warGamesCompetitor}" throughout all 5 steps.\n\n`
+      : '';
+
+    const rawTaskDescription = buildTaskDescription({
       requestMode, assessmentTypes, brand, hexLabel, hexId,
       ideasContent, ideaElements,
       userSolution: cleanedUserSolution,   // cleaned — prior markers stripped
@@ -1589,7 +1603,8 @@ ${iterationDirections.map((d, i) => `${i + 1}. ${d}`).join('\n')}
 
     // ── Round 2+: Debate rounds ──────────────────────────────────────────────
     // Skip debate rounds if there is only one persona — a single voice has no one to debate.
-    const actualDebateRounds = shuffledPersonaData.length <= 1
+    // Skip debate for single persona OR War Games (structured sequential analysis, not debate)
+    const actualDebateRounds = (shuffledPersonaData.length <= 1 || projectType === 'War Games')
       ? 0
       : Math.max(1, Math.min(numDebateRounds, MAX_DEBATE_ROUNDS));
 
