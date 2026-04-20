@@ -15,7 +15,7 @@ import { DatabricksFileSaver } from './DatabricksFileSaver';
 import { InterviewDialog } from './InterviewDialog';
 import { AssessmentModal, type IdeaElement, type IterationGem, type KbMode, type RequestMode } from './AssessmentModal';
 import { MarkdownViewer } from './MarkdownViewer';
-import { LoadingGem } from './LoadingGem';
+import { LoadingGem, SpinHex } from './LoadingGem';
 import cohiveLogo from 'figma:asset/88105c0c8621f3d41d65e5be3ae75558f9de1753.png';
 import { uploadToKnowledgeBase, downloadFile, listKnowledgeBaseFiles, type KnowledgeBaseFile, generateSummary, fetchSharedConfig, addSharedConfigItem, fetchProjectTypeConfigs, type ProjectTypeConfig } from '../utils/databricksAPI';
 import { isAuthenticated, getCurrentUserEmail, getValidSession } from '../utils/databricksAuth';
@@ -1093,7 +1093,7 @@ export default function ProcessWireframe() {
       {isCheckingAuth && (
         <div className="fixed inset-0 bg-white flex items-center justify-center z-50">
           <div className="text-center">
-            <Cpu className="w-12 h-12 text-blue-500 animate-spin mx-auto mb-4" />
+            <SpinHex className="w-12 h-12 mx-auto mb-4" />
             <p className="text-gray-700">Loading CoHive...</p>
           </div>
         </div>

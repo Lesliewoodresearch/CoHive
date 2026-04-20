@@ -7,6 +7,7 @@ import { executeAIPrompt, runAIAgent } from '../utils/databricksAI';
 import { isAuthenticated, getCurrentUserEmail, getValidSession } from '../utils/databricksAuth';
 import { Upload, CircleCheck, Trash2, Edit, Bot, Sparkles, X, Loader, FileText, Download, Save, RefreshCw, ChevronDown, ChevronRight } from 'lucide-react';
 import gemIcon from 'figma:asset/53dc6cf554f69e479cfbd60a46741f158d11dd21.png';
+import { SpinHex } from './LoadingGem';
 
 interface ResearchFile {
   id: string;
@@ -257,6 +258,7 @@ export function ResearcherModes({
 
   const [selectedKBFiles, setSelectedKBFiles] = useState<Set<string>>(new Set());
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [processingStatus, setProcessingStatus] = useState<{ [fileId: string]: 'pending' | 'processing' | 'success' | 'error' }>({});
 
   const [previewFile, setPreviewFile] = useState<KnowledgeBaseFile | null>(null);
@@ -396,18 +398,22 @@ export function ResearcherModes({
     if (!confirmed) return;
     const selectedArray = Array.from(selectedKBFiles);
     let ok = 0; let fail = 0;
-    for (const fileId of selectedArray) {
-      try {
-        const r = await deleteKnowledgeBaseFile(fileId, userEmail, 'research-leader');
-        if (r.success) ok++;
-        else fail++;
-      } catch { fail++; }
+    setIsDeleting(true);
+    try {
+      for (const fileId of selectedArray) {
+        try {
+          const r = await deleteKnowledgeBaseFile(fileId, userEmail, 'research-leader');
+          if (r.success) ok++;
+          else fail++;
+        } catch { fail++; }
+      }
+      setSelectedKBFiles(new Set());
+      await refreshPendingQueues();
+    } finally {
+      setIsDeleting(false);
     }
-    setSelectedKBFiles(new Set());
-    await refreshPendingQueues();
     alert(ok > 0
-      ? `✅ ${ok} file${ok !== 1 ? 's' : ''} deleted${fail > 0 ? `
-❌ ${fail} failed` : ''}`
+      ? `✅ ${ok} file${ok !== 1 ? 's' : ''} deleted${fail > 0 ? `\n❌ ${fail} failed` : ''}`
       : `❌ Failed to delete files`
     );
   };
@@ -772,7 +778,7 @@ export function ResearcherModes({
           <div className="border-t-2 border-gray-200 px-6 py-4 flex items-center justify-between">
             <button onClick={() => { setShowMetadataModal(false); setMetadataQueue([]); }} className="px-4 py-2 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm">Skip — assign later</button>
             <button onClick={handleSaveMetadataAssignments} disabled={isSavingMetadata} className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 flex items-center gap-2 text-sm font-semibold">
-              {isSavingMetadata ? <><Loader className="w-4 h-4 animate-spin" />Saving...</> : <><Save className="w-4 h-4" />Save Metadata</>}
+              {isSavingMetadata ? <><SpinHex className="w-4 h-4" />Saving...</> : <><Save className="w-4 h-4" />Save Metadata</>}
             </button>
           </div>
         </div>
@@ -839,13 +845,13 @@ export function ResearcherModes({
             </div>
             <div>
               <h4 className="text-gray-900 font-medium mb-2 text-sm">File Content</h4>
-              {isLoadingPreview ? <div className="flex items-center justify-center py-8"><Loader className="w-6 h-6 animate-spin text-gray-400" /><span className="ml-2 text-gray-500">Loading...</span></div> : <textarea value={editedKBContent} onChange={e => setEditedKBContent(e.target.value)} className="w-full min-h-[300px] bg-gray-50 border-2 border-gray-300 rounded p-4 text-gray-700 text-sm resize-y focus:outline-none focus:border-green-500" />}
+              {isLoadingPreview ? <div className="flex items-center justify-center py-8"><SpinHex className="w-6 h-6" /><span className="ml-2 text-gray-500">Loading...</span></div> : <textarea value={editedKBContent} onChange={e => setEditedKBContent(e.target.value)} className="w-full min-h-[300px] bg-gray-50 border-2 border-gray-300 rounded p-4 text-gray-700 text-sm resize-y focus:outline-none focus:border-green-500" />}
             </div>
           </div>
           {canApproveResearch && (
             <div className="border-t-2 border-gray-300 p-4 flex items-center justify-between">
               <button onClick={handleSaveKBChanges} disabled={isSavingKBChanges} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-300 flex items-center gap-2">
-                {isSavingKBChanges ? <><Loader className="w-4 h-4 animate-spin" />Saving...</> : <><Save className="w-4 h-4" />Save Changes</>}
+                {isSavingKBChanges ? <><SpinHex className="w-4 h-4" />Saving...</> : <><Save className="w-4 h-4" />Save Changes</>}
               </button>
               <div className="flex items-center gap-3">
                 <button onClick={() => handleRejectKBFile(previewFile.fileId)} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 flex items-center gap-2"><Trash2 className="w-4 h-4" />Reject & Delete</button>
@@ -921,10 +927,10 @@ export function ResearcherModes({
               {selectedKBFiles.size > 0 && (
                 <div className="flex items-center gap-2">
                   <button onClick={handleProcessSelectedFiles} disabled={isProcessing} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 flex items-center gap-2">
-                    {isProcessing ? <><img src={gemIcon} alt="" className="w-5 h-5 animate-spin" />Processing {selectedKBFiles.size}...</> : <><Sparkles className="w-5 h-5" />Process Selected ({selectedKBFiles.size})</>}
+                    {isProcessing ? <><SpinHex className="w-5 h-5" />Processing {selectedKBFiles.size}...</> : <><Sparkles className="w-5 h-5" />Process Selected ({selectedKBFiles.size})</>}
                   </button>
-                  <button onClick={handleDeleteSelectedFiles} disabled={isProcessing} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:bg-gray-400 flex items-center gap-2">
-                    <Trash2 className="w-4 h-4" />Delete Selected ({selectedKBFiles.size})
+                  <button onClick={handleDeleteSelectedFiles} disabled={isProcessing || isDeleting} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:bg-gray-400 flex items-center gap-2">
+                    {isDeleting ? <><SpinHex className="w-4 h-4" />Deleting {selectedKBFiles.size}...</> : <><Trash2 className="w-4 h-4" />Delete Selected ({selectedKBFiles.size})</>}
                   </button>
                 </div>
               )}
@@ -949,7 +955,7 @@ export function ResearcherModes({
                             </div>
                           </div>
                           {status && <div className="flex-shrink-0">
-                            {status === 'processing' && <img src={gemIcon} alt="" className="w-6 h-6 animate-spin" />}
+                            {status === 'processing' && <SpinHex className="w-6 h-6" />}
                             {status === 'success' && <CircleCheck className="w-6 h-6 text-green-600" />}
                             {status === 'error' && <X className="w-6 h-6 text-red-600" />}
                           </div>}
@@ -1054,7 +1060,7 @@ export function ResearcherModes({
                 {canApproveResearch && <button onClick={() => onToggleApproval(selectedFile.id)} className={`px-3 py-1 rounded text-xs ${selectedFile.isApproved ? 'bg-yellow-500 text-white' : 'bg-green-600 text-white'}`}>{selectedFile.isApproved ? 'Unapprove' : 'Approve'}</button>}
               </div>
             </div>
-            {isLoadingFileContent ? <div className="flex items-center justify-center py-10"><Loader className="w-5 h-5 animate-spin text-gray-400 mr-2" /><span className="text-gray-500 text-sm">Loading...</span></div>
+            {isLoadingFileContent ? <div className="flex items-center justify-center py-10"><SpinHex className="w-5 h-5 mr-2" /><span className="text-gray-500 text-sm">Loading...</span></div>
               : fileLoadError ? <div className="bg-red-50 border-2 border-red-200 rounded p-4 text-red-700 text-sm">{fileLoadError}</div>
               : <textarea className={`w-full min-h-[300px] border-2 rounded p-3 text-gray-700 text-sm font-mono resize-y focus:outline-none ${canApproveResearch ? 'border-gray-300 bg-white focus:border-green-500' : 'border-gray-200 bg-gray-50'}`} value={editContent} onChange={e => canApproveResearch && setEditContent(e.target.value)} readOnly={!canApproveResearch} />
             }
@@ -1077,7 +1083,7 @@ export function ResearcherModes({
                     {renamingFileId === file.id ? (
                       <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
                         <input type="text" value={renameValue} onChange={e => setRenameValue(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') handleRenameFile(file.id, renameValue); if (e.key === 'Escape') { setRenamingFileId(null); setRenameValue(''); } }} className="flex-1 border-2 border-green-400 rounded px-2 py-1 text-sm text-gray-900 focus:outline-none" autoFocus />
-                        <button onClick={() => handleRenameFile(file.id, renameValue)} disabled={isSavingRename || !renameValue.trim()} className="px-3 py-1 bg-green-600 text-white text-xs rounded disabled:bg-gray-300 flex items-center gap-1">{isSavingRename ? <Loader className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}Save</button>
+                        <button onClick={() => handleRenameFile(file.id, renameValue)} disabled={isSavingRename || !renameValue.trim()} className="px-3 py-1 bg-green-600 text-white text-xs rounded disabled:bg-gray-300 flex items-center gap-1">{isSavingRename ? <SpinHex className="w-3 h-3" /> : <Save className="w-3 h-3" />}Save</button>
                         <button onClick={() => { setRenamingFileId(null); setRenameValue(''); }} className="px-3 py-1 border-2 border-gray-300 text-gray-600 text-xs rounded">Cancel</button>
                       </div>
                     ) : (
@@ -1226,7 +1232,7 @@ export function ResearcherModes({
                 } catch (e) { alert(`❌ Synthesis failed: ${e instanceof Error ? e.message : 'Unknown'}`); }
                 finally { setIsProcessing(false); }
               }} disabled={isProcessing} className="w-full px-6 py-3 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-gray-400 flex items-center justify-center gap-2">
-                {isProcessing && <img src={gemIcon} alt="" className="w-5 h-5 animate-spin" />}
+                {isProcessing && <SpinHex className="w-5 h-5" />}
                 {isProcessing ? 'Generating...' : 'Execute - New Synthesis'}
               </button>
             )}
@@ -1371,7 +1377,7 @@ export function ResearcherModes({
           <div className="bg-white border-2 border-gray-300 rounded-lg p-4"><label className="block text-gray-900 font-semibold text-sm mb-1">Additional Context (optional)</label><textarea value={cpRunInput} onChange={e => setCpRunInput(e.target.value)} rows={3} className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg text-gray-900 text-sm resize-y focus:outline-none focus:border-teal-400" /></div>
           {cpError && <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 flex items-start gap-3"><X className="w-5 h-5 text-red-600 flex-shrink-0" /><p className="text-red-700 text-sm">{cpError}</p></div>}
           <div className="flex gap-3">
-            <button onClick={() => handleCpRunPrompt(cpActivePrompt)} disabled={cpIsRunning || cpSelectedFiles.length === 0} className="flex items-center gap-2 px-6 py-2.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-40 text-sm font-semibold">{cpIsRunning ? <><Loader className="w-4 h-4 animate-spin" />Running…</> : <><Bot className="w-4 h-4" />Run Prompt</>}</button>
+            <button onClick={() => handleCpRunPrompt(cpActivePrompt)} disabled={cpIsRunning || cpSelectedFiles.length === 0} className="flex items-center gap-2 px-6 py-2.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-40 text-sm font-semibold">{cpIsRunning ? <><SpinHex className="w-4 h-4" />Running…</> : <><Bot className="w-4 h-4" />Run Prompt</>}</button>
             {cpResult && <button onClick={() => openAiModal(cpActivePrompt.name, cpResult)} className="flex items-center gap-2 px-5 py-2.5 border-2 border-teal-300 text-teal-700 rounded-lg hover:bg-teal-50 text-sm"><FileText className="w-4 h-4" />View Full</button>}
           </div>
           {cpResult && <div className="bg-white border-2 border-teal-200 rounded-lg p-5"><div className="flex items-center justify-between mb-3"><h4 className="text-gray-900 font-semibold text-sm flex items-center gap-2"><CircleCheck className="w-4 h-4 text-green-600" />Result</h4><button onClick={() => downloadAsMarkdown(cpActivePrompt.name, cpResult)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-teal-600 text-white rounded-lg"><Download className="w-3.5 h-3.5" />Download</button></div><div className="max-h-80 overflow-y-auto">{renderMarkdown(cpResult)}</div></div>}
