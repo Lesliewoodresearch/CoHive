@@ -1472,7 +1472,6 @@ ${iterationDirections.map((d, i) => `${i + 1}. ${d}`).join('\n')}
     console.log(`[Assessment] Iteration context: ${priorHexCount} prior hex(es)`);
 
     // ── Step 2: Build shared context ────────────────────────────────────────
-    const taskDescription = warGamesCompetitorBlock + rawTaskDescription;
     const assessmentTypeLabel = assessmentTypes?.includes('recommend') ? 'Recommend'
       : assessmentTypes?.includes('assess') ? 'Assess'
       : 'Unified';
@@ -1520,6 +1519,7 @@ ${iterationDirections.map((d, i) => `${i + 1}. ${d}`).join('\n')}
       userSolution: cleanedUserSolution,   // cleaned — prior markers stripped
       projectType, projectTypePrompt, scope,
     });
+    const taskDescription = warGamesCompetitorBlock + rawTaskDescription;
 
     // Shuffle personas, load full persona data
     const basePersonas = selectedPersonas?.length > 0 ? [...selectedPersonas] : ['General Expert'];
