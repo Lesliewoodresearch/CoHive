@@ -259,6 +259,16 @@ export function ResearcherModes({
   const [selectedKBFiles, setSelectedKBFiles] = useState<Set<string>>(new Set());
   const [isProcessing, setIsProcessing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isBulkActioning, setIsBulkActioning] = useState(false);
+  const [selectedProcessedFiles, setSelectedProcessedFiles] = useState<Set<string>>(new Set());
+
+  const toggleProcessedFileSelection = (fileId: string) => {
+    setSelectedProcessedFiles(prev => {
+      const next = new Set(prev);
+      next.has(fileId) ? next.delete(fileId) : next.add(fileId);
+      return next;
+    });
+  };
   const [processingStatus, setProcessingStatus] = useState<{ [fileId: string]: 'pending' | 'processing' | 'success' | 'error' }>({});
 
   const [previewFile, setPreviewFile] = useState<KnowledgeBaseFile | null>(null);
@@ -411,6 +421,59 @@ export function ResearcherModes({
       await refreshPendingQueues();
     } finally {
       setIsDeleting(false);
+    }
+    alert(ok > 0
+      ? `✅ ${ok} file${ok !== 1 ? 's' : ''} deleted${fail > 0 ? `\n❌ ${fail} failed` : ''}`
+      : `❌ Failed to delete files`
+    );
+  };
+
+  const handleBulkApproveProcessed = async (approve: boolean) => {
+    if (selectedProcessedFiles.size === 0) return;
+    const label = approve ? 'approve' : 'unapprove';
+    const confirmed = confirm(`${approve ? 'Approve' : 'Unapprove'} ${selectedProcessedFiles.size} selected file${selectedProcessedFiles.size !== 1 ? 's' : ''}?`);
+    if (!confirmed) return;
+    setIsBulkActioning(true);
+    let ok = 0; let fail = 0;
+    try {
+      for (const fileId of Array.from(selectedProcessedFiles)) {
+        try {
+          if (onToggleApproval) {
+            await onToggleApproval(fileId, approve);
+            ok++;
+          }
+        } catch { fail++; }
+      }
+      setSelectedProcessedFiles(new Set());
+      await refreshPendingQueues();
+    } finally {
+      setIsBulkActioning(false);
+    }
+    alert(ok > 0
+      ? `✅ ${ok} file${ok !== 1 ? 's' : ''} ${label}d${fail > 0 ? `\n❌ ${fail} failed` : ''}`
+      : `❌ Failed to ${label} files`
+    );
+  };
+
+  const handleBulkDeleteProcessed = async () => {
+    if (selectedProcessedFiles.size === 0) return;
+    const count = selectedProcessedFiles.size;
+    const confirmed = confirm(`Delete ${count} selected file${count !== 1 ? 's' : ''}? This cannot be undone.`);
+    if (!confirmed) return;
+    setIsBulkActioning(true);
+    let ok = 0; let fail = 0;
+    try {
+      for (const fileId of Array.from(selectedProcessedFiles)) {
+        try {
+          const r = await deleteKnowledgeBaseFile(fileId, userEmail, 'research-leader');
+          if (r.success) ok++;
+          else fail++;
+        } catch { fail++; }
+      }
+      setSelectedProcessedFiles(new Set());
+      await refreshPendingQueues();
+    } finally {
+      setIsBulkActioning(false);
     }
     alert(ok > 0
       ? `✅ ${ok} file${ok !== 1 ? 's' : ''} deleted${fail > 0 ? `\n❌ ${fail} failed` : ''}`
@@ -929,9 +992,9 @@ export function ResearcherModes({
                   <button onClick={handleProcessSelectedFiles} disabled={isProcessing} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 flex items-center gap-2">
                     {isProcessing ? <><SpinHex className="w-5 h-5" />Processing {selectedKBFiles.size}...</> : <><Sparkles className="w-5 h-5" />Process Selected ({selectedKBFiles.size})</>}
                   </button>
-                  <button onClick={handleDeleteSelectedFiles} disabled={isProcessing || isDeleting} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:bg-gray-400 flex items-center gap-2">
+                  {canApproveResearch && <button onClick={handleDeleteSelectedFiles} disabled={isProcessing || isDeleting} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:bg-gray-400 flex items-center gap-2">
                     {isDeleting ? <><SpinHex className="w-4 h-4" />Deleting {selectedKBFiles.size}...</> : <><Trash2 className="w-4 h-4" />Delete Selected ({selectedKBFiles.size})</>}
-                  </button>
+                  </button>}
                 </div>
               )}
             </div>
@@ -1069,6 +1132,21 @@ export function ResearcherModes({
         )}
 
         <div className="bg-white border-2 border-gray-300 rounded-lg p-4">
+          {canApproveResearch && selectedProcessedFiles.size > 0 && (
+            <div className="flex items-center gap-2 mb-4 p-2 bg-gray-50 border border-gray-200 rounded-lg">
+              <span className="text-sm text-gray-600 mr-1">{selectedProcessedFiles.size} selected</span>
+              <button onClick={() => handleBulkApproveProcessed(true)} disabled={isBulkActioning} className="px-3 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400 flex items-center gap-1.5 text-sm">
+                {isBulkActioning ? <SpinHex className="w-4 h-4" /> : <CircleCheck className="w-4 h-4" />}Approve
+              </button>
+              <button onClick={() => handleBulkApproveProcessed(false)} disabled={isBulkActioning} className="px-3 py-1.5 bg-yellow-500 text-white rounded hover:bg-yellow-600 disabled:bg-gray-400 flex items-center gap-1.5 text-sm">
+                {isBulkActioning ? <SpinHex className="w-4 h-4" /> : <X className="w-4 h-4" />}Unapprove
+              </button>
+              <button onClick={handleBulkDeleteProcessed} disabled={isBulkActioning} className="px-3 py-1.5 bg-red-600 text-white rounded hover:bg-red-700 disabled:bg-gray-400 flex items-center gap-1.5 text-sm">
+                {isBulkActioning ? <SpinHex className="w-4 h-4" /> : <Trash2 className="w-4 h-4" />}Delete
+              </button>
+              <button onClick={() => setSelectedProcessedFiles(new Set())} className="ml-auto px-3 py-1.5 text-gray-500 hover:text-gray-700 text-sm">Clear</button>
+            </div>
+          )}
           <div className="flex gap-2 mb-4">
             <button onClick={() => setFilterType('all')} className={`px-4 py-2 rounded-lg ${filterType === 'all' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>All ({selectableFiles.length})</button>
             <button onClick={() => setFilterType('synthesis')} className={`px-4 py-2 rounded-lg ${filterType === 'synthesis' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>Synthesis ({getSynthesisFiles().length})</button>
@@ -1078,7 +1156,17 @@ export function ResearcherModes({
           {getFilteredFiles().length === 0 ? <div className="text-center py-8 text-gray-500">No files available</div> : (
             getFilteredFiles().map(file => (
               <div key={file.id} className={`border-2 rounded transition-all mb-2 ${selectedFile?.id === file.id ? 'border-green-500 bg-green-50' : 'border-gray-300 bg-white hover:border-gray-400'} ${file.fileType === 'Example' ? 'border-l-4 border-l-amber-400' : ''}`}>
-                <div className="flex items-start justify-between gap-2 p-3">
+                <div className="flex items-start gap-2 p-3">
+                  {canApproveResearch && (
+                    <input
+                      type="checkbox"
+                      checked={selectedProcessedFiles.has(file.id)}
+                      onChange={e => { e.stopPropagation(); toggleProcessedFileSelection(file.id); }}
+                      onClick={e => e.stopPropagation()}
+                      disabled={isBulkActioning}
+                      className="w-4 h-4 mt-1 cursor-pointer flex-shrink-0"
+                    />
+                  )}
                   <div className="flex-1 min-w-0 cursor-pointer" onClick={() => renamingFileId !== file.id && handleSelectFile(file)}>
                     {renamingFileId === file.id ? (
                       <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
