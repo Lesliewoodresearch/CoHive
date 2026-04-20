@@ -516,18 +516,13 @@ export function CentralHexView({
               <label className="block text-gray-900 mb-1 font-semibold">
                 Select Competitor
               </label>
-              <select
+              <input
+                type="text"
                 className="w-full border-2 border-gray-300 bg-white rounded p-2 text-gray-700 focus:outline-none focus:border-blue-500"
+                placeholder="Enter competitor brand name..."
                 value={selectedCompetitor}
                 onChange={(e) => setSelectedCompetitor(e.target.value)}
-              >
-                <option value="">Choose a competitor...</option>
-                <option value="Puma">Puma</option>
-                <option value="Under Armour">Under Armour</option>
-                <option value="New Balance">New Balance</option>
-                <option value="Lululemon">Lululemon</option>
-                <option value="Reebok">Reebok</option>
-              </select>
+              />
             </div>
 
             {/* Analysis Type - Hidden for War Games */}
