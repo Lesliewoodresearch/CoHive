@@ -1292,14 +1292,45 @@ export function ResearcherModes({
             {selectedBrand && selectedProjectType && (
               <div className="bg-white border-2 border-gray-300 rounded-lg p-4">
                 <label className="block text-gray-900 mb-3">4. Select Research Files</label>
-                {researchFiles.filter(f => f.isApproved && f.brand === selectedBrand).length > 0 ? (
-                  <div className="space-y-2 max-h-40 overflow-y-auto mb-4">
-                    {researchFiles.filter(f => f.isApproved && f.brand === selectedBrand).map(file => {
-                      const isSel = selectedDatabricksFiles.some(sf => sf.id === file.id);
-                      return <div key={file.id} onClick={() => setSelectedDatabricksFiles(prev => isSel ? prev.filter(sf => sf.id !== file.id) : [...prev, file])} className={`p-3 border-2 rounded cursor-pointer ${isSel ? 'border-purple-500 bg-purple-50' : 'border-gray-300 bg-white hover:border-gray-400'}`}><div className="flex items-center gap-2"><input type="checkbox" checked={isSel} onChange={() => {}} className="w-4 h-4" /><span className="text-sm text-gray-900">{file.fileName}</span></div></div>;
-                    })}
-                  </div>
-                ) : <p className="text-sm text-gray-500 italic mb-4">No approved files for {selectedBrand}</p>}
+                {(() => {
+                  const brandLower = selectedBrand.toLowerCase();
+                  const ptLower = selectedProjectType.toLowerCase();
+                  // Include files for this brand (case-insensitive) OR files with no brand (general/category)
+                  const eligible = researchFiles.filter(f =>
+                    f.isApproved &&
+                    (!f.brand || f.brand.toLowerCase() === brandLower)
+                  );
+                  // Sort: matched project type first, then others
+                  const matched = eligible.filter(f => (f.projectType || '').toLowerCase() === ptLower);
+                  const others  = eligible.filter(f => (f.projectType || '').toLowerCase() !== ptLower);
+                  const sorted  = [...matched, ...others];
+                  return sorted.length > 0 ? (
+                    <div className="space-y-2 max-h-60 overflow-y-auto mb-4">
+                      {sorted.map((file, idx) => {
+                        const isSel = selectedDatabricksFiles.some(sf => sf.id === file.id);
+                        const isOtherPT = matched.length > 0 && idx === matched.length;
+                        return (
+                          <div key={file.id}>
+                            {isOtherPT && (
+                              <div className="flex items-center gap-2 my-2">
+                                <div className="flex-1 border-t border-gray-200" />
+                                <span className="text-xs text-gray-400 whitespace-nowrap">Other project types</span>
+                                <div className="flex-1 border-t border-gray-200" />
+                              </div>
+                            )}
+                            <div onClick={() => setSelectedDatabricksFiles(prev => isSel ? prev.filter(sf => sf.id !== file.id) : [...prev, file])} className={`p-3 border-2 rounded cursor-pointer ${isSel ? 'border-purple-500 bg-purple-50' : 'border-gray-300 bg-white hover:border-gray-400'}`}>
+                              <div className="flex items-center gap-2">
+                                <input type="checkbox" checked={isSel} onChange={() => {}} className="w-4 h-4" />
+                                <span className="text-sm text-gray-900">{file.fileName}</span>
+                                {file.projectType && (file.projectType || '').toLowerCase() !== ptLower && <span className="text-xs text-gray-400 ml-auto">{file.projectType}</span>}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : <p className="text-sm text-gray-500 italic mb-4">No approved files for {selectedBrand}</p>;
+                })()}
                 <label className="w-full px-4 py-3 bg-green-600 text-white rounded hover:bg-green-700 flex items-center justify-center gap-2 cursor-pointer">
                   <Upload className="w-5 h-5" />Upload Files Directly
                   <input type="file" accept=".pdf,.doc,.docx,.xlsx,.xls,.csv,.txt,.ppt,.pptx" multiple className="hidden" onChange={handleUploadForNewSynthesis} />

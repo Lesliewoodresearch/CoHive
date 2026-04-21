@@ -484,7 +484,8 @@ export default function ProcessWireframe() {
 
   const getUniqueFileName = (fileName: string, brand: string, projectType: string): string => {
     const existingFiles = projectFiles.filter(f => f.brand.toLowerCase() === brand.toLowerCase() && f.projectType.toLowerCase() === projectType.toLowerCase());
-    const versionMatch = fileName.match(/^(.+?)_[vV](\d+)$/);
+    const baseName = fileName.replace(/\.txt$/i, '');
+    const versionMatch = baseName.match(/^(.+?)_[vV](\d+)$/);
     if (versionMatch) {
       const baseName = versionMatch[1];
       let highestVersion = parseInt(versionMatch[2], 10);
@@ -539,9 +540,15 @@ export default function ProcessWireframe() {
     );
   };
 
+  // Strip extension for display — users never see .txt
+  const displayFileName = (fileName: string): string =>
+    fileName.replace(/\.(txt|json)$/i, '');
+
   const getSummaryFileName = (fileName: string): string => {
-    const versionMatch = fileName.match(/^(.+?)_[vV]\d+$/);
-    const baseName = versionMatch ? versionMatch[1] : fileName;
+    // Strip .txt extension before generating summary name
+    const stripped = fileName.replace(/\.txt$/i, '');
+    const versionMatch = stripped.match(/^(.+?)_[vV]\d+$/);
+    const baseName = versionMatch ? versionMatch[1] : stripped;
     return `${baseName}_sum`;
   };
 
@@ -1067,10 +1074,10 @@ export default function ProcessWireframe() {
       kbFiles = await listKnowledgeBaseFiles({ sortBy: 'upload_date', sortOrder: 'DESC', limit: 500 });
       const filteredFiles = kbFiles.filter(file => file.fileType !== 'Findings');
       const convertedFiles: ResearchFile[] = filteredFiles.map((kbFile: KnowledgeBaseFile) => {
-        let displayBrand = 'General', displayProjectType = 'Knowledge Base';
-        if (kbFile.scope === 'category') { displayBrand = kbFile.category || 'Uncategorized'; displayProjectType = kbFile.projectType || 'Category Knowledge'; }
-        else if (kbFile.scope === 'brand') { displayBrand = kbFile.brand || 'Unknown Brand'; displayProjectType = kbFile.projectType || kbFile.category || 'Brand Knowledge'; }
-        else { displayBrand = 'General'; displayProjectType = kbFile.projectType || 'General Knowledge'; }
+        let displayBrand = '', displayProjectType = 'Knowledge Base';
+        if (kbFile.scope === 'category') { displayBrand = ''; displayProjectType = kbFile.projectType || 'Category Knowledge'; }
+        else if (kbFile.scope === 'brand') { displayBrand = kbFile.brand || ''; displayProjectType = kbFile.projectType || kbFile.category || 'Brand Knowledge'; }
+        else { displayBrand = ''; displayProjectType = kbFile.projectType || 'General Knowledge'; }
         return { id: kbFile.fileId, brand: displayBrand, projectType: displayProjectType, fileName: kbFile.fileName, isApproved: kbFile.isApproved, uploadDate: new Date(kbFile.uploadDate).getTime(), fileType: kbFile.fileType, source: kbFile.filePath, scope: kbFile.scope, contentSummary: kbFile.contentSummary };
       });
       setResearchFiles(convertedFiles);
@@ -1137,7 +1144,7 @@ export default function ProcessWireframe() {
                 const currentFileName = responses['Enter']?.[2];
                 if (brand && projectType && currentFileName) {
                   const nextFileName = getUniqueFileName(currentFileName, brand, projectType);
-                  setResponses(prev => ({ ...prev, 'Enter': { ...prev['Enter'], [2]: nextFileName }, 'Findings': { ...prev['Findings'], [0]: '' } }));
+                  setResponses(prev => ({ ...prev, 'Enter': { ...prev['Enter'], [2]: displayFileName(nextFileName) }, 'Findings': { ...prev['Findings'], [0]: '' } }));
                 }
                 setIterationSaved(false);
                 localStorage.setItem('cohive_iteration_saved', 'false');
@@ -1475,7 +1482,7 @@ export default function ProcessWireframe() {
                                 <span>{idx + 1}. {question}</span>
                                 {hasResponse && <CircleCheck className="w-5 h-5 text-green-600 flex-shrink-0" />}
                               </label>
-                              <input type="text" className="w-full border-2 border-gray-300 bg-white rounded p-2 text-gray-700 font-mono focus:outline-none focus:border-blue-500" value={responses[activeStepId]?.[idx] || suggestedFileName} onChange={(e) => handleResponseChange(idx, e.target.value)} placeholder={suggestedFileName} />
+                              <input type="text" className="w-full border-2 border-gray-300 bg-white rounded p-2 text-gray-700 font-mono focus:outline-none focus:border-blue-500" value={displayFileName(responses[activeStepId]?.[idx] || suggestedFileName)} onChange={(e) => handleResponseChange(idx, e.target.value)} placeholder={displayFileName(suggestedFileName)} />
                               <p className="text-gray-600 text-xs mt-1">You can edit this filename or keep the suggested name</p>
                             </div>
                           );
@@ -1755,10 +1762,40 @@ export default function ProcessWireframe() {
                                           if (!userEnteredFileName) { alert('Please enter a filename in the Enter hex before saving.'); handleResponseChange(idx, ''); return; }
                                           const { updatedSession } = generateIterationFileName(sessionVersions, brand, projectType);
                                           setSessionVersions(prev => ({ ...prev, [updatedSession.sessionKey]: updatedSession }));
-                                          const newFile: ProjectFile = { brand, projectType, fileName: userEnteredFileName, timestamp: Date.now() };
-                                          const content = JSON.stringify({ responses, hexExecutions, completedSteps: Array.from(completedSteps) });
-                                          const blob = new Blob([content], { type: 'application/json' });
-                                          const file = createFileFromBlob(blob, userEnteredFileName);
+                                          const txtFileName2 = userEnteredFileName.endsWith('.txt') ? userEnteredFileName : `${userEnteredFileName}.txt`;
+                                          const newFile: ProjectFile = { brand, projectType, fileName: txtFileName2, timestamp: Date.now() };
+                                          // Build human-readable text — readable in MyFiles and usable by summarize.js
+                                          const txtLines: string[] = [];
+                                          txtLines.push(`ITERATION: ${userEnteredFileName}`);
+                                          txtLines.push(`Brand: ${brand}`);
+                                          txtLines.push(`Project Type: ${projectType}`);
+                                          txtLines.push(`Saved: ${new Date().toLocaleDateString()}`);
+                                          txtLines.push('');
+                                          if (completedSteps.size > 0) {
+                                            txtLines.push(`Completed Hexes: ${Array.from(completedSteps).join(', ')}`);
+                                            txtLines.push('');
+                                          }
+                                          const hexOrder = ['research','Luminaries','panelist','Consumers','competitors','Colleagues','cultural','social','Grade','Wisdom'];
+                                          const hexLabels: Record<string,string> = { research:'Research', Luminaries:'Luminaries', panelist:'Panelist', Consumers:'Consumers', competitors:'Competitors', Colleagues:'Colleagues', cultural:'Cultural', social:'Social', Grade:'Grade', Wisdom:'Wisdom' };
+                                          const orderedHexes = [...hexOrder.filter(h => hexExecutions[h]?.length > 0), ...Object.keys(hexExecutions).filter(h => !hexOrder.includes(h) && hexExecutions[h]?.length > 0)];
+                                          for (const hexId of orderedHexes) {
+                                            const execs = hexExecutions[hexId];
+                                            if (!execs?.length) continue;
+                                            const label = hexLabels[hexId] || hexId;
+                                            txtLines.push('='.repeat(60));
+                                            txtLines.push(`${label.toUpperCase()} HEX`);
+                                            txtLines.push('='.repeat(60));
+                                            execs.forEach((ex: any, i: number) => {
+                                              if (execs.length > 1) txtLines.push(`\n--- Run ${i + 1} ---`);
+                                              if (ex.selectedFiles?.length > 0) txtLines.push(`Files: ${ex.selectedFiles.join(', ')}`);
+                                              if (ex.assessment) txtLines.push('\n' + ex.assessment);
+                                            });
+                                            txtLines.push('');
+                                          }
+                                          const txtContent = txtLines.join('\n');
+                                          const txtFileName = userEnteredFileName.endsWith('.txt') ? userEnteredFileName : `${userEnteredFileName}.txt`;
+                                          const blob = new Blob([txtContent], { type: 'text/plain' });
+                                          const file = createFileFromBlob(blob, txtFileName);
                                           let scope: 'general' | 'category' | 'brand' = 'brand';
                                           if (!brand) scope = projectType ? 'category' : 'general';
                                           const result = await uploadToKnowledgeBase({ file, scope, category: projectType, brand: scope === 'brand' ? brand : undefined, projectType: projectType || undefined, fileType: 'Findings', tags: ['Iteration', brand, projectType].filter(Boolean) as string[], iterationType: 'iteration', includedHexes: Array.from(completedSteps), userEmail: userEmail, userRole });
@@ -1808,7 +1845,7 @@ export default function ProcessWireframe() {
                                   {matchingFiles.length > 0 ? matchingFiles.map((file, fileIdx) => (
                                     <label key={fileIdx} className="flex items-center gap-2 cursor-pointer py-1">
                                       <input type="checkbox" checked={selectedFiles.includes(file.fileName)} onChange={(e) => { let newSelected = [...selectedFiles]; if (e.target.checked) { newSelected.push(file.fileName); } else { newSelected = newSelected.filter(f => f !== file.fileName); } handleResponseChange(idx, newSelected.join(',')); }} className="w-4 h-4" />
-                                      <span className="text-gray-700">{file.fileName} ({new Date(file.timestamp).toLocaleDateString()})</span>
+                                      <span className="text-gray-700">{displayFileName(file.fileName)} ({new Date(file.timestamp).toLocaleDateString()})</span>
                                     </label>
                                   )) : <p className="text-gray-500 text-sm">No files found for {brand} - {projectType}</p>}
                                 </div>
