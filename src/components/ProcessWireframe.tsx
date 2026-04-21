@@ -510,8 +510,23 @@ export default function ProcessWireframe() {
   };
 
   const getApprovedResearchFiles = (brand: string, projectType: string): ResearchFile[] => {
+    // Only return files for this brand, or files with no brand (general/category scope)
     // Exclude Example files — they appear in their own section below
-    return researchFiles.filter(file => file.isApproved && file.fileType !== 'Example');
+    const brandLower = brand.toLowerCase();
+    const ptLower = projectType.toLowerCase();
+    const brandFiles = researchFiles.filter(file =>
+      file.isApproved &&
+      file.fileType !== 'Example' &&
+      (!file.brand || file.brand.toLowerCase() === brandLower)
+    );
+    // Sort: matched project type first, then other project types, then untyped
+    return brandFiles.sort((a, b) => {
+      const aMatch = (a.projectType || '').toLowerCase() === ptLower;
+      const bMatch = (b.projectType || '').toLowerCase() === ptLower;
+      if (aMatch && !bMatch) return -1;
+      if (!aMatch && bMatch) return 1;
+      return 0;
+    });
   };
 
   const getExampleFiles = (projectType: string): ResearchFile[] => {
@@ -1364,14 +1379,17 @@ export default function ProcessWireframe() {
                                 {hasResponse && <CircleCheck className="w-5 h-5 text-green-600 flex-shrink-0" />}
                               </label>
 
-                              {/* Brand/project research files */}
+                              {/* Brand/project research files — matched PT first, then others */}
                               <div className="border-2 border-gray-300 rounded-lg p-3">
                                 <h6 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">
                                   Research Files — {brand}{projectType ? ` · ${projectType}` : ''}
                                 </h6>
                                 <div className="space-y-1">
-                                  {approvedFiles.length > 0 ? (
-                                    approvedFiles.map((file, fileIdx) => (
+                                  {approvedFiles.length > 0 ? (() => {
+                                    const ptLower = (projectType || '').toLowerCase();
+                                    const matched = approvedFiles.filter(f => (f.projectType || '').toLowerCase() === ptLower);
+                                    const others  = approvedFiles.filter(f => (f.projectType || '').toLowerCase() !== ptLower);
+                                    const renderFile = (file: ResearchFile, fileIdx: number) => (
                                       <label key={fileIdx} className="flex items-center gap-2 cursor-pointer">
                                         <input
                                           type="checkbox"
@@ -1384,9 +1402,25 @@ export default function ProcessWireframe() {
                                         <span className="text-gray-700 text-sm">{file.fileName}</span>
                                         <span className="text-xs text-gray-400">{new Date(file.uploadDate).toLocaleDateString()}</span>
                                       </label>
-                                    ))
-                                  ) : (
-                                    <p className="text-gray-500 text-sm italic">No approved research files for {brand} - {projectType}.</p>
+                                    );
+                                    return (
+                                      <>
+                                        {matched.map(renderFile)}
+                                        {matched.length > 0 && others.length > 0 && (
+                                          <div className="flex items-center gap-2 my-2">
+                                            <div className="flex-1 border-t border-gray-200" />
+                                            <span className="text-xs text-gray-400 whitespace-nowrap">Other project types</span>
+                                            <div className="flex-1 border-t border-gray-200" />
+                                          </div>
+                                        )}
+                                        {others.map((f, i) => renderFile(f, matched.length + i))}
+                                        {matched.length === 0 && others.length === 0 && (
+                                          <p className="text-gray-500 text-sm italic">No approved research files for {brand}.</p>
+                                        )}
+                                      </>
+                                    );
+                                  })() : (
+                                    <p className="text-gray-500 text-sm italic">No approved research files for {brand}.</p>
                                   )}
                                 </div>
                               </div>
