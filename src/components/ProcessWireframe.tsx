@@ -15,7 +15,7 @@ import { DatabricksFileSaver } from './DatabricksFileSaver';
 import { InterviewDialog } from './InterviewDialog';
 import { AssessmentModal, type IdeaElement, type IterationGem, type KbMode, type RequestMode } from './AssessmentModal';
 import { MarkdownViewer } from './MarkdownViewer';
-import { LoadingGem, SpinHex } from './LoadingGem';
+import { LoadingGem } from './LoadingGem';
 import cohiveLogo from 'figma:asset/88105c0c8621f3d41d65e5be3ae75558f9de1753.png';
 import { uploadToKnowledgeBase, downloadFile, listKnowledgeBaseFiles, type KnowledgeBaseFile, generateSummary, fetchSharedConfig, addSharedConfigItem, fetchProjectTypeConfigs, type ProjectTypeConfig } from '../utils/databricksAPI';
 import { isAuthenticated, getCurrentUserEmail, getValidSession } from '../utils/databricksAuth';
@@ -695,11 +695,15 @@ export default function ProcessWireframe() {
     localStorage.setItem('cohive_edit_suggestions', JSON.stringify(updated));
   };
 
-  const handleToggleApproval = async (fileId: string) => {
+  const handleToggleApproval = async (fileId: string, forceValue?: boolean) => {
     const file = researchFiles.find(f => f.id === fileId);
     if (!file) return;
 
-    const nowApproved = !file.isApproved;
+    // If forceValue is provided, use it directly; otherwise toggle current state
+    const nowApproved = forceValue !== undefined ? forceValue : !file.isApproved;
+
+    // If already in the desired state, skip (prevents toggle-back on bulk ops)
+    if (nowApproved === file.isApproved) return;
 
     // Check if file has been processed before approving
     if (nowApproved && (!file.contentSummary || file.contentSummary.trim() === '')) {
@@ -740,9 +744,12 @@ export default function ProcessWireframe() {
       return;
     }
 
-    // Update local cache after successful Databricks write
+    // Update local cache and re-fetch from Databricks to ensure full sync
     const updated = researchFiles.map(f => f.id === fileId ? { ...f, isApproved: nowApproved } : f);
     localStorage.setItem('cohive_research_files', JSON.stringify(updated));
+    setResearchFiles(updated);
+    // Re-fetch so synthesis file list reflects the new approval state
+    await loadKnowledgeBaseFiles();
   };
 
   const handleCreateResearchFile = (file: Omit<ResearchFile, 'id' | 'uploadDate'>) => {
@@ -817,13 +824,18 @@ export default function ProcessWireframe() {
     console.log(`[${activeStepId}] requestMode (from Enter hex): ${requestMode}`);
     console.log(`[${activeStepId}] ideaElements: ${ideaElements.length} element(s)`);
 
+    const isWarGames = projectType === 'War Games';
+
     setAssessmentModalProps({
       hexId: activeStepId,
       hexLabel,
-      assessmentType: assessmentType[0] || 'unified',
-      selectedPersonas: isPersonaHex ? selectedFiles : [],
+      // War Games uses unified output — not persona debate rounds
+      assessmentType: isWarGames ? 'unified' : (assessmentType[0] || 'unified'),
+      // War Games does not use personas — the 5-step framework runs directly
+      selectedPersonas: (isPersonaHex && !isWarGames) ? selectedFiles : [],
       kbFileNames,
-      userSolution: assessmentType.includes('assess') ? assessment : '',
+      // Always pass assessment for War Games so the [WAR_GAMES_COMPETITOR:] marker reaches run.js
+      userSolution: (isWarGames || assessmentType.includes('assess')) ? assessment : '',
       ideasFile: ideasFile ? {
         fileName: ideasFile.fileName,
         content: ideasFile.content,
@@ -1093,7 +1105,7 @@ export default function ProcessWireframe() {
       {isCheckingAuth && (
         <div className="fixed inset-0 bg-white flex items-center justify-center z-50">
           <div className="text-center">
-            <SpinHex className="w-12 h-12 mx-auto mb-4" />
+            <Cpu className="w-12 h-12 text-blue-500 animate-spin mx-auto mb-4" />
             <p className="text-gray-700">Loading CoHive...</p>
           </div>
         </div>

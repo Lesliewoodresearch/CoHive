@@ -439,13 +439,16 @@ export function ResearcherModes({
       for (const fileId of Array.from(selectedProcessedFiles)) {
         try {
           if (onToggleApproval) {
+            // Pass forceValue so per-file toggle doesn't flip files already in target state
             await onToggleApproval(fileId, approve);
             ok++;
           }
         } catch { fail++; }
       }
       setSelectedProcessedFiles(new Set());
+      // Refresh once after all files are done rather than once per file
       await refreshPendingQueues();
+      if (onRefreshFiles) await onRefreshFiles();
     } finally {
       setIsBulkActioning(false);
     }
@@ -472,6 +475,7 @@ export function ResearcherModes({
       }
       setSelectedProcessedFiles(new Set());
       await refreshPendingQueues();
+      if (onRefreshFiles) await onRefreshFiles();
     } finally {
       setIsBulkActioning(false);
     }

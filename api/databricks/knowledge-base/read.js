@@ -64,9 +64,71 @@ export default async function handler(req, res) {
     let extractionMethod = 'raw';
     const ext = fileName.toLowerCase().split('.').pop();
 
-    if (['txt', 'md', 'csv', 'json'].includes(ext)) {
+    if (['txt', 'md', 'csv'].includes(ext)) {
       textContent = fileBuffer.toString('utf-8');
       extractionMethod = 'text';
+    } else if (ext === 'json') {
+      // Iteration files are saved as JSON — render as human-readable text
+      try {
+        const raw = fileBuffer.toString('utf-8');
+        const parsed = JSON.parse(raw);
+        const lines = [];
+
+        // Header
+        const brand = parsed.responses?.Enter?.[0] || '';
+        const projectType = parsed.responses?.Enter?.[1] || '';
+        const fileNameEntry = parsed.responses?.Enter?.[2] || fileName;
+        if (brand || projectType) {
+          lines.push(`ITERATION: ${fileNameEntry}`);
+          if (brand) lines.push(`Brand: ${brand}`);
+          if (projectType) lines.push(`Project Type: ${projectType}`);
+          lines.push('');
+        }
+
+        // Completed steps
+        const completedSteps = parsed.completedSteps || [];
+        if (completedSteps.length > 0) {
+          lines.push(`Completed Hexes: ${completedSteps.join(', ')}`);
+          lines.push('');
+        }
+
+        // Assessment content from each hex execution
+        const hexExecutions = parsed.hexExecutions || {};
+        const hexOrder = ['research', 'Luminaries', 'panelist', 'Consumers', 'competitors', 'Colleagues', 'cultural', 'social', 'Grade', 'Wisdom'];
+        const hexLabels = {
+          research: 'Research', Luminaries: 'Luminaries', panelist: 'Panelist',
+          Consumers: 'Consumers', competitors: 'Competitors', Colleagues: 'Colleagues',
+          cultural: 'Cultural', social: 'Social', Grade: 'Grade', Wisdom: 'Wisdom',
+        };
+
+        // Output in workflow order first, then any remaining hexes
+        const orderedHexes = [
+          ...hexOrder.filter(h => hexExecutions[h]?.length > 0),
+          ...Object.keys(hexExecutions).filter(h => !hexOrder.includes(h) && hexExecutions[h]?.length > 0),
+        ];
+
+        for (const hexId of orderedHexes) {
+          const executions = hexExecutions[hexId];
+          if (!executions?.length) continue;
+          const label = hexLabels[hexId] || hexId;
+          lines.push(`${'='.repeat(60)}`);
+          lines.push(`${label.toUpperCase()} HEX`);
+          lines.push(`${'='.repeat(60)}`);
+          executions.forEach((ex, i) => {
+            if (executions.length > 1) lines.push(`\n--- Run ${i + 1} ---`);
+            if (ex.selectedFiles?.length > 0) lines.push(`Files: ${ex.selectedFiles.join(', ')}`);
+            if (ex.assessment) lines.push('\n' + ex.assessment);
+          });
+          lines.push('');
+        }
+
+        textContent = lines.join('\n');
+        if (!textContent.trim()) textContent = raw; // fallback to raw if nothing extracted
+        extractionMethod = 'iteration-json';
+      } catch {
+        textContent = fileBuffer.toString('utf-8');
+        extractionMethod = 'json-raw';
+      }
     } else if (ext === 'pdf') {
       textContent = `[PDF File: ${fileName}]\n\nFile size: ${fileSizeBytes} bytes`;
       extractionMethod = 'pdf';
