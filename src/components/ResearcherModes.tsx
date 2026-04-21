@@ -708,38 +708,6 @@ export function ResearcherModes({
   };
 
   // Upload directly to KB as approved brand-scoped file — bypasses read/edit/approve
-  const handleUploadForNewSynthesis = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
-    if (!isAuthenticated()) { alert('⚠️ Please sign in to Databricks first.'); event.target.value = ''; return; }
-    if (!selectedBrand || !selectedProjectType) { alert('⚠️ Please select a brand and project type first.'); event.target.value = ''; return; }
-    const fileArray = Array.from(files);
-    let ok = 0; let fail = 0; const failed: string[] = [];
-    try {
-      for (const file of fileArray) {
-        try {
-          const r = await uploadToKnowledgeBase({
-            file, scope: 'brand', brand: selectedBrand, category: selectedProjectType,
-            projectType: selectedProjectType, fileType: 'Synthesis',
-            tags: ['synthesis', selectedBrand, selectedProjectType], userEmail, userRole,
-          });
-          if (r.success) {
-            ok++;
-            if (r.fileId && onToggleApproval) await onToggleApproval(r.fileId, true, file.name);
-            const reader = new FileReader();
-            reader.onload = e => onCreateResearchFile({ brand: selectedBrand, projectType: selectedProjectType, fileName: file.name, isApproved: true, fileType: 'Synthesis', content: e.target?.result as string, source: r.filePath ? `Databricks: ${r.filePath}` : `Databricks KB: ${file.name}` });
-            reader.readAsDataURL(file);
-          } else { fail++; failed.push(file.name); }
-        } catch { fail++; failed.push(file.name); }
-      }
-      if (ok > 0) await refreshPendingQueues();
-      alert(fileArray.length === 1
-        ? ok === 1 ? `✅ "${fileArray[0].name}" uploaded and ready to use in synthesis.` : `❌ Failed to upload "${fileArray[0].name}".`
-        : `✅ ${ok} file${ok !== 1 ? 's' : ''} uploaded and ready${fail > 0 ? `\n❌ ${fail} failed:\n${failed.join('\n')}` : ''}`
-      );
-      event.target.value = '';
-    } catch { alert('Failed to upload. Please try again.'); event.target.value = ''; }
-  };
 
   const handleCreatePersonaFile = () => {
     if (!selectedHexagon || !personaFileForm.fileName.trim()) return;
@@ -1331,11 +1299,7 @@ export function ResearcherModes({
                     </div>
                   ) : <p className="text-sm text-gray-500 italic mb-4">No approved files for {selectedBrand}</p>;
                 })()}
-                <label className="w-full px-4 py-3 bg-green-600 text-white rounded hover:bg-green-700 flex items-center justify-center gap-2 cursor-pointer">
-                  <Upload className="w-5 h-5" />Upload Files Directly
-                  <input type="file" accept=".pdf,.doc,.docx,.xlsx,.xls,.csv,.txt,.ppt,.pptx" multiple className="hidden" onChange={handleUploadForNewSynthesis} />
-                </label>
-                <p className="text-xs text-gray-500 mt-1">Files are uploaded directly as approved — no approval step needed.</p>
+
               </div>
             )}
             {selectedBrand && selectedProjectType && selectedDatabricksFiles.length > 0 && (

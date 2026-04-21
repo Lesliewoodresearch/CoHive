@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
-import { SpinHex } from './LoadingGem';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
@@ -34,6 +33,7 @@ import {
 import { 
   listKnowledgeBaseFiles, 
   downloadKnowledgeBaseFile,
+  readKnowledgeBaseFile,
   type KnowledgeBaseFile 
 } from '../utils/databricksAPI';
 import { logout, getWorkspaceHost } from '../utils/databricksAuth';
@@ -177,7 +177,7 @@ export function DatabricksFileBrowser({ open, onClose, onFilesSelected, userRole
           try {
             const kbFile = knowledgeBaseFiles.find(f => f.fileId === fileId);
             if (kbFile) {
-              const result = await downloadKnowledgeBaseFile(kbFile.fileId, kbFile.fileName);
+              const result = await readKnowledgeBaseFile(kbFile.fileId, kbFile.fileName);
               if (result.success) {
                 importedFiles.push({
                   name: kbFile.fileName,
@@ -428,7 +428,7 @@ export function DatabricksFileBrowser({ open, onClose, onFilesSelected, userRole
           <ScrollArea className="flex-1 border rounded-lg" style={{ borderColor: colors.border.light }}>
             {loading ? (
               <div className="flex items-center justify-center h-64">
-                <SpinHex className="w-8 h-8" />
+                <Loader2 className="h-8 w-8 animate-spin" style={{ color: colors.hex.purple.light }} />
               </div>
             ) : viewMode === 'knowledge-base' ? (
               // Knowledge Base Files
@@ -597,7 +597,7 @@ export function DatabricksFileBrowser({ open, onClose, onFilesSelected, userRole
               >
                 {importing ? (
                   <>
-                    <SpinHex className="w-4 h-4" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                     Importing...
                   </>
                 ) : (

@@ -297,7 +297,29 @@ export function downloadFile(fileName: string, content: string, mimeType: string
 }
 
 /**
- * Download a file from the Knowledge Base
+ * Read a file from the Knowledge Base for display — no browser download triggered.
+ * Use this for viewing/previewing file content in the UI.
+ */
+export async function readKnowledgeBaseFile(
+  fileId: string, fileName?: string
+): Promise<{ success: boolean; content?: string; error?: string }> {
+  try {
+    const auth = await getAuthData();
+    const response = await fetch('/api/databricks/knowledge-base/read', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fileId }),
+    });
+    if (!response.ok) { const errorData = await response.json().catch(() => ({})); throw new Error(errorData.error || `Read failed: ${response.statusText}`); }
+    const result = await response.json();
+    return { success: true, content: result.content || '' };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Read failed' };
+  }
+}
+
+/**
+ * Download a file from the Knowledge Base — fetches content AND triggers browser download.
+ * Use this only for explicit Download buttons.
  */
 export async function downloadKnowledgeBaseFile(
   fileId: string, fileName: string

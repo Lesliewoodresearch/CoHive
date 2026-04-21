@@ -2018,7 +2018,28 @@ export default function ProcessWireframe() {
         <AssessmentModal
           isOpen={assessmentModalOpen}
           onClose={() => setAssessmentModalOpen(false)}
-          onAcceptResults={(results) => { setLastAssessmentResults(results); }}
+          onAcceptResults={(results) => {
+            setLastAssessmentResults(results);
+            // Write the actual AI-generated content back into hexExecutions
+            // so the iteration .txt file contains the real assessment output
+            const { rounds, summary, hexId: resultHexId } = results;
+            const aiContent = [
+              ...rounds.map(r => r.content),
+              ...(summary ? [`\n--- Summary ---\n${summary}`] : []),
+            ].join('\n').trim();
+            if (aiContent) {
+              setHexExecutions(prev => {
+                const existing = prev[resultHexId] || [];
+                if (existing.length === 0) return prev;
+                // Update the last execution's assessment with the real AI output
+                const updated = [...existing];
+                updated[updated.length - 1] = { ...updated[updated.length - 1], assessment: aiContent };
+                const next = { ...prev, [resultHexId]: updated };
+                localStorage.setItem('cohive_hex_executions', JSON.stringify(next));
+                return next;
+              });
+            }
+          }}
           hexId={assessmentModalProps.hexId}
           hexLabel={assessmentModalProps.hexLabel}
           assessmentType={assessmentModalProps.assessmentType}

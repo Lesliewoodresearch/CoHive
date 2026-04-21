@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Filter, RefreshCw, Download, Trash2, Eye, X, ChevronDown } from 'lucide-react';
-import { SpinHex } from './LoadingGem';
-import { listKnowledgeBaseFiles, deleteKnowledgeBaseFile, downloadKnowledgeBaseFile, downloadFile, KnowledgeBaseFile } from '../utils/databricksAPI';
+import { listKnowledgeBaseFiles, deleteKnowledgeBaseFile, downloadKnowledgeBaseFile, readKnowledgeBaseFile, downloadFile, KnowledgeBaseFile } from '../utils/databricksAPI';
 import { getValidSession, getCurrentUserEmail } from '../utils/databricksAuth';
 import { CircleAlert } from 'lucide-react';
 
@@ -268,8 +267,8 @@ export function ReviewView({ projectFiles, onDeleteFiles }: ReviewViewProps) {
     setFileContent('');
     
     try {
-      const result = await downloadKnowledgeBaseFile(file.fileId, file.fileName);
-      
+      const result = await readKnowledgeBaseFile(file.fileId, file.fileName);
+
       if (result.success && result.content) {
         setFileContent(result.content);
       } else {
@@ -570,7 +569,7 @@ export function ReviewView({ projectFiles, onDeleteFiles }: ReviewViewProps) {
           {/* Files Table */}
           {loading ? (
             <div className="p-8 bg-gray-50 rounded-lg text-center text-gray-600">
-              <SpinHex className="w-6 h-6 mx-auto mb-2" />
+              <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" />
               Loading files...
             </div>
           ) : sortedFiles.length === 0 ? (
