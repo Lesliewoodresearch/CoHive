@@ -307,6 +307,7 @@ export function AssessmentModal({
   const [gemToasts, setGemToasts] = useState<GemToast[]>([]);
   const [savedGemCount, setSavedGemCount] = useState(0);
   const [summary, setSummary] = useState<string | null>(null);
+  const [savedGemItems,   setSavedGemItems]   = useState<Array<{ text: string; fileName: string | null }>>([]);
   const [savedCoalItems,  setSavedCoalItems]  = useState<Array<{ text: string }>>([]);
   const [savedCheckItems, setSavedCheckItems] = useState<Array<{ text: string }>>([]);
   const [coalToasts, setCoalToasts] = useState<Array<{ id: string; text: string }>>([]);
@@ -676,6 +677,7 @@ export function AssessmentModal({
       });
       if (result.success) {
         setSavedGemCount((prev) => prev + 1);
+        setSavedGemItems(prev => [...prev, { text: floatingBtn.text, fileName: floatingBtn.fileName }]);
         // Notify ProcessWireframe to accumulate gem into iteration-level array
         onGemSaved?.({
           gemText: floatingBtn.text,
@@ -1451,7 +1453,28 @@ export function AssessmentModal({
                   if (onAcceptResults) {
                     onAcceptResults({ rounds, citedFiles, summary, hexId, hexLabel });
                   }
-                  onClose();
+                  // Build review items if any gems/checks/coal were saved
+                  const ts = Date.now();
+                  const allNew = [
+                    ...savedGemItems.map((g, i) => ({
+                      id: `gem-${ts}-${i}`, text: g.text, type: 'gem' as const,
+                      included: true, hexId, hexLabel, fileName: g.fileName, fileId: null as null, rank: i,
+                    })),
+                    ...savedCheckItems.map((c, i) => ({
+                      id: `chk-${ts}-${i}`, text: c.text, type: 'check' as const,
+                      included: true, hexId, hexLabel, rank: i,
+                    })),
+                    ...savedCoalItems.map((c, i) => ({
+                      id: `coal-${ts}-${i}`, text: c.text, type: 'coal' as const,
+                      included: true, hexId, hexLabel, rank: i,
+                    })),
+                  ];
+                  if (allNew.length > 0) {
+                    setReviewItems(allNew);
+                    setShowReviewPanel(true);
+                  } else {
+                    onClose();
+                  }
                 }}
                 className="px-6 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors"
               >

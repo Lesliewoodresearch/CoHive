@@ -31,6 +31,11 @@ export default async function handler(req, res) {
       userEmail,
       userRole,
       modelEndpoint = 'databricks-claude-sonnet-4-6',
+      iterationGems = [],
+      iterationChecks = [],
+      iterationCoal = [],
+      iterationDirections = [],
+      userNotes = '',
     } = req.body;
 
     if (!brand || !projectType || !userEmail) {
@@ -253,24 +258,110 @@ Your summaries should:
       userPrompt += `- Use proper markdown table formatting\n\n`;
     }
 
+    // ── Iteration directions — extract from saved files ─────────────────────
+    // Collect all directions found in loaded iteration files
+    const allDirections = [];
+    for (const f of filesWithContent) {
+      if (!f.content) continue;
+      const dirMatch = f.content.match(/DIRECTIONS ADDED DURING ITERATION\n={60}\n([\s\S]*?)(?=={60}|$)/);
+      if (dirMatch) {
+        const lines = dirMatch[1].trim().split('\n').filter(Boolean);
+        lines.forEach(l => allDirections.push({ source: f.fileName, direction: l }));
+      }
+    }
+    // Also include directions from the current session
+    if (iterationDirections?.length > 0) {
+      iterationDirections.forEach(d => allDirections.push({ source: 'Current session', direction: d }));
+    }
+
+    if (allDirections.length > 0) {
+      userPrompt += `\n---\n## DIRECTIONS ADDED DURING THIS WORK\n`;
+      userPrompt += `The following focus directions were added by the user during the iteration process.\n`;
+      userPrompt += `Include these at the end of the summary and note which steps they were added before/after:\n`;
+      allDirections.forEach((d, i) => {
+        userPrompt += `${i + 1}. [${d.source}] ${d.direction}\n`;
+      });
+      userPrompt += `\n`;
+    }
+
     if (outputOptions?.includes('Include Gems')) {
+      // Extract gems from saved iteration files
+      const allGems = [];
+      for (const f of filesWithContent) {
+        if (!f.content) continue;
+        // Gems may appear as plain text paragraphs in .txt files — extract from KB separately
+      }
+      // Also include current session gems
+      if (iterationGems?.length > 0) {
+        allGems.push(...iterationGems.map(g => ({ text: g.gemText, source: g.hexLabel || g.hexId, file: g.fileName })));
+      }
       sectionsToInclude.push('Gems');
       userPrompt += `### ${sectionsToInclude.length}. Key Gems & Insights\n`;
-      userPrompt += `Identify and highlight the most valuable insights (gems):\n`;
-      userPrompt += `- Extract particularly noteworthy findings from the iteration data\n`;
-      userPrompt += `- Highlight breakthrough ideas or unexpected discoveries\n`;
-      userPrompt += `- Include strategic insights that stand out\n`;
-      userPrompt += `- Format each gem with context and source reference\n\n`;
+      if (allGems.length > 0) {
+        userPrompt += `The following elements were highlighted as gems during this iteration:\n`;
+        allGems.forEach((g, i) => {
+          userPrompt += `${i + 1}. [${g.source}${g.file ? ` · ${g.file}` : ''}] ${g.text}\n`;
+        });
+        userPrompt += `\nInclude all of these gems verbatim. Add a brief note after each about why it stands out.\n\n`;
+      } else {
+        userPrompt += `No gems were saved in this session. Extract the most valuable insights from the iteration data.\n\n`;
+      }
+    }
+
+    if (outputOptions?.includes('Include Checks')) {
+      const allChecks = iterationChecks?.length > 0 ? iterationChecks : [];
+      sectionsToInclude.push('Checks');
+      userPrompt += `### ${sectionsToInclude.length}. Elements of Interest (Checks)\n`;
+      if (allChecks.length > 0) {
+        userPrompt += `The following elements were checked as noteworthy during this iteration:\n`;
+        allChecks.forEach((c, i) => {
+          userPrompt += `${i + 1}. [${c.hexLabel || c.hexId}] ${c.text}\n`;
+        });
+        userPrompt += `\nInclude all of these items and synthesise what they collectively point to.\n\n`;
+      } else {
+        userPrompt += `No checks were saved in this session.\n\n`;
+      }
+    }
+
+    if (outputOptions?.includes('Include Coal')) {
+      const allCoal = iterationCoal?.length > 0 ? iterationCoal : [];
+      sectionsToInclude.push('Coal');
+      userPrompt += `### ${sectionsToInclude.length}. Elements to Avoid (Coal)\n`;
+      if (allCoal.length > 0) {
+        userPrompt += `The following elements were flagged to avoid during this iteration:\n`;
+        allCoal.forEach((c, i) => {
+          userPrompt += `${i + 1}. [${c.hexLabel || c.hexId}] ${c.text}\n`;
+        });
+        userPrompt += `\nInclude all of these items and explain what they collectively signal to avoid.\n\n`;
+      } else {
+        userPrompt += `No coal was saved in this session.\n\n`;
+      }
     }
 
     if (outputOptions?.includes('Include User Notes from all iterations as an Appendix')) {
-      sectionsToInclude.push('Appendix');
-      userPrompt += `### ${sectionsToInclude.length}. Appendix: Iteration Notes\n`;
-      userPrompt += `Compile detailed notes from all iterations:\n`;
-      userPrompt += `- Include user assessments and observations from each iteration\n`;
-      userPrompt += `- Preserve hex execution details and responses\n`;
-      userPrompt += `- Document the workflow progression across iterations\n`;
-      userPrompt += `- Include any relevant metadata or timestamps\n\n`;
+      sectionsToInclude.push('User Notes');
+      userPrompt += `### ${sectionsToInclude.length}. User Notes\n`;
+      // Extract user notes from loaded iteration files
+      const fileNotes = [];
+      for (const f of filesWithContent) {
+        if (!f.content) continue;
+        const notesMatch = f.content.match(/USER NOTES\n={60}\n([\s\S]*?)(?=={60}|$)/);
+        if (notesMatch) {
+          fileNotes.push({ source: f.fileName, notes: notesMatch[1].trim() });
+        }
+      }
+      // Also include current session notes
+      if (userNotes?.trim()) {
+        fileNotes.push({ source: 'Current session', notes: userNotes.trim() });
+      }
+      if (fileNotes.length > 0) {
+        userPrompt += `The following notes were added by the user during this work. Include them verbatim in the appendix:\n\n`;
+        fileNotes.forEach(n => {
+          userPrompt += `**From: ${n.source}**\n${n.notes}\n\n`;
+        });
+      } else {
+        userPrompt += `No user notes were recorded for this iteration.\n\n`;
+      }
     }
 
     // Handle case where no options selected
