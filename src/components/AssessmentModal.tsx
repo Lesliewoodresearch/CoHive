@@ -965,7 +965,7 @@ export function AssessmentModal({
 
     return (
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center p-8"
+        className="fixed inset-y-0 left-0 w-3/4 z-50 flex items-center justify-center p-8 bg-black/40"
         style={{ backgroundColor: "rgba(0, 0, 0, 0.2)" }}
       >
         <div
@@ -1155,7 +1155,7 @@ export function AssessmentModal({
       )}
 
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center p-8"
+        className="fixed inset-y-0 left-0 w-3/4 z-50 flex items-center justify-center p-8 bg-black/40"
         style={{ backgroundColor: "rgba(0, 0, 0, 0.2)" }}
       >
         <div

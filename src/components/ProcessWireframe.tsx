@@ -136,6 +136,10 @@ export default function ProcessWireframe() {
   const [iterationChecks, setIterationChecks] = useState<Array<{ text: string; hexId: string; hexLabel: string }>>([]);
   const [iterationCoal, setIterationCoal] = useState<Array<{ text: string; hexId: string; hexLabel: string }>>([]);
   const [iterationDirections, setIterationDirections] = useState<string[]>([]);
+  const [userNotes, setUserNotes] = useState<string>(() => {
+    // Persist notes across re-renders and page refreshes
+    return localStorage.getItem('cohive_user_notes') || '';
+  });
 
   // Assessment Modal state
   const [assessmentModalOpen, setAssessmentModalOpen] = useState(false);
@@ -1792,6 +1796,14 @@ export default function ProcessWireframe() {
                                             });
                                             txtLines.push('');
                                           }
+                                          // Append user notes if present
+                                          if (userNotes.trim()) {
+                                            txtLines.push('='.repeat(60));
+                                            txtLines.push('USER NOTES');
+                                            txtLines.push('='.repeat(60));
+                                            txtLines.push(userNotes.trim());
+                                            txtLines.push('');
+                                          }
                                           const txtContent = txtLines.join('\n');
                                           const txtFileName = userEnteredFileName.endsWith('.txt') ? userEnteredFileName : `${userEnteredFileName}.txt`;
                                           const blob = new Blob([txtContent], { type: 'text/plain' });
@@ -1811,6 +1823,8 @@ export default function ProcessWireframe() {
         setIterationChecks([]);
         setIterationCoal([]);
         setIterationDirections([]); // iteration boundary — clear gems
+        setUserNotes('');
+        localStorage.removeItem('cohive_user_notes');
                                           } else { alert(`Failed to save to Databricks: ${result.error || 'Unknown error'}`); }
                                         }
                                       }}
@@ -1989,7 +2003,16 @@ export default function ProcessWireframe() {
                 <FileText className="w-4 h-4 text-gray-600" />
                 <h3 className="text-gray-900">User Notes</h3>
               </div>
-              <textarea className="w-full border-2 border-gray-300 bg-gray-50 rounded p-2 text-sm resize-none" style={{ height: 'calc(550px - 80px)' }} placeholder="Add notes to be saved with each iteration..." />
+              <textarea
+                className="w-full border-2 border-gray-300 bg-gray-50 rounded p-2 text-sm resize-none focus:outline-none focus:border-blue-500"
+                style={{ height: 'calc(550px - 80px)' }}
+                placeholder="Add notes to be saved with each iteration..."
+                value={userNotes}
+                onChange={e => {
+                  setUserNotes(e.target.value);
+                  localStorage.setItem('cohive_user_notes', e.target.value);
+                }}
+              />
             </div>
           </div>
         </div>
