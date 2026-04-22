@@ -1645,6 +1645,20 @@ export default function ProcessWireframe() {
 
                           // PHOTO — upload or use camera
                           if (inputMethod === 'Photo') {
+                            const photoScope: 'general' | 'category' | 'brand' = insightType === 'General' ? 'general' : insightType === 'Category' ? 'category' : 'brand';
+                            const uploadPhoto = async (file: File, label: string, e: React.ChangeEvent<HTMLInputElement>) => {
+                              if (!isDatabricksAuthenticated) { alert('⚠️ Please sign in to Databricks before saving to the Knowledge Base.'); setShowLoginModal(true); return; }
+                              const ext = file.name.split('.').pop() || 'jpg';
+                              const renamed = new File([file], wisdomFileName(ext), { type: file.type });
+                              setDatabricksLoadingMessage('Saving photo to Knowledge Base...');
+                              setIsDatabricksLoading(true);
+                              try {
+                                const result = await uploadToKnowledgeBase({ file: renamed, scope: photoScope, brand: photoScope === 'brand' ? (brand || undefined) : undefined, projectType: projectType || undefined, fileType: 'Wisdom', tags: [insightType, 'Photo'], insightType: insightType as 'Brand' | 'Category' | 'General', inputMethod: 'Photo', userEmail, userRole });
+                                if (result.success) { handleResponseChange(idx, label); setWisdomSuccessMessage(`✅ "${renamed.name}" saved to Knowledge Base`); setTimeout(() => setWisdomSuccessMessage(null), 3000); }
+                                else { alert(`Failed to save photo: ${result.error || 'Unknown error'}`); }
+                              } catch (err) { alert(`Failed to save photo: ${err instanceof Error ? err.message : 'Unknown error'}`); }
+                              finally { setIsDatabricksLoading(false); e.target.value = ''; }
+                            };
                             return (
                               <div key={idx} className="mb-2">
                                 <label className="block text-gray-900 mb-1 flex items-start justify-between">
@@ -1655,22 +1669,12 @@ export default function ProcessWireframe() {
                                   <label className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 cursor-pointer">
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                                     Upload Photo
-                                    <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
-                                      const file = e.target.files?.[0]; if (!file) return;
-                                      const reader = new FileReader();
-                                      reader.onload = async (ev) => { await handleSaveWisdomToDatabricks(wisdomFileName(file.name.split('.').pop() || 'jpg'), ev.target?.result as string, insightType, 'Photo', brand, projectType); handleResponseChange(idx, `Photo: ${file.name}`); };
-                                      reader.readAsDataURL(file);
-                                    }} />
+                                    <input type="file" accept="image/*" className="hidden" onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; await uploadPhoto(file, `Photo: ${file.name}`, e); }} />
                                   </label>
                                   <label className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-gray-700 text-white rounded hover:bg-gray-900 cursor-pointer">
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                                     Take Photo with Camera
-                                    <input type="file" accept="image/*" capture="environment" className="hidden" onChange={async (e) => {
-                                      const file = e.target.files?.[0]; if (!file) return;
-                                      const reader = new FileReader();
-                                      reader.onload = async (ev) => { await handleSaveWisdomToDatabricks(wisdomFileName('jpg'), ev.target?.result as string, insightType, 'Photo', brand, projectType); handleResponseChange(idx, 'Camera photo saved'); };
-                                      reader.readAsDataURL(file);
-                                    }} />
+                                    <input type="file" accept="image/*" capture="environment" className="hidden" onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; await uploadPhoto(file, `Photo: ${file.name}`, e); }} />
                                   </label>
                                   {responses[activeStepId]?.[idx] && <div className="bg-green-50 border border-green-200 rounded p-2"><p className="text-sm text-green-700">✓ {responses[activeStepId][idx]}</p></div>}
                                 </div>
@@ -1680,6 +1684,22 @@ export default function ProcessWireframe() {
 
                           // VIDEO — upload or use camera
                           if (inputMethod === 'Video') {
+                            const videoScope: 'general' | 'category' | 'brand' = insightType === 'General' ? 'general' : insightType === 'Category' ? 'category' : 'brand';
+                            const MAX_VIDEO_BYTES = 37 * 1024 * 1024;
+                            const uploadVideo = async (file: File, label: string, e: React.ChangeEvent<HTMLInputElement>) => {
+                              if (!isDatabricksAuthenticated) { alert('⚠️ Please sign in to Databricks before saving to the Knowledge Base.'); setShowLoginModal(true); e.target.value = ''; return; }
+                              if (file.size > MAX_VIDEO_BYTES) { alert(`Video is too large (${Math.round(file.size / 1024 / 1024)}MB). Maximum size is 37MB — please trim or compress the video first.`); e.target.value = ''; return; }
+                              const ext = file.name.split('.').pop() || 'mp4';
+                              const renamed = new File([file], wisdomFileName(ext), { type: file.type });
+                              setDatabricksLoadingMessage('Saving video to Knowledge Base...');
+                              setIsDatabricksLoading(true);
+                              try {
+                                const result = await uploadToKnowledgeBase({ file: renamed, scope: videoScope, brand: videoScope === 'brand' ? (brand || undefined) : undefined, projectType: projectType || undefined, fileType: 'Wisdom', tags: [insightType, 'Video'], insightType: insightType as 'Brand' | 'Category' | 'General', inputMethod: 'Video', userEmail, userRole });
+                                if (result.success) { handleResponseChange(idx, label); setWisdomSuccessMessage(`✅ "${renamed.name}" saved to Knowledge Base`); setTimeout(() => setWisdomSuccessMessage(null), 3000); }
+                                else { alert(`Failed to save video: ${result.error || 'Unknown error'}`); }
+                              } catch (err) { alert(`Failed to save video: ${err instanceof Error ? err.message : 'Unknown error'}`); }
+                              finally { setIsDatabricksLoading(false); e.target.value = ''; }
+                            };
                             return (
                               <div key={idx} className="mb-2">
                                 <label className="block text-gray-900 mb-1 flex items-start justify-between">
@@ -1687,25 +1707,16 @@ export default function ProcessWireframe() {
                                   {hasResponse && <CircleCheck className="w-5 h-5 text-green-600 flex-shrink-0" />}
                                 </label>
                                 <div className="space-y-2">
+                                  <p className="text-xs text-gray-500">Maximum file size: 37MB. For larger videos, trim or compress first.</p>
                                   <label className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 cursor-pointer">
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
                                     Upload Video
-                                    <input type="file" accept="video/*" className="hidden" onChange={async (e) => {
-                                      const file = e.target.files?.[0]; if (!file) return;
-                                      const reader = new FileReader();
-                                      reader.onload = async (ev) => { await handleSaveWisdomToDatabricks(wisdomFileName(file.name.split('.').pop() || 'mp4'), ev.target?.result as string, insightType, 'Video', brand, projectType); handleResponseChange(idx, `Video: ${file.name}`); };
-                                      reader.readAsDataURL(file);
-                                    }} />
+                                    <input type="file" accept="video/*" className="hidden" onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; await uploadVideo(file, `Video: ${file.name}`, e); }} />
                                   </label>
                                   <label className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-gray-700 text-white rounded hover:bg-gray-900 cursor-pointer">
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
                                     Record Video with Camera
-                                    <input type="file" accept="video/*" capture="environment" className="hidden" onChange={async (e) => {
-                                      const file = e.target.files?.[0]; if (!file) return;
-                                      const reader = new FileReader();
-                                      reader.onload = async (ev) => { await handleSaveWisdomToDatabricks(wisdomFileName('mp4'), ev.target?.result as string, insightType, 'Video', brand, projectType); handleResponseChange(idx, 'Camera video saved'); };
-                                      reader.readAsDataURL(file);
-                                    }} />
+                                    <input type="file" accept="video/*" capture="environment" className="hidden" onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; await uploadVideo(file, `Video: ${file.name}`, e); }} />
                                   </label>
                                   {responses[activeStepId]?.[idx] && <div className="bg-green-50 border border-green-200 rounded p-2"><p className="text-sm text-green-700">✓ {responses[activeStepId][idx]}</p></div>}
                                 </div>
