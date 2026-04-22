@@ -1,7 +1,7 @@
 
-  # CoHiveToDatabricks3
+  # CoHive
 
-  This is a code bundle for CoHiveToDatabricks3. The original project is available at https://www.figma.com/design/1B4Hlm4zergahbs25i6Wxo/CoHiveToDatabricks3.
+  This is a code bundle for CoHive. The original project is available at https://www.figma.com/design/1B4Hlm4zergahbs25i6Wxo/CoHive.
 
   ## Running the code
 
