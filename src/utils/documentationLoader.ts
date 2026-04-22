@@ -205,8 +205,8 @@ Luminaries, Consumers, Panelist, Colleagues, Cultural, and Grade all follow a 2-
 
 ## After Running:
 - Results appear in the execution history panel below
-- Save a Gem: click "Highlight an element that you like" (gem icon) to mark good directions
-- Save Coal: click "Flag an element you want to avoid" (🪨 icon) to exclude bad directions
+- Save a Gem: click "Highlight elements you like" (gem icon) to mark good directions
+- Save Coal: click "Flag elements you want to avoid" (🪨 icon) to exclude bad directions
 - Send Recommendations to Knowledge Base: saves a recommendation directly to your KB
 
 ## How Personas Respond:
@@ -516,7 +516,7 @@ A Gem marks text, ideas, or directions you want more of.
 
 ### How to Save a Gem:
 - In the Assessment Modal: highlight any text → floating "Gem 💎" button → click to save
-- On any hex page: click "Highlight an element that you like" (gem hexagon icon) → type or paste → click "Save Gem"
+- On any hex page: click "Highlight elements you like" (gem hexagon icon) → type or paste → click "Save Gem"
 
 ### What Gems Do:
 - Injected into every subsequent persona and moderator prompt as "PRIOR GEMS — EXAMPLES GOING IN THE RIGHT DIRECTION"
@@ -529,7 +529,7 @@ Coal marks text, directions, framings, or themes you want explicitly excluded.
 
 ### How to Save Coal:
 - In the Assessment Modal: highlight any text → floating "Coal 🪨" button → click to save
-- On any hex page: click "Flag an element you want to avoid" (🪨 icon) → type or paste → click "Save Coal"
+- On any hex page: click "Flag elements you want to avoid" (🪨 icon) → type or paste → click "Save Coal"
 
 ### What Coal Does:
 - Injected into every subsequent persona and moderator prompt as "COAL — DIRECTIONS AND THEMES TO ACTIVELY AVOID"

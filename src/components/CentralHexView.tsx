@@ -1049,7 +1049,7 @@ export function CentralHexView({
         {/* Gem — display only, interaction happens in assessment modal */}
         <div className="mb-3 flex items-center gap-2">
           <img src={gemIcon} alt="gem" className="w-7 h-7 flex-shrink-0" />
-          <span className="text-gray-900">Highlight an element that you like</span>
+          <span className="text-gray-900">Highlight elements you like</span>
         </div>
 
         {/* Check — display only */}
@@ -1076,7 +1076,7 @@ export function CentralHexView({
         {/* Coal — display only */}
         <div className="mb-3 flex items-center gap-2">
           <span className="text-2xl leading-none w-7 flex items-center justify-center">🪨</span>
-          <span className="text-gray-900">Flag an element you want to avoid</span>
+          <span className="text-gray-900">Flag elements you want to avoid</span>
         </div>
 
         {/* Add Direction / Focus */}
