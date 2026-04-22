@@ -328,11 +328,18 @@ export function ResearcherModes({
     console.log("[KB Queues] Unprocessed:", unprocessed.length, "| Pending approval:", pendingApproval.length);
   };
 
+  const [isLoadingQueues, setIsLoadingQueues] = useState(false);
+
   const refreshPendingQueues = async () => {
-    // Force fresh fetch — avoids Vercel edge cache returning stale data after delete/approve
-    const files = await listKnowledgeBaseFiles({ isApproved: false, sortBy: 'upload_date', sortOrder: 'DESC', limit: 200 });
-    // Always create new array references so React triggers re-render
-    updatePendingQueues([...files]);
+    setIsLoadingQueues(true);
+    try {
+      // Force fresh fetch — avoids Vercel edge cache returning stale data after delete/approve
+      const files = await listKnowledgeBaseFiles({ isApproved: false, sortBy: 'upload_date', sortOrder: 'DESC', limit: 200 });
+      // Always create new array references so React triggers re-render
+      updatePendingQueues([...files]);
+    } finally {
+      setIsLoadingQueues(false);
+    }
   };
 
   const handleClosePreview = () => {
@@ -347,11 +354,13 @@ export function ResearcherModes({
     const load = async () => {
       const session = await getValidSession();
       if (mode === 'read-edit-approve' && session) {
+        setIsLoadingQueues(true);
         try {
           const files = await listKnowledgeBaseFiles({ isApproved: false, sortBy: 'upload_date', sortOrder: 'DESC', limit: 200 });
           updatePendingQueues(files);
           console.log(`✅ Loaded: ${filterUnprocessed(files).length} unprocessed, ${filterPendingApproval(files).length} pending approval`);
         } catch (e) { console.error('Failed to load pending KB files:', e); }
+        finally { setIsLoadingQueues(false); }
       }
     };
     load();
@@ -947,8 +956,18 @@ export function ResearcherModes({
         </div>
 
         <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
-          <h3 className="text-green-900 leading-tight">{canApproveResearch ? 'Read/Edit/Approve Mode' : 'Read Files Mode'}</h3>
-          <p className="text-green-700 text-sm">{canApproveResearch ? 'Process, assign metadata, and approve files for use' : 'View knowledge base files'}</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-green-900 leading-tight">{canApproveResearch ? 'Read/Edit/Approve Mode' : 'Read Files Mode'}</h3>
+              <p className="text-green-700 text-sm">{canApproveResearch ? 'Process, assign metadata, and approve files for use' : 'View knowledge base files'}</p>
+            </div>
+            <button onClick={refreshPendingQueues} disabled={isLoadingQueues} className="px-3 py-1.5 text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-green-400 flex items-center gap-1.5 flex-shrink-0">
+              {isLoadingQueues
+                ? <SpinHex className="w-4 h-4" />
+                : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>}
+              {isLoadingQueues ? 'Loading...' : 'Refresh'}
+            </button>
+          </div>
         </div>
 
         {/* Pending Processing */}
@@ -1082,6 +1101,14 @@ export function ResearcherModes({
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {/* Empty state when loaded but nothing pending */}
+        {!isLoadingQueues && pendingKBFiles.length === 0 && pendingApprovalFiles.length === 0 && (
+          <div className="bg-gray-50 border-2 border-gray-200 rounded-lg p-4 text-center">
+            <p className="text-gray-500 text-sm">No files pending processing or approval.</p>
+            <p className="text-gray-400 text-xs mt-1">Files uploaded from the Wisdom hex or via Upload above will appear here.</p>
           </div>
         )}
 

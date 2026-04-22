@@ -16,7 +16,7 @@ import { InterviewDialog } from './InterviewDialog';
 import { useMicDevices } from '../hooks/useMicDevices';
 import { AssessmentModal, type IdeaElement, type IterationGem, type KbMode, type RequestMode } from './AssessmentModal';
 import { MarkdownViewer } from './MarkdownViewer';
-import { LoadingGem } from './LoadingGem';
+import { LoadingGem, SpinHex } from './LoadingGem';
 import cohiveLogo from 'figma:asset/88105c0c8621f3d41d65e5be3ae75558f9de1753.png';
 import { uploadToKnowledgeBase, downloadFile, listKnowledgeBaseFiles, type KnowledgeBaseFile, generateSummary, fetchSharedConfig, addSharedConfigItem, fetchProjectTypeConfigs, type ProjectTypeConfig } from '../utils/databricksAPI';
 import { isAuthenticated, getCurrentUserEmail, getValidSession } from '../utils/databricksAuth';
@@ -181,6 +181,7 @@ export default function ProcessWireframe() {
   }>({ insightType: 'General' });
   
   const [wisdomSuccessMessage, setWisdomSuccessMessage] = useState<string | null>(null);
+  const [isWisdomSaving, setIsWisdomSaving] = useState(false);
   const [isDatabricksLoading, setIsDatabricksLoading] = useState(false);
   const [databricksLoadingMessage, setDatabricksLoadingMessage] = useState('Communicating with Databricks...');
   const [recordedAudioBlob, setRecordedAudioBlob] = useState<Blob | null>(null);
@@ -906,8 +907,7 @@ export default function ProcessWireframe() {
 
   const handleSaveWisdomToDatabricks = async (fileName: string, content: string, insightType: string, inputMethod: string, brand?: string, projectType?: string) => {
     if (!isDatabricksAuthenticated) { alert('⚠️ Please sign in to Databricks before saving to the Knowledge Base.\n\nClick the "Sign In" button in the header to authenticate.'); setShowLoginModal(true); return false; }
-    setDatabricksLoadingMessage('Saving wisdom to Knowledge Base...');
-    setIsDatabricksLoading(true);
+    setIsWisdomSaving(true);
     try {
       const mimeType = getMimeTypeFromFileName(fileName);
       let file: File;
@@ -931,7 +931,6 @@ export default function ProcessWireframe() {
       const result = await uploadToKnowledgeBase({ file, scope, category: projectType, brand: scope === 'brand' ? (brand || undefined) : undefined, projectType: projectType || undefined, fileType: 'Wisdom', tags: [insightType, inputMethod], insightType: insightType as 'Brand' | 'Category' | 'General', inputMethod: inputMethod as 'Text' | 'Voice' | 'Photo' | 'Video' | 'File', userEmail: userEmail, userRole });
       if (result.success) {
         setWisdomSuccessMessage(`✅ "${fileName}" saved to Knowledge Base`);
-        setTimeout(() => setWisdomSuccessMessage(null), 3000);
         return true;
       } else {
         alert(`Failed to save to Knowledge Base: ${result.error || 'Unknown error'}`);
@@ -941,7 +940,7 @@ export default function ProcessWireframe() {
       alert(`Failed to save wisdom: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return false;
     } finally {
-      setIsDatabricksLoading(false);
+      setIsWisdomSaving(false);
     }
   };
 
@@ -1312,8 +1311,9 @@ export default function ProcessWireframe() {
                         ) : (
                     <>
                     {wisdomSuccessMessage && activeStepId === 'Wisdom' && (
-                      <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-3">
+                      <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-3 flex items-center justify-between gap-3">
                         <p className="text-sm text-green-800">{wisdomSuccessMessage}</p>
+                        <button onClick={() => setWisdomSuccessMessage(null)} className="flex-shrink-0 px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700">OK</button>
                       </div>
                     )}
                     {currentContent.questions.map((question, idx) => {
@@ -1600,7 +1600,17 @@ export default function ProcessWireframe() {
                                   </button>
                                 </div>
                                 {hasResponse && (
-                                  <button onClick={async () => { const wisdom = responses[activeStepId]?.[idx]; if (!wisdom) return; await handleSaveWisdomToDatabricks(wisdomFileName('txt'), wisdom, insightType, 'Text', brand, projectType); }} className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Save to Knowledge Base</button>
+                                  <button onClick={async () => {
+                                    const wisdom = responses[activeStepId]?.[idx];
+                                    if (!wisdom) return;
+                                    const saved = await handleSaveWisdomToDatabricks(wisdomFileName('txt'), wisdom, insightType, 'Text', brand, projectType);
+                                    if (saved) {
+                                      handleResponseChange(idx, '');
+                                      handleResponseChange(0, '');
+                                    }
+                                  }} disabled={isWisdomSaving} className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-blue-400 flex items-center gap-2">
+                                    {isWisdomSaving ? <><SpinHex className="w-4 h-4" />Saving...</> : 'Save to Knowledge Base'}
+                                  </button>
                                 )}
                               </div>
                             );
@@ -1668,14 +1678,13 @@ export default function ProcessWireframe() {
                               if (!isDatabricksAuthenticated) { alert('⚠️ Please sign in to Databricks before saving to the Knowledge Base.'); setShowLoginModal(true); return; }
                               const ext = file.name.split('.').pop() || 'jpg';
                               const renamed = new File([file], wisdomFileName(ext), { type: file.type });
-                              setDatabricksLoadingMessage('Saving photo to Knowledge Base...');
-                              setIsDatabricksLoading(true);
+                              setIsWisdomSaving(true);
                               try {
                                 const result = await uploadToKnowledgeBase({ file: renamed, scope: photoScope, brand: photoScope === 'brand' ? (brand || undefined) : undefined, projectType: projectType || undefined, fileType: 'Wisdom', tags: [insightType, 'Photo'], insightType: insightType as 'Brand' | 'Category' | 'General', inputMethod: 'Photo', userEmail, userRole });
-                                if (result.success) { handleResponseChange(idx, label); setWisdomSuccessMessage(`✅ "${renamed.name}" saved to Knowledge Base`); setTimeout(() => setWisdomSuccessMessage(null), 3000); }
+                                if (result.success) { handleResponseChange(idx, label); setWisdomSuccessMessage(`✅ "${renamed.name}" saved to Knowledge Base`); }
                                 else { alert(`Failed to save photo: ${result.error || 'Unknown error'}`); }
                               } catch (err) { alert(`Failed to save photo: ${err instanceof Error ? err.message : 'Unknown error'}`); }
-                              finally { setIsDatabricksLoading(false); e.target.value = ''; }
+                              finally { setIsWisdomSaving(false); e.target.value = ''; }
                             };
                             return (
                               <div key={idx} className="mb-2">
@@ -1684,10 +1693,10 @@ export default function ProcessWireframe() {
                                   {hasResponse && <CircleCheck className="w-5 h-5 text-green-600 flex-shrink-0" />}
                                 </label>
                                 <div className="space-y-2">
-                                  <label className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 cursor-pointer">
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                                    Upload Photo
-                                    <input type="file" accept="image/*" className="hidden" onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; await uploadPhoto(file, `Photo: ${file.name}`, e); }} />
+                                  <label className={`flex items-center justify-center gap-2 w-full px-4 py-3 rounded cursor-pointer ${isWisdomSaving ? 'bg-blue-400 text-white pointer-events-none' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
+                                    {isWisdomSaving ? <SpinHex className="w-5 h-5" /> : <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>}
+                                    {isWisdomSaving ? 'Saving...' : 'Upload Photo'}
+                                    <input type="file" accept="image/*" className="hidden" disabled={isWisdomSaving} onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; await uploadPhoto(file, `Photo: ${file.name}`, e); }} />
                                   </label>
                                   <button
                                     type="button"
@@ -1709,7 +1718,8 @@ export default function ProcessWireframe() {
                                       <div className="flex gap-2 p-2 bg-gray-50">
                                         <button
                                           type="button"
-                                          className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center justify-center gap-2"
+                                          disabled={isWisdomSaving}
+                                          className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-blue-400 flex items-center justify-center gap-2"
                                           onClick={async () => {
                                             const video = wisdomVideoRef.current;
                                             if (!video) return;
@@ -1722,18 +1732,17 @@ export default function ProcessWireframe() {
                                               const captured = new File([blob], wisdomFileName('jpg'), { type: 'image/jpeg' });
                                               stopWisdomCamera();
                                               if (!isDatabricksAuthenticated) { alert('⚠️ Please sign in to Databricks before saving.'); setShowLoginModal(true); return; }
-                                              setDatabricksLoadingMessage('Saving photo to Knowledge Base...');
-                                              setIsDatabricksLoading(true);
+                                              setIsWisdomSaving(true);
                                               try {
                                                 const result = await uploadToKnowledgeBase({ file: captured, scope: photoScope, brand: photoScope === 'brand' ? (brand || undefined) : undefined, projectType: projectType || undefined, fileType: 'Wisdom', tags: [insightType, 'Photo'], insightType: insightType as 'Brand' | 'Category' | 'General', inputMethod: 'Photo', userEmail, userRole });
-                                                if (result.success) { handleResponseChange(idx, 'Camera photo saved'); setWisdomSuccessMessage(`✅ "${captured.name}" saved to Knowledge Base`); setTimeout(() => setWisdomSuccessMessage(null), 3000); }
+                                                if (result.success) { handleResponseChange(idx, 'Camera photo saved'); setWisdomSuccessMessage(`✅ "${captured.name}" saved to Knowledge Base`); }
                                                 else { alert(`Failed to save photo: ${result.error || 'Unknown error'}`); }
                                               } catch (err) { alert(`Failed to save photo: ${err instanceof Error ? err.message : 'Unknown error'}`); }
-                                              finally { setIsDatabricksLoading(false); }
+                                              finally { setIsWisdomSaving(false); }
                                             }, 'image/jpeg', 0.92);
                                           }}
                                         >
-                                          <Camera className="w-4 h-4" /> Capture
+                                          {isWisdomSaving ? <><SpinHex className="w-4 h-4" />Saving...</> : <><Camera className="w-4 h-4" />Capture</>}
                                         </button>
                                         <button type="button" className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300" onClick={stopWisdomCamera}>Cancel</button>
                                       </div>
@@ -1754,14 +1763,13 @@ export default function ProcessWireframe() {
                               if (file.size > MAX_VIDEO_BYTES) { alert(`Video is too large (${Math.round(file.size / 1024 / 1024)}MB). Maximum size is 37MB — please trim or compress the video first.`); e.target.value = ''; return; }
                               const ext = file.name.split('.').pop() || 'mp4';
                               const renamed = new File([file], wisdomFileName(ext), { type: file.type });
-                              setDatabricksLoadingMessage('Saving video to Knowledge Base...');
-                              setIsDatabricksLoading(true);
+                              setIsWisdomSaving(true);
                               try {
                                 const result = await uploadToKnowledgeBase({ file: renamed, scope: videoScope, brand: videoScope === 'brand' ? (brand || undefined) : undefined, projectType: projectType || undefined, fileType: 'Wisdom', tags: [insightType, 'Video'], insightType: insightType as 'Brand' | 'Category' | 'General', inputMethod: 'Video', userEmail, userRole });
-                                if (result.success) { handleResponseChange(idx, label); setWisdomSuccessMessage(`✅ "${renamed.name}" saved to Knowledge Base`); setTimeout(() => setWisdomSuccessMessage(null), 3000); }
+                                if (result.success) { handleResponseChange(idx, label); setWisdomSuccessMessage(`✅ "${renamed.name}" saved to Knowledge Base`); }
                                 else { alert(`Failed to save video: ${result.error || 'Unknown error'}`); }
                               } catch (err) { alert(`Failed to save video: ${err instanceof Error ? err.message : 'Unknown error'}`); }
-                              finally { setIsDatabricksLoading(false); e.target.value = ''; }
+                              finally { setIsWisdomSaving(false); e.target.value = ''; }
                             };
                             return (
                               <div key={idx} className="mb-2">
@@ -1771,10 +1779,10 @@ export default function ProcessWireframe() {
                                 </label>
                                 <div className="space-y-2">
                                   <p className="text-xs text-gray-500">Maximum file size: 37MB. For larger videos, trim or compress first.</p>
-                                  <label className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 cursor-pointer">
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                                    Upload Video
-                                    <input type="file" accept="video/*" className="hidden" onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; await uploadVideo(file, `Video: ${file.name}`, e); }} />
+                                  <label className={`flex items-center justify-center gap-2 w-full px-4 py-3 rounded cursor-pointer ${isWisdomSaving ? 'bg-blue-400 text-white pointer-events-none' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
+                                    {isWisdomSaving ? <SpinHex className="w-5 h-5" /> : <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>}
+                                    {isWisdomSaving ? 'Saving...' : 'Upload Video'}
+                                    <input type="file" accept="video/*" className="hidden" disabled={isWisdomSaving} onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; await uploadVideo(file, `Video: ${file.name}`, e); }} />
                                   </label>
                                   <button
                                     type="button"
@@ -1791,14 +1799,13 @@ export default function ProcessWireframe() {
                                           if (blob.size > MAX_VIDEO_BYTES) { alert(`Recording is too large (${Math.round(blob.size / 1024 / 1024)}MB). Keep under 37MB.`); return; }
                                           const recorded = new File([blob], wisdomFileName('webm'), { type: 'video/webm' });
                                           if (!isDatabricksAuthenticated) { alert('⚠️ Please sign in to Databricks before saving.'); setShowLoginModal(true); return; }
-                                          setDatabricksLoadingMessage('Saving video to Knowledge Base...');
-                                          setIsDatabricksLoading(true);
+                                          setIsWisdomSaving(true);
                                           try {
                                             const result = await uploadToKnowledgeBase({ file: recorded, scope: videoScope, brand: videoScope === 'brand' ? (brand || undefined) : undefined, projectType: projectType || undefined, fileType: 'Wisdom', tags: [insightType, 'Video'], insightType: insightType as 'Brand' | 'Category' | 'General', inputMethod: 'Video', userEmail, userRole });
-                                            if (result.success) { handleResponseChange(idx, 'Camera video saved'); setWisdomSuccessMessage(`✅ "${recorded.name}" saved to Knowledge Base`); setTimeout(() => setWisdomSuccessMessage(null), 3000); }
+                                            if (result.success) { handleResponseChange(idx, 'Camera video saved'); setWisdomSuccessMessage(`✅ "${recorded.name}" saved to Knowledge Base`); }
                                             else { alert(`Failed to save video: ${result.error || 'Unknown error'}`); }
                                           } catch (err) { alert(`Failed to save video: ${err instanceof Error ? err.message : 'Unknown error'}`); }
-                                          finally { setIsDatabricksLoading(false); }
+                                          finally { setIsWisdomSaving(false); }
                                         };
                                         setStream(s);
                                         setMediaRecorder(rec);
@@ -1821,10 +1828,11 @@ export default function ProcessWireframe() {
                                       <div className="flex gap-2 p-2 bg-gray-50">
                                         <button
                                           type="button"
-                                          className="flex-1 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 flex items-center justify-center gap-2"
+                                          disabled={isWisdomSaving}
+                                          className="flex-1 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:bg-red-400 flex items-center justify-center gap-2"
                                           onClick={() => mediaRecorder?.stop()}
                                         >
-                                          <CircleStop className="w-4 h-4" /> Stop &amp; Save
+                                          {isWisdomSaving ? <><SpinHex className="w-4 h-4" />Saving...</> : <><CircleStop className="w-4 h-4" />Stop &amp; Save</>}
                                         </button>
                                         <button type="button" className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300" onClick={() => { mediaRecorder?.stop(); stopWisdomCamera(); }}>Cancel</button>
                                       </div>

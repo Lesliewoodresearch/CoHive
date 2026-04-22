@@ -191,7 +191,14 @@ export default async function handler(req, res) {
       throw new Error('Metadata insert failed: ' + (errorData.message || sqlResponse.statusText));
     }
 
-    console.log('[KB Upload] Metadata inserted successfully');
+    const sqlResult = await sqlResponse.json();
+    if (sqlResult.status?.state === 'FAILED') {
+      const sqlErr = sqlResult.status.error?.message || JSON.stringify(sqlResult.status.error) || 'Unknown SQL error';
+      console.error('[KB Upload] SQL INSERT FAILED:', sqlErr);
+      throw new Error('Metadata insert failed: ' + sqlErr);
+    }
+
+    console.log('[KB Upload] Metadata inserted successfully', sqlResult.status?.state);
     logFileEvent({
       eventType: 'file_uploaded',
       userEmail,
