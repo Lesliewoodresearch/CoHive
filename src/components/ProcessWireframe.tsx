@@ -13,6 +13,7 @@ import { ReviewView } from './ReviewView';
 import { DatabricksOAuthLogin } from './DatabricksOAuthLogin';
 import { DatabricksFileSaver } from './DatabricksFileSaver';
 import { InterviewDialog } from './InterviewDialog';
+import { useMicDevices } from '../hooks/useMicDevices';
 import { AssessmentModal, type IdeaElement, type IterationGem, type KbMode, type RequestMode } from './AssessmentModal';
 import { MarkdownViewer } from './MarkdownViewer';
 import { LoadingGem } from './LoadingGem';
@@ -194,6 +195,7 @@ export default function ProcessWireframe() {
   const [selectedKBFile, setSelectedKBFile] = useState<string | null>(null);
   const [pendingApprovalCount, setPendingApprovalCount] = useState<number>(0);
   const [wisdomInputMethod, setWisdomInputMethod] = useState<string | null>(null);
+  const { devices: micDevices, selectedDeviceId: selectedMicDeviceId, setSelectedDeviceId: setSelectedMicDeviceId } = useMicDevices();
   
   const isBrowser = typeof window !== 'undefined';
   const hasMediaDevices = isBrowser && typeof navigator !== 'undefined' && navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
@@ -1516,6 +1518,22 @@ export default function ProcessWireframe() {
                           const inputMethod = responses[activeStepId]?.[0];
                           if (!inputMethod) return null;
 
+                          const usesMic = ['Text', 'Voice', 'Interview'].includes(inputMethod);
+                          const MicDevicePicker = usesMic && micDevices.length > 1 ? (
+                            <div className="flex items-center gap-2 mb-3">
+                              <svg className="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+                              <select
+                                value={selectedMicDeviceId}
+                                onChange={e => setSelectedMicDeviceId(e.target.value)}
+                                className="flex-1 text-sm border border-gray-300 rounded px-2 py-1 text-gray-700 bg-white focus:outline-none focus:border-blue-500"
+                              >
+                                {micDevices.map(d => (
+                                  <option key={d.deviceId} value={d.deviceId}>{d.label}</option>
+                                ))}
+                              </select>
+                            </div>
+                          ) : null;
+
                           // Shared filename helper — Wisdom_email_DDMMYY.ext
                           const wisdomFileName = (ext: string) => {
                             const d = new Date();
@@ -1533,15 +1551,23 @@ export default function ProcessWireframe() {
                                   <span>Share Your Wisdom</span>
                                   {hasResponse && <CircleCheck className="w-5 h-5 text-green-600 flex-shrink-0" />}
                                 </label>
+                                {MicDevicePicker}
                                 <div className="relative">
                                   <textarea className="w-full border-2 border-gray-300 bg-white rounded p-2 pr-10 text-gray-700 focus:outline-none focus:border-blue-500" placeholder={`Share your ${insightType.toLowerCase()} insight here...`} rows={6} value={responses[activeStepId]?.[idx] || ''} onChange={(e) => handleResponseChange(idx, e.target.value)} />
                                   <button
                                     type="button"
                                     title="Dictate (speech to text)"
                                     className="absolute bottom-3 right-2 p-1.5 rounded-full bg-gray-100 hover:bg-blue-100 text-gray-500 hover:text-blue-600"
-                                    onClick={() => {
+                                    onClick={async () => {
                                       const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
                                       if (!SR) { alert('Speech recognition is not supported in this browser.'); return; }
+                                      // Prime the browser to the selected device before SpeechRecognition starts
+                                      if (selectedMicDeviceId && selectedMicDeviceId !== 'default') {
+                                        try {
+                                          const s = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: { exact: selectedMicDeviceId } } });
+                                          s.getTracks().forEach(t => t.stop());
+                                        } catch { /* fall back to browser default */ }
+                                      }
                                       const rec = new SR();
                                       rec.continuous = true; rec.interimResults = false; rec.lang = 'en-US';
                                       rec.onresult = (e: any) => {
@@ -1570,12 +1596,17 @@ export default function ProcessWireframe() {
                                   <span>Record Your Wisdom</span>
                                   {hasResponse && <CircleCheck className="w-5 h-5 text-green-600 flex-shrink-0" />}
                                 </label>
+                                {MicDevicePicker}
                                 <div className="space-y-2">
                                   <button
                                     className="w-full px-4 py-3 bg-red-600 text-white rounded hover:bg-red-700 flex items-center justify-center gap-2"
                                     onClick={async () => {
                                       try {
-                                        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                                        const audioConstraints: MediaStreamConstraints['audio'] =
+                                          selectedMicDeviceId && selectedMicDeviceId !== 'default'
+                                            ? { deviceId: { exact: selectedMicDeviceId } }
+                                            : true;
+                                        const stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
                                         const recorder = new MediaRecorder(stream);
                                         const chunks: BlobPart[] = [];
                                         recorder.ondataavailable = (e) => chunks.push(e.data);
@@ -1720,6 +1751,7 @@ export default function ProcessWireframe() {
                                   <span>Share Your Wisdom</span>
                                   {hasResponse && <CircleCheck className="w-5 h-5 text-green-600 flex-shrink-0" />}
                                 </label>
+                                {MicDevicePicker}
                                 <button
                                   onClick={() => { setInterviewContext({ insightType, brand, projectType }); setShowInterviewDialog(true); }}
                                   className="w-full px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 flex items-center justify-center gap-2"
@@ -2001,7 +2033,7 @@ export default function ProcessWireframe() {
         <DatabricksFileSaver open={showFileSaver} onClose={() => { setShowFileSaver(false); setFileSaverData(null); }} fileName={fileSaverData.fileName} fileContent={fileSaverData.content} onSaveSuccess={(path) => { console.log('File saved successfully to:', path); }} />
       )}
 
-      <InterviewDialog open={showInterviewDialog} onClose={() => { setShowInterviewDialog(false); }} onComplete={() => { if (activeStepId === 'Wisdom') { handleResponseChange(1, 'Interview completed and saved to Knowledge Base'); } }} userEmail={userEmail} userRole={userRole}
+      <InterviewDialog open={showInterviewDialog} onClose={() => { setShowInterviewDialog(false); }} onComplete={() => { if (activeStepId === 'Wisdom') { handleResponseChange(1, 'Interview completed and saved to Knowledge Base'); } }} userEmail={userEmail} userRole={userRole} selectedMicDeviceId={selectedMicDeviceId}
         onSaveTranscript={async (transcript: string, fileName: string) => {
           try {
             const blob = new Blob([transcript], { type: 'text/plain' });

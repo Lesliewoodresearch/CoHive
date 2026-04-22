@@ -10,6 +10,7 @@ interface InterviewDialogProps {
   userEmail: string;
   userRole: string;
   onSaveTranscript: (transcript: string, fileName: string) => Promise<boolean>;
+  selectedMicDeviceId?: string;
 }
 
 export function InterviewDialog({
@@ -18,7 +19,8 @@ export function InterviewDialog({
   onComplete,
   userEmail,
   userRole,
-  onSaveTranscript
+  onSaveTranscript,
+  selectedMicDeviceId,
 }: InterviewDialogProps) {
   const [conversation, setConversation] = useState<AIConversation | null>(null);
   const [messages, setMessages] = useState<Array<{ role: string; content: string }>>([]);
@@ -275,10 +277,18 @@ ${summarySection}
     }
   };
 
-  const handleStartListening = () => {
+  const handleStartListening = async () => {
     if (!hasSpeechRecognition) {
       alert('Speech recognition is not supported in your browser.');
       return;
+    }
+
+    // Prime the browser to the selected device before SpeechRecognition starts
+    if (selectedMicDeviceId && selectedMicDeviceId !== 'default') {
+      try {
+        const s = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: { exact: selectedMicDeviceId } } });
+        s.getTracks().forEach(t => t.stop());
+      } catch { /* fall back to browser default */ }
     }
 
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
