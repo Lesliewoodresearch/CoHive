@@ -256,11 +256,28 @@ Your summaries should:
     if (outputOptions?.includes('Include Gems')) {
       sectionsToInclude.push('Gems');
       userPrompt += `### ${sectionsToInclude.length}. Key Gems & Insights\n`;
-      userPrompt += `Identify and highlight the most valuable insights (gems):\n`;
-      userPrompt += `- Extract particularly noteworthy findings from the iteration data\n`;
-      userPrompt += `- Highlight breakthrough ideas or unexpected discoveries\n`;
-      userPrompt += `- Include strategic insights that stand out\n`;
-      userPrompt += `- Format each gem with context and source reference\n\n`;
+      userPrompt += `Using the GEMS (Highlighted Elements) sections in the iteration files:\n`;
+      userPrompt += `- List every gem exactly as recorded, grouped by hex\n`;
+      userPrompt += `- If no GEMS section exists in the data, note that none were saved\n`;
+      userPrompt += `- Format each gem with its source hex in brackets\n\n`;
+    }
+
+    if (outputOptions?.includes('Include Check')) {
+      sectionsToInclude.push('Check');
+      userPrompt += `### ${sectionsToInclude.length}. Elements of Interest\n`;
+      userPrompt += `Using the CHECK (Elements of Interest) sections in the iteration files:\n`;
+      userPrompt += `- List every checked element exactly as recorded, grouped by hex\n`;
+      userPrompt += `- If no CHECK section exists in the data, note that none were saved\n`;
+      userPrompt += `- Format each item with its source hex in brackets\n\n`;
+    }
+
+    if (outputOptions?.includes('Include Coal')) {
+      sectionsToInclude.push('Coal');
+      userPrompt += `### ${sectionsToInclude.length}. Elements to Avoid\n`;
+      userPrompt += `Using the COAL (Elements to Avoid) sections in the iteration files:\n`;
+      userPrompt += `- List every coal item exactly as recorded, grouped by hex\n`;
+      userPrompt += `- If no COAL section exists in the data, note that none were saved\n`;
+      userPrompt += `- Format each item with its source hex in brackets\n\n`;
     }
 
     if (outputOptions?.includes('Include User Notes from all iterations as an Appendix')) {

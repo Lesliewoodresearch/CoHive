@@ -1953,6 +1953,29 @@ export default function ProcessWireframe() {
                                             });
                                             txtLines.push('');
                                           }
+
+                                          if (iterationGems.length > 0) {
+                                            txtLines.push('='.repeat(60));
+                                            txtLines.push('GEMS (Highlighted Elements)');
+                                            txtLines.push('='.repeat(60));
+                                            iterationGems.forEach(g => txtLines.push(`[${g.hexLabel}] ${g.gemText}`));
+                                            txtLines.push('');
+                                          }
+                                          if (iterationChecks.length > 0) {
+                                            txtLines.push('='.repeat(60));
+                                            txtLines.push('CHECK (Elements of Interest)');
+                                            txtLines.push('='.repeat(60));
+                                            iterationChecks.forEach(c => txtLines.push(`[${c.hexLabel}] ${c.text}`));
+                                            txtLines.push('');
+                                          }
+                                          if (iterationCoal.length > 0) {
+                                            txtLines.push('='.repeat(60));
+                                            txtLines.push('COAL (Elements to Avoid)');
+                                            txtLines.push('='.repeat(60));
+                                            iterationCoal.forEach(c => txtLines.push(`[${c.hexLabel}] ${c.text}`));
+                                            txtLines.push('');
+                                          }
+
                                           const txtContent = txtLines.join('\n');
                                           const txtFileName = userEnteredFileName.endsWith('.txt') ? userEnteredFileName : `${userEnteredFileName}.txt`;
                                           const blob = new Blob([txtContent], { type: 'text/plain' });
@@ -2016,7 +2039,7 @@ export default function ProcessWireframe() {
                         }
                         if (idx === 2 && question === 'Output Options') {
                           const selectedOptions = responses[activeStepId]?.[idx]?.split(',').filter(Boolean) || [];
-                          const options = ['Executive Summary', 'Share all Ideas as a list', 'Provide a grid with all "final" ideas with their scores', 'Include Gems', 'Include User Notes from all iterations as an Appendix'];
+                          const options = ['Executive Summary', 'Share all Ideas as a list', 'Provide a grid with all "final" ideas with their scores', 'Include Gems', 'Include Check', 'Include Coal', 'Include User Notes from all iterations as an Appendix'];
                           return (
                             <div key={idx} className="mb-2">
                               <label className="block text-gray-900 mb-1 flex items-start justify-between"><span>{idx + 1}. {question}</span>{hasResponse && <CircleCheck className="w-5 h-5 text-green-600 flex-shrink-0" />}</label>
