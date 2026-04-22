@@ -152,7 +152,7 @@ export function ResearchView({
           if (!file) return null;
           
           return (
-            <div className="fixed inset-y-0 left-0 right-80 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedFile(null)}>
+            <div className="fixed inset-y-0 left-0 right-[344px] bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedFile(null)}>
               <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
                 {/* Modal Header */}
                 <div className="border-b-2 border-gray-300 p-4 flex items-center justify-between">
@@ -241,7 +241,7 @@ export function ResearchView({
           if (!file) return null;
           
           return (
-            <div className="fixed inset-y-0 left-0 right-80 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => { setShowSuggestionForm(false); setNewSuggestion(''); }}>
+            <div className="fixed inset-y-0 left-0 right-[344px] bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => { setShowSuggestionForm(false); setNewSuggestion(''); }}>
               <div className="bg-white rounded-lg max-w-2xl w-full" onClick={(e) => e.stopPropagation()}>
                 <div className="border-b-2 border-gray-300 p-4 flex items-center justify-between">
                   <h3 className="text-gray-900 leading-tight font-medium">
@@ -463,7 +463,7 @@ export function ResearchView({
         if (!file) return null;
         
         return (
-          <div className="fixed inset-y-0 left-0 right-80 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedFile(null)}>
+          <div className="fixed inset-y-0 left-0 right-[344px] bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedFile(null)}>
             <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
               {/* Modal Header */}
               <div className="border-b-2 border-gray-300 p-4 flex items-center justify-between">

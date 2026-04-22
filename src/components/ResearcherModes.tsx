@@ -181,7 +181,7 @@ function downloadAsMarkdown(title: string, content: string) {
 function AIResponseModal({ isOpen, onClose, title, content, meta }: AIResponseModalProps) {
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-y-0 left-0 right-80 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
+    <div className="fixed inset-y-0 left-0 right-[344px] z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
       <div className="bg-white rounded-xl shadow-2xl flex flex-col w-full max-w-3xl" style={{ maxHeight: '90vh' }}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl flex-shrink-0">
           <div>
@@ -762,7 +762,7 @@ export function ResearcherModes({
   const MetadataAssignmentModal = () => {
     if (!showMetadataModal || metadataQueue.length === 0) return null;
     return (
-      <div className="fixed inset-y-0 left-0 right-80 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+      <div className="fixed inset-y-0 left-0 right-[344px] bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
           <div className="border-b-2 border-gray-200 px-6 py-4">
             <h2 className="text-gray-900 font-bold text-lg">Assign Brand & Project Type</h2>
@@ -825,7 +825,7 @@ export function ResearcherModes({
   const PreviewModal = () => {
     if (!previewFile) return null;
     return (
-      <div className="fixed inset-y-0 left-0 right-80 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="fixed inset-y-0 left-0 right-[344px] bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col">
           <div className="border-b-2 border-gray-300 p-4 flex items-center justify-between">
             <div className="flex-1 mr-4">
@@ -1350,7 +1350,7 @@ export function ResearcherModes({
         )}
         <DatabricksFileBrowser open={showDatabricksBrowser} onClose={() => setShowDatabricksBrowser(false)} onFilesSelected={handleDatabricksFilesSelected} userRole={canApproveResearch ? 'researcher' : 'non-researcher'} />
         {showEditPopup && editingFile && (
-          <div className="fixed inset-y-0 left-0 right-80 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="fixed inset-y-0 left-0 right-[344px] bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col">
               <div className="px-6 py-4 border-b border-gray-200"><h2 className="text-xl font-semibold text-gray-900">Edit: {editingFile.fileName}</h2></div>
               <div className="flex-1 overflow-y-auto px-6 py-4"><textarea className="w-full h-96 border-2 border-gray-300 bg-white rounded p-4 text-gray-700 font-mono text-sm focus:outline-none focus:border-purple-500" value={editedContent} onChange={e => setEditedContent(e.target.value)} /></div>

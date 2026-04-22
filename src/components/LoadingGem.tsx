@@ -37,7 +37,7 @@ export function LoadingGem({
   };
 
   return (
-    <div className="fixed inset-y-0 left-0 right-80 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+    <div className="fixed inset-y-0 left-0 right-[344px] z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
       <div className="flex flex-col items-center gap-6">
         {/* Rotating Hexagon Gem */}
         <div 
