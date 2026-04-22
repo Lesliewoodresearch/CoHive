@@ -1,6 +1,6 @@
 import { Database, Cpu, GitBranch, BarChart3, Rocket, CirclePlay, Settings, FileText, Users, Globe, MessageSquare, TestTube2, CircleCheck, Save, CircleAlert, User, Download, Upload, RotateCcw, Mic, Camera, Video, CircleStop, File } from 'lucide-react';
 import { ProcessFlow, processSteps } from './ProcessFlow';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import React from 'react';
 import { ResearchView } from './ResearchView';
 import { TemplateManager, UserTemplate, defaultTemplates } from './TemplateManager';
@@ -195,6 +195,8 @@ export default function ProcessWireframe() {
   const [selectedKBFile, setSelectedKBFile] = useState<string | null>(null);
   const [pendingApprovalCount, setPendingApprovalCount] = useState<number>(0);
   const [wisdomInputMethod, setWisdomInputMethod] = useState<string | null>(null);
+  const [wisdomCameraMode, setWisdomCameraMode] = useState<'photo' | 'video' | null>(null);
+  const wisdomVideoRef = useRef<HTMLVideoElement>(null);
   const { devices: micDevices, selectedDeviceId: selectedMicDeviceId, setSelectedDeviceId: setSelectedMicDeviceId } = useMicDevices();
   
   const isBrowser = typeof window !== 'undefined';
@@ -949,6 +951,22 @@ export default function ProcessWireframe() {
     return mimeTypes[ext || ''] || 'application/octet-stream';
   }
 
+  // Attach camera stream to the video preview element whenever the mode changes
+  useEffect(() => {
+    if (wisdomCameraMode && stream && wisdomVideoRef.current) {
+      wisdomVideoRef.current.srcObject = stream;
+    }
+  }, [wisdomCameraMode, stream]);
+
+  const stopWisdomCamera = () => {
+    stream?.getTracks().forEach(t => t.stop());
+    setStream(null);
+    setWisdomCameraMode(null);
+    setIsRecording(false);
+    setMediaRecorder(null);
+    setRecordedChunks([]);
+  };
+
   const centralHexIds = ['Luminaries', 'panelist', 'Consumers', 'competitors', 'Colleagues', 'cultural', 'test', 'Grade'];
   const isCentralHex = centralHexIds.includes(activeStepId);
 
@@ -1671,11 +1689,56 @@ export default function ProcessWireframe() {
                                     Upload Photo
                                     <input type="file" accept="image/*" className="hidden" onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; await uploadPhoto(file, `Photo: ${file.name}`, e); }} />
                                   </label>
-                                  <label className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-gray-700 text-white rounded hover:bg-gray-900 cursor-pointer">
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                  <button
+                                    type="button"
+                                    className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-gray-700 text-white rounded hover:bg-gray-900"
+                                    onClick={async () => {
+                                      try {
+                                        const s = await navigator.mediaDevices.getUserMedia({ video: true });
+                                        setStream(s);
+                                        setWisdomCameraMode('photo');
+                                      } catch { alert('Camera access denied. Please allow camera access and try again.'); }
+                                    }}
+                                  >
+                                    <Camera className="w-5 h-5" />
                                     Take Photo with Camera
-                                    <input type="file" accept="image/*" capture="environment" className="hidden" onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; await uploadPhoto(file, `Photo: ${file.name}`, e); }} />
-                                  </label>
+                                  </button>
+                                  {wisdomCameraMode === 'photo' && (
+                                    <div className="border-2 border-gray-300 rounded overflow-hidden">
+                                      <video ref={wisdomVideoRef} autoPlay muted playsInline className="w-full rounded-t" />
+                                      <div className="flex gap-2 p-2 bg-gray-50">
+                                        <button
+                                          type="button"
+                                          className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center justify-center gap-2"
+                                          onClick={async () => {
+                                            const video = wisdomVideoRef.current;
+                                            if (!video) return;
+                                            const canvas = document.createElement('canvas');
+                                            canvas.width = video.videoWidth || 1280;
+                                            canvas.height = video.videoHeight || 720;
+                                            canvas.getContext('2d')?.drawImage(video, 0, 0);
+                                            canvas.toBlob(async (blob) => {
+                                              if (!blob) return;
+                                              const captured = new File([blob], wisdomFileName('jpg'), { type: 'image/jpeg' });
+                                              stopWisdomCamera();
+                                              if (!isDatabricksAuthenticated) { alert('⚠️ Please sign in to Databricks before saving.'); setShowLoginModal(true); return; }
+                                              setDatabricksLoadingMessage('Saving photo to Knowledge Base...');
+                                              setIsDatabricksLoading(true);
+                                              try {
+                                                const result = await uploadToKnowledgeBase({ file: captured, scope: photoScope, brand: photoScope === 'brand' ? (brand || undefined) : undefined, projectType: projectType || undefined, fileType: 'Wisdom', tags: [insightType, 'Photo'], insightType: insightType as 'Brand' | 'Category' | 'General', inputMethod: 'Photo', userEmail, userRole });
+                                                if (result.success) { handleResponseChange(idx, 'Camera photo saved'); setWisdomSuccessMessage(`✅ "${captured.name}" saved to Knowledge Base`); setTimeout(() => setWisdomSuccessMessage(null), 3000); }
+                                                else { alert(`Failed to save photo: ${result.error || 'Unknown error'}`); }
+                                              } catch (err) { alert(`Failed to save photo: ${err instanceof Error ? err.message : 'Unknown error'}`); }
+                                              finally { setIsDatabricksLoading(false); }
+                                            }, 'image/jpeg', 0.92);
+                                          }}
+                                        >
+                                          <Camera className="w-4 h-4" /> Capture
+                                        </button>
+                                        <button type="button" className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300" onClick={stopWisdomCamera}>Cancel</button>
+                                      </div>
+                                    </div>
+                                  )}
                                   {responses[activeStepId]?.[idx] && <div className="bg-green-50 border border-green-200 rounded p-2"><p className="text-sm text-green-700">✓ {responses[activeStepId][idx]}</p></div>}
                                 </div>
                               </div>
@@ -1713,11 +1776,60 @@ export default function ProcessWireframe() {
                                     Upload Video
                                     <input type="file" accept="video/*" className="hidden" onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; await uploadVideo(file, `Video: ${file.name}`, e); }} />
                                   </label>
-                                  <label className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-gray-700 text-white rounded hover:bg-gray-900 cursor-pointer">
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                                  <button
+                                    type="button"
+                                    className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-gray-700 text-white rounded hover:bg-gray-900"
+                                    onClick={async () => {
+                                      try {
+                                        const s = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                                        const chunks: Blob[] = [];
+                                        const rec = new MediaRecorder(s);
+                                        rec.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+                                        rec.onstop = async () => {
+                                          const blob = new Blob(chunks, { type: 'video/webm' });
+                                          stopWisdomCamera();
+                                          if (blob.size > MAX_VIDEO_BYTES) { alert(`Recording is too large (${Math.round(blob.size / 1024 / 1024)}MB). Keep under 37MB.`); return; }
+                                          const recorded = new File([blob], wisdomFileName('webm'), { type: 'video/webm' });
+                                          if (!isDatabricksAuthenticated) { alert('⚠️ Please sign in to Databricks before saving.'); setShowLoginModal(true); return; }
+                                          setDatabricksLoadingMessage('Saving video to Knowledge Base...');
+                                          setIsDatabricksLoading(true);
+                                          try {
+                                            const result = await uploadToKnowledgeBase({ file: recorded, scope: videoScope, brand: videoScope === 'brand' ? (brand || undefined) : undefined, projectType: projectType || undefined, fileType: 'Wisdom', tags: [insightType, 'Video'], insightType: insightType as 'Brand' | 'Category' | 'General', inputMethod: 'Video', userEmail, userRole });
+                                            if (result.success) { handleResponseChange(idx, 'Camera video saved'); setWisdomSuccessMessage(`✅ "${recorded.name}" saved to Knowledge Base`); setTimeout(() => setWisdomSuccessMessage(null), 3000); }
+                                            else { alert(`Failed to save video: ${result.error || 'Unknown error'}`); }
+                                          } catch (err) { alert(`Failed to save video: ${err instanceof Error ? err.message : 'Unknown error'}`); }
+                                          finally { setIsDatabricksLoading(false); }
+                                        };
+                                        setStream(s);
+                                        setMediaRecorder(rec);
+                                        setWisdomCameraMode('video');
+                                        setIsRecording(true);
+                                        rec.start();
+                                      } catch { alert('Camera/microphone access denied. Please allow access and try again.'); }
+                                    }}
+                                  >
+                                    <Video className="w-5 h-5" />
                                     Record Video with Camera
-                                    <input type="file" accept="video/*" capture="environment" className="hidden" onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; await uploadVideo(file, `Video: ${file.name}`, e); }} />
-                                  </label>
+                                  </button>
+                                  {wisdomCameraMode === 'video' && (
+                                    <div className="border-2 border-red-400 rounded overflow-hidden">
+                                      <div className="flex items-center gap-2 px-3 py-1.5 bg-red-50">
+                                        <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                                        <span className="text-sm text-red-700 font-medium">Recording…</span>
+                                      </div>
+                                      <video ref={wisdomVideoRef} autoPlay muted playsInline className="w-full" />
+                                      <div className="flex gap-2 p-2 bg-gray-50">
+                                        <button
+                                          type="button"
+                                          className="flex-1 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 flex items-center justify-center gap-2"
+                                          onClick={() => mediaRecorder?.stop()}
+                                        >
+                                          <CircleStop className="w-4 h-4" /> Stop &amp; Save
+                                        </button>
+                                        <button type="button" className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300" onClick={() => { mediaRecorder?.stop(); stopWisdomCamera(); }}>Cancel</button>
+                                      </div>
+                                    </div>
+                                  )}
                                   {responses[activeStepId]?.[idx] && <div className="bg-green-50 border border-green-200 rounded p-2"><p className="text-sm text-green-700">✓ {responses[activeStepId][idx]}</p></div>}
                                 </div>
                               </div>
