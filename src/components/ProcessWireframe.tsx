@@ -489,27 +489,29 @@ export default function ProcessWireframe() {
 
   const getUniqueFileName = (fileName: string, brand: string, projectType: string): string => {
     const existingFiles = projectFiles.filter(f => f.brand.toLowerCase() === brand.toLowerCase() && f.projectType.toLowerCase() === projectType.toLowerCase());
-    const baseName = fileName.replace(/\.txt$/i, '');
+    // Strip .txt so comparisons work regardless of how the file was stored
+    const normalize = (n: string) => n.replace(/\.txt$/i, '');
+    const baseName = normalize(fileName);
     const versionMatch = baseName.match(/^(.+?)_[vV](\d+)$/);
     if (versionMatch) {
-      const baseName = versionMatch[1];
+      const base = versionMatch[1];
       let highestVersion = parseInt(versionMatch[2], 10);
       existingFiles.forEach(file => {
-        const fvm = file.fileName.match(/^(.+?)_[vV](\d+)$/);
-        if (fvm && fvm[1] === baseName) { const v = parseInt(fvm[2], 10); if (v > highestVersion) highestVersion = v; }
+        const fvm = normalize(file.fileName).match(/^(.+?)_[vV](\d+)$/);
+        if (fvm && fvm[1] === base) { const v = parseInt(fvm[2], 10); if (v > highestVersion) highestVersion = v; }
       });
-      const fileExists = existingFiles.some(f => f.fileName === fileName);
-      if (!fileExists) return fileName;
-      return `${baseName}_v${highestVersion + 1}`;
+      const fileExists = existingFiles.some(f => normalize(f.fileName) === baseName);
+      if (!fileExists) return baseName;
+      return `${base}_V${highestVersion + 1}`;
     } else {
-      const baseV1 = `${fileName}_v1`;
-      if (existingFiles.some(f => f.fileName === baseV1)) {
+      const baseV1 = `${baseName}_V1`;
+      if (existingFiles.some(f => normalize(f.fileName) === baseV1)) {
         let highestVersion = 1;
         existingFiles.forEach(file => {
-          const fvm = file.fileName.match(/^(.+?)_[vV](\d+)$/);
-          if (fvm && fvm[1] === fileName) { const v = parseInt(fvm[2], 10); if (v > highestVersion) highestVersion = v; }
+          const fvm = normalize(file.fileName).match(/^(.+?)_[vV](\d+)$/);
+          if (fvm && fvm[1] === baseName) { const v = parseInt(fvm[2], 10); if (v > highestVersion) highestVersion = v; }
         });
-        return `${fileName}_v${highestVersion + 1}`;
+        return `${baseName}_V${highestVersion + 1}`;
       }
       return baseV1;
     }
@@ -595,10 +597,11 @@ export default function ProcessWireframe() {
         const today = new Date();
         const dateStr = today.toISOString().split('T')[0];
         let highestVersion = 0;
-        const basePattern = `CoHive_${brand}_${projectType}_${dateStr}_V`;
+        const basePattern = `CoHive_${brand}_${projectType}_`;
         projectFiles.forEach(file => {
-          if (file.fileName.startsWith(basePattern)) {
-            const vm = file.fileName.match(/_V(\d+)$/);
+          const normalized = file.fileName.replace(/\.txt$/i, '');
+          if (normalized.startsWith(basePattern)) {
+            const vm = normalized.match(/_V(\d+)$/);
             if (vm) { const v = parseInt(vm[1], 10); if (v > highestVersion) highestVersion = v; }
           }
         });
@@ -1158,13 +1161,8 @@ export default function ProcessWireframe() {
             activeStep={activeStepId}
             onStepChange={(stepId) => {
               if (stepId === 'Enter' && iterationSaved) {
-                const brand = responses['Enter']?.[0];
-                const projectType = responses['Enter']?.[1];
-                const currentFileName = responses['Enter']?.[2];
-                if (brand && projectType && currentFileName) {
-                  const nextFileName = getUniqueFileName(currentFileName, brand, projectType);
-                  setResponses(prev => ({ ...prev, 'Enter': { ...prev['Enter'], [2]: displayFileName(nextFileName) }, 'Findings': { ...prev['Findings'], [0]: '' } }));
-                }
+                // Clear the filename so the useEffect recomputes it with today's date + next version
+                setResponses(prev => ({ ...prev, 'Enter': { ...prev['Enter'], [2]: '' }, 'Findings': { ...prev['Findings'], [0]: '' } }));
                 setIterationSaved(false);
                 localStorage.setItem('cohive_iteration_saved', 'false');
               }
