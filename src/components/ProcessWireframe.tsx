@@ -1125,7 +1125,7 @@ export default function ProcessWireframe() {
   return (
     <div className="p-8">
       {isCheckingAuth && (
-        <div className="fixed inset-y-0 left-0 right-[344px] bg-white flex items-center justify-center z-50">
+        <div className="fixed inset-y-0 left-0 right-[350px] bg-white flex items-center justify-center z-50">
           <div className="text-center">
             <Cpu className="w-12 h-12 text-blue-500 animate-spin mx-auto mb-4" />
             <p className="text-gray-700">Loading CoHive...</p>

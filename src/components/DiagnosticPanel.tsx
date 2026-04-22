@@ -4377,7 +4377,7 @@ export function DiagnosticPanel({ onClose }: DiagnosticPanelProps) {
   // ═══════════════════════════���═══════════════════════════════════════════════
 
   return (
-    <div className="fixed inset-y-0 left-0 right-[344px] bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-y-0 left-0 right-[350px] bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col">
         
         {/* Header */}

@@ -269,7 +269,7 @@ export function GemCheckCoalReviewPanel({
   const includedCount = items.filter(i => i.included).length;
 
   return (
-    <div className="fixed inset-y-0 left-0 right-[344px] z-[300] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div className="fixed inset-y-0 left-0 right-[350px] z-[300] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
 
         {/* Header */}

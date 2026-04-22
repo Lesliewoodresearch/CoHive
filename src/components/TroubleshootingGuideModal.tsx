@@ -3603,7 +3603,7 @@ export function TroubleshootingGuideModal({ onClose, testResults, selectedCatego
   // If no problems, show success message
   if (problemTests.length === 0) {
     return (
-      <div className="fixed inset-y-0 left-0 right-[344px] bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+      <div className="fixed inset-y-0 left-0 right-[350px] bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
         <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl">
           <div className="px-6 py-4 border-b-2 border-gray-300 flex items-center justify-between bg-gradient-to-r from-green-50 to-emerald-50">
             <div>
@@ -3636,7 +3636,7 @@ export function TroubleshootingGuideModal({ onClose, testResults, selectedCatego
   }
 
   return (
-    <div className="fixed inset-y-0 left-0 right-[344px] bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+    <div className="fixed inset-y-0 left-0 right-[350px] bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
       <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col">
         
         {/* Header */}
