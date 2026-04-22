@@ -15,7 +15,7 @@ import { DatabricksFileSaver } from './DatabricksFileSaver';
 import { InterviewDialog } from './InterviewDialog';
 import { AssessmentModal, type IdeaElement, type IterationGem, type KbMode, type RequestMode } from './AssessmentModal';
 import { MarkdownViewer } from './MarkdownViewer';
-import { LoadingGem, SpinHex } from './LoadingGem';
+import { LoadingGem } from './LoadingGem';
 import cohiveLogo from 'figma:asset/88105c0c8621f3d41d65e5be3ae75558f9de1753.png';
 import { uploadToKnowledgeBase, downloadFile, listKnowledgeBaseFiles, type KnowledgeBaseFile, generateSummary, fetchSharedConfig, addSharedConfigItem, fetchProjectTypeConfigs, type ProjectTypeConfig } from '../utils/databricksAPI';
 import { isAuthenticated, getCurrentUserEmail, getValidSession } from '../utils/databricksAuth';
@@ -136,10 +136,6 @@ export default function ProcessWireframe() {
   const [iterationChecks, setIterationChecks] = useState<Array<{ text: string; hexId: string; hexLabel: string }>>([]);
   const [iterationCoal, setIterationCoal] = useState<Array<{ text: string; hexId: string; hexLabel: string }>>([]);
   const [iterationDirections, setIterationDirections] = useState<string[]>([]);
-  const [userNotes, setUserNotes] = useState<string>(() => {
-    // Persist notes across re-renders and page refreshes
-    return localStorage.getItem('cohive_user_notes') || '';
-  });
 
   // Assessment Modal state
   const [assessmentModalOpen, setAssessmentModalOpen] = useState(false);
@@ -1796,22 +1792,6 @@ export default function ProcessWireframe() {
                                             });
                                             txtLines.push('');
                                           }
-                                          // Append directions added during iteration
-                                          if (iterationDirections.length > 0) {
-                                            txtLines.push('='.repeat(60));
-                                            txtLines.push('DIRECTIONS ADDED DURING ITERATION');
-                                            txtLines.push('='.repeat(60));
-                                            iterationDirections.forEach((d, i) => txtLines.push(`${i + 1}. ${d}`));
-                                            txtLines.push('');
-                                          }
-                                          // Append user notes if present
-                                          if (userNotes.trim()) {
-                                            txtLines.push('='.repeat(60));
-                                            txtLines.push('USER NOTES');
-                                            txtLines.push('='.repeat(60));
-                                            txtLines.push(userNotes.trim());
-                                            txtLines.push('');
-                                          }
                                           const txtContent = txtLines.join('\n');
                                           const txtFileName = userEnteredFileName.endsWith('.txt') ? userEnteredFileName : `${userEnteredFileName}.txt`;
                                           const blob = new Blob([txtContent], { type: 'text/plain' });
@@ -1831,8 +1811,6 @@ export default function ProcessWireframe() {
         setIterationChecks([]);
         setIterationCoal([]);
         setIterationDirections([]); // iteration boundary — clear gems
-        setUserNotes('');
-        localStorage.removeItem('cohive_user_notes');
                                           } else { alert(`Failed to save to Databricks: ${result.error || 'Unknown error'}`); }
                                         }
                                       }}
@@ -1877,7 +1855,7 @@ export default function ProcessWireframe() {
                         }
                         if (idx === 2 && question === 'Output Options') {
                           const selectedOptions = responses[activeStepId]?.[idx]?.split(',').filter(Boolean) || [];
-                          const options = ['Executive Summary', 'Share all Ideas as a list', 'Provide a grid with all "final" ideas with their scores', 'Include Gems', 'Include Checks', 'Include Coal', 'Include User Notes from all iterations as an Appendix'];
+                          const options = ['Executive Summary', 'Share all Ideas as a list', 'Provide a grid with all "final" ideas with their scores', 'Include Gems', 'Include User Notes from all iterations as an Appendix'];
                           return (
                             <div key={idx} className="mb-2">
                               <label className="block text-gray-900 mb-1 flex items-start justify-between"><span>{idx + 1}. {question}</span>{hasResponse && <CircleCheck className="w-5 h-5 text-green-600 flex-shrink-0" />}</label>
@@ -1906,7 +1884,7 @@ export default function ProcessWireframe() {
                                         if (summaryFileName) {
                                           setIsGeneratingSummary(true);
                                           try {
-                                            const result = await generateSummary({ brand, projectType, fileName: summaryFileName, selectedFiles: responses[activeStepId]?.[1]?.split(',').filter(Boolean) || [], outputOptions: responses[activeStepId]?.[2]?.split(',').filter(Boolean) || [], hexExecutions, completedSteps: Array.from(completedSteps), responses, userEmail, userRole, modelEndpoint: currentTemplate?.conversationMode === 'incremental' ? currentTemplate?.modelEndpoint : 'databricks-claude-sonnet-4-6', iterationGems, iterationChecks, iterationCoal, iterationDirections, userNotes });
+                                            const result = await generateSummary({ brand, projectType, fileName: summaryFileName, selectedFiles: responses[activeStepId]?.[1]?.split(',').filter(Boolean) || [], outputOptions: responses[activeStepId]?.[2]?.split(',').filter(Boolean) || [], hexExecutions, completedSteps: Array.from(completedSteps), responses, userEmail, userRole, modelEndpoint: currentTemplate?.conversationMode === 'incremental' ? currentTemplate?.modelEndpoint : 'databricks-claude-sonnet-4-6' });
                                             if (result.success && result.summary) { setMarkdownContent(result.summary); setMarkdownTitle(summaryFileName); setShowMarkdownViewer(true); }
                                             else { alert(`Failed to generate summary: ${result.error || 'Unknown error'}`); }
                                           } catch { alert('Failed to generate summary. Please try again.'); }
@@ -1916,7 +1894,7 @@ export default function ProcessWireframe() {
                                     }}
                                     className="w-4 h-4" disabled={isGeneratingSummary}
                                   />
-                                  <span className="text-gray-700 flex items-center gap-2">{isGeneratingSummary ? <><SpinHex className="w-4 h-4" />Generating Summary...</> : 'Read'}</span>
+                                  <span className="text-gray-700">{isGeneratingSummary ? 'Generating Summary...' : 'Read'}</span>
                                 </label>
                                 <label className="flex items-center gap-2 cursor-pointer">
                                   <input type="radio" name="saveOrDownload" value="SaveWorkspace" checked={responses[activeStepId]?.[idx] === 'SaveWorkspace'}
@@ -2011,16 +1989,7 @@ export default function ProcessWireframe() {
                 <FileText className="w-4 h-4 text-gray-600" />
                 <h3 className="text-gray-900">User Notes</h3>
               </div>
-              <textarea
-                className="w-full border-2 border-gray-300 bg-gray-50 rounded p-2 text-sm resize-none focus:outline-none focus:border-blue-500"
-                style={{ height: 'calc(550px - 80px)' }}
-                placeholder="Add notes to be saved with each iteration..."
-                value={userNotes}
-                onChange={e => {
-                  setUserNotes(e.target.value);
-                  localStorage.setItem('cohive_user_notes', e.target.value);
-                }}
-              />
+              <textarea className="w-full border-2 border-gray-300 bg-gray-50 rounded p-2 text-sm resize-none" style={{ height: 'calc(550px - 80px)' }} placeholder="Add notes to be saved with each iteration..." />
             </div>
           </div>
         </div>

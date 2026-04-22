@@ -30,6 +30,7 @@ import {
   Building2,
 } from "lucide-react";
 import gemIcon from "figma:asset/53dc6cf554f69e479cfbd60a46741f158d11dd21.png";
+import { GemCheckCoalReviewPanel, type ReviewItem } from "./GemCheckCoalReviewPanel";
 import {
   saveGem,
   type AssessmentRound,
@@ -38,7 +39,6 @@ import {
 import { getValidSession } from "../utils/databricksAuth";
 import { availableModels } from "./ModelTemplateManager";
 import { LoadingGem, SpinHex } from "./LoadingGem";
-import { GemCheckCoalReviewPanel, type ReviewItem } from "./GemCheckCoalReviewPanel";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -66,6 +66,16 @@ interface GemToast {
   id: string;
   text: string;
   fileName: string;
+}
+
+interface CoalToast {
+  id: string;
+  text: string;
+}
+
+interface CheckToast {
+  id: string;
+  text: string;
 }
 
 /**
@@ -177,14 +187,15 @@ interface AssessmentModalProps {
    * persists across multiple modal opens within the same iteration.
    */
   iterationGems?: IterationGem[];
+  iterationChecks?: Array<{ text: string; hexId: string; hexLabel: string }>;
+  iterationCoal?: Array<{ text: string; hexId: string; hexLabel: string }>;
+  iterationDirections?: string[];
   /**
    * Called whenever the user saves a new gem — lets ProcessWireframe
    * accumulate it into the iteration-level gems array.
    */
   onGemSaved?: (gem: IterationGem) => void;
-  iterationChecks?: Array<{ text: string; hexId: string; hexLabel: string }>;
-  iterationCoal?: Array<{ text: string; hexId: string; hexLabel: string }>;
-  iterationDirections?: string[];
+  /** Called when review panel is confirmed — passes all confirmed items */
   onReviewConfirmed?: (items: ReviewItem[]) => void;
 }
 
@@ -209,7 +220,7 @@ const KB_MODE_OPTIONS: {
   {
     value: "strong-preference",
     label: "Knowledge Base Preferred",
-    description: "Strongly prefer KB — general knowledge only when KB is completely silent",
+    description: "Strongly prefer Knowledge Base — general knowledge only when Knowledge Base is completely silent",
     color: "text-amber-700",
     borderColor: "border-amber-300",
     activeClasses: "bg-amber-50 border-amber-400 text-amber-800",
@@ -276,10 +287,10 @@ export function AssessmentModal({
   numDebateRounds = 1,
   hexExecutions = {},
   iterationGems = [],
-  onGemSaved,
   iterationChecks = [],
   iterationCoal = [],
   iterationDirections = [],
+  onGemSaved,
   onReviewConfirmed,
 }: AssessmentModalProps) {
 
@@ -304,20 +315,21 @@ export function AssessmentModal({
   const [collapsedRounds, setCollapsedRounds] = useState<Set<number>>(new Set());
   const [floatingBtn, setFloatingBtn] = useState<FloatingButtonPos | null>(null);
   const [savingGem, setSavingGem] = useState(false);
-  const [gemToasts, setGemToasts] = useState<GemToast[]>([]);
-  const [savedGemCount, setSavedGemCount] = useState(0);
-  const [summary, setSummary] = useState<string | null>(null);
-  const [savedGemItems,   setSavedGemItems]   = useState<Array<{ text: string; fileName: string | null }>>([]);
-  const [savedCoalItems,  setSavedCoalItems]  = useState<Array<{ text: string }>>([]);
-  const [savedCheckItems, setSavedCheckItems] = useState<Array<{ text: string }>>([]);
-  const [coalToasts, setCoalToasts] = useState<Array<{ id: string; text: string }>>([]);
-  const [checkToasts, setCheckToasts] = useState<Array<{ id: string; text: string }>>([]);
   const [savingCoal, setSavingCoal] = useState(false);
   const [savingCheck, setSavingCheck] = useState(false);
+  const [gemToasts, setGemToasts] = useState<GemToast[]>([]);
+  const [coalToasts, setCoalToasts] = useState<CoalToast[]>([]);
+  const [checkToasts, setCheckToasts] = useState<CheckToast[]>([]);
+  const [savedGemCount, setSavedGemCount] = useState(0);
   const [savedCoalCount, setSavedCoalCount] = useState(0);
   const [savedCheckCount, setSavedCheckCount] = useState(0);
+  // Persistent item lists — survive toast expiry, used to build the review panel
+  const [savedGemItems,   setSavedGemItems]   = useState<Array<{ text: string; fileName: string | null }>>([]);
+  const [savedCheckItems, setSavedCheckItems] = useState<Array<{ text: string }>>([]);
+  const [savedCoalItems,  setSavedCoalItems]  = useState<Array<{ text: string }>>([]);
   const [showReviewPanel, setShowReviewPanel] = useState(false);
   const [reviewItems, setReviewItems] = useState<ReviewItem[]>([]);
+  const [summary, setSummary] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"rounds" | "summary">("rounds");
 
   // iterationGems is now owned by ProcessWireframe and passed as a prop —
@@ -420,7 +432,7 @@ export function AssessmentModal({
           requestMode,
           scope,
           numDebateRounds,
-          // Iteration context — prior hex results and gems saved this iteration
+          // Iteration context — prior hex results and gems/checks/coal saved this iteration
           hexExecutions,
           iterationGems,
           iterationChecks,
@@ -517,8 +529,8 @@ export function AssessmentModal({
       setSavedCoalCount(0);
       setSavedCheckCount(0);
       setSavedGemItems([]);
-      setSavedCoalItems([]);
       setSavedCheckItems([]);
+      setSavedCoalItems([]);
       setGemToasts([]);
       setCoalToasts([]);
       setCheckToasts([]);
@@ -712,16 +724,27 @@ export function AssessmentModal({
     setSavingCoal(true);
     try {
       const existing = JSON.parse(localStorage.getItem('cohive_coal') || '[]');
-      const newCoal = { id: Date.now().toString(), text: floatingBtn.text, hexId, hexLabel, timestamp: Date.now() };
+      const newCoal = {
+        id: Date.now().toString(),
+        text: floatingBtn.text,
+        hexId,
+        hexLabel,
+        timestamp: Date.now(),
+      };
       localStorage.setItem('cohive_coal', JSON.stringify([...existing, newCoal]));
       setSavedCoalCount(prev => prev + 1);
       setSavedCoalItems(prev => [...prev, { text: floatingBtn.text }]);
       const toastId = `coal-${Date.now()}`;
-      setCoalToasts(prev => [...prev, { id: toastId, text: floatingBtn.text.substring(0, 60) + (floatingBtn.text.length > 60 ? '…' : '') }]);
+      setCoalToasts(prev => [...prev, {
+        id: toastId,
+        text: floatingBtn.text.substring(0, 60) + (floatingBtn.text.length > 60 ? '…' : ''),
+      }]);
       setTimeout(() => setCoalToasts(prev => prev.filter(t => t.id !== toastId)), 3500);
       setFloatingBtn(null);
       window.getSelection()?.removeAllRanges();
-    } finally { setSavingCoal(false); }
+    } finally {
+      setSavingCoal(false);
+    }
   };
 
   const handleSaveCheck = () => {
@@ -729,18 +752,47 @@ export function AssessmentModal({
     setSavingCheck(true);
     try {
       const existing = JSON.parse(localStorage.getItem('cohive_checks') || '[]');
-      const newCheck = { id: Date.now().toString(), text: floatingBtn.text, hexId, hexLabel, fileName: floatingBtn.fileName, timestamp: Date.now() };
+      const newCheck = {
+        id: Date.now().toString(),
+        text: floatingBtn.text,
+        hexId,
+        hexLabel,
+        fileName: floatingBtn.fileName,
+        timestamp: Date.now(),
+      };
       localStorage.setItem('cohive_checks', JSON.stringify([...existing, newCheck]));
       setSavedCheckCount(prev => prev + 1);
       setSavedCheckItems(prev => [...prev, { text: floatingBtn.text }]);
       const toastId = `check-${Date.now()}`;
-      setCheckToasts(prev => [...prev, { id: toastId, text: floatingBtn.text.substring(0, 60) + (floatingBtn.text.length > 60 ? '…' : '') }]);
+      setCheckToasts(prev => [...prev, {
+        id: toastId,
+        text: floatingBtn.text.substring(0, 60) + (floatingBtn.text.length > 60 ? '…' : ''),
+      }]);
       setTimeout(() => setCheckToasts(prev => prev.filter(t => t.id !== toastId)), 3500);
       setFloatingBtn(null);
       window.getSelection()?.removeAllRanges();
-    } finally { setSavingCheck(false); }
+    } finally {
+      setSavingCheck(false);
+    }
   };
 
+
+  // Returns a descriptive subtitle for each round type
+  const getRoundSubtitle = (label: string): string => {
+    const l = label.toLowerCase();
+    if (l.includes('moderator opening')) return 'Session framing & objectives';
+    if (l.includes('moderator recap')) return 'Round recap & next direction';
+    if (l.includes('moderator synthesis') || l.includes('moderator closing')) return 'Final synthesis & recommendations';
+    if (l.includes('moderator')) return 'Moderator';
+    if (l.includes('fact-checker') || l.includes('fact checker')) return 'Citation audit';
+    if (l.includes('summary') || l.includes('neutral')) return 'Neutral summary';
+    // Persona rounds
+    const r1 = label.match(/^R1:/i) || label.match(/round 1/i);
+    const rN = label.match(/^R(\d+):/i) || label.match(/round (\d+)/i);
+    if (r1) return 'Independent expert views';
+    if (rN) return `Debate round — direct engagement`;
+    return '';
+  };
   const toggleRoundCollapse = (roundNum: number) => {
     setCollapsedRounds((prev) => {
       const next = new Set(prev);
@@ -978,7 +1030,7 @@ export function AssessmentModal({
               </div>
             )}
 
-            {/* ── KB Mode ── */}
+            {/* ── Knowledge Base Mode ── */}
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <BookOpen className="w-4 h-4 text-gray-500" />
@@ -1103,7 +1155,7 @@ export function AssessmentModal({
       )}
 
       <div
-        className="fixed inset-y-0 left-0 w-3/4 z-50 flex items-center justify-center p-8 bg-black/20"
+        className="fixed inset-0 z-50 flex items-center justify-center p-8"
         style={{ backgroundColor: "rgba(0, 0, 0, 0.2)" }}
       >
         <div
@@ -1150,12 +1202,41 @@ export function AssessmentModal({
                   )}
                 </div>
               </div>
-              {isComplete && savedGemCount > 0 && (
-                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-full">
-                  <img src={gemIcon} alt="gems" className="w-4 h-4" />
-                  <span className="text-amber-700 text-sm font-medium">
-                    {savedGemCount} gem{savedGemCount !== 1 ? "s" : ""} saved
-                  </span>
+              {isComplete && (savedGemCount > 0 || savedCheckCount > 0 || savedCoalCount > 0) && (
+                <div className="flex items-center gap-1.5">
+                  {savedGemCount > 0 && (
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 border border-amber-200 rounded-full">
+                      <img src={gemIcon} alt="gem" style={{ width: "16px", height: "16px", objectFit: "contain" }} />
+                      <span className="text-amber-800 text-xs font-semibold">{savedGemCount}</span>
+                    </div>
+                  )}
+                  {savedCheckCount > 0 && (
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-purple-50 border border-purple-200 rounded-full">
+                      <svg viewBox="0 0 32 32" style={{ width: "16px", height: "16px", flexShrink: 0 }} xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                          <linearGradient id="hdrCheckBg" x1="0%" y1="50%" x2="100%" y2="50%">
+                            <stop offset="0%" stopColor="#0F766E" />
+                            <stop offset="50%" stopColor="#7C3AED" />
+                            <stop offset="100%" stopColor="#DC2626" />
+                          </linearGradient>
+                          <radialGradient id="hdrCheckGold" cx="50%" cy="50%" r="30%">
+                            <stop offset="0%" stopColor="#FBBF24" stopOpacity="0.9" />
+                            <stop offset="100%" stopColor="#FBBF24" stopOpacity="0" />
+                          </radialGradient>
+                        </defs>
+                        <polygon points="16,2 29,9 29,23 16,30 3,23 3,9" fill="url(#hdrCheckBg)" />
+                        <polygon points="16,2 29,9 29,23 16,30 3,23 3,9" fill="url(#hdrCheckGold)" />
+                        <path d="M9 16.5l5 5 9.5-10" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                      </svg>
+                      <span className="text-purple-800 text-xs font-semibold">{savedCheckCount}</span>
+                    </div>
+                  )}
+                  {savedCoalCount > 0 && (
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 border border-gray-300 rounded-full">
+                      <span style={{ fontSize: "16px", lineHeight: 1 }}>🪨</span>
+                      <span className="text-gray-700 text-xs font-semibold">{savedCoalCount}</span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1180,9 +1261,22 @@ export function AssessmentModal({
             <div className="bg-purple-50 border-b border-purple-200 px-6 py-3 flex items-center gap-3 flex-shrink-0">
               <SpinHex className="w-4 h-4" />
               <span className="text-purple-800 text-sm font-medium">
-                {currentRound > 0
-                  ? `Round ${currentRound} complete — starting Round ${currentRound + 1}…`
-                  : "Starting collaboration…"}
+                {currentRound > 0 ? (() => {
+                  const lastRound = rounds[rounds.length - 1];
+                  const lbl = (lastRound as any)?.label || `Round ${currentRound}`;
+                  // Determine if this is a final housekeeping round (not a user-visible debate round)
+                  const isFinal = lbl.toLowerCase().includes('moderator') || lbl.toLowerCase().includes('fact');
+                  if (isFinal) return `${lbl} complete…`;
+                  // Count how many user-visible debate/persona rounds have completed
+                  // (exclude Moderator Opening roundNumber=0, Fact-Checker, Moderator Synthesis)
+                  const completedDebateRounds = rounds.filter(r =>
+                    r.roundNumber > 0 &&
+                    !(r as any).label?.toLowerCase().includes('moderator') &&
+                    !(r as any).label?.toLowerCase().includes('fact')
+                  ).length;
+                  const nextRoundNum = completedDebateRounds + 1;
+                  return `${lbl} complete — starting Round ${nextRoundNum}…`;
+                })() : "Starting collaboration…"}
               </span>
               <div className="flex gap-1 ml-2">
                 {[1, 2, 3].map((n) => (
@@ -1223,12 +1317,36 @@ export function AssessmentModal({
             </div>
           )}
 
-          {/* Gem hint */}
+          {/* Selection hint */}
           {isComplete && (
-            <div className="bg-amber-50 border-b border-amber-200 px-6 py-2 flex items-center gap-2 flex-shrink-0">
-              <img src={gemIcon} alt="gem" className="w-4 h-4" />
-              <span className="text-amber-800 text-sm">
-                <strong>Highlight any text</strong> to save it as a Gem — gems track which Knowledge Base files inspired great ideas
+            <div className="bg-white border-b border-gray-200 px-6 py-2.5 flex items-center gap-4 flex-shrink-0 flex-wrap">
+              <span className="text-gray-500 text-sm font-medium">Select any text:</span>
+              <span className="flex items-center gap-1.5 text-sm text-gray-800 font-medium">
+                <img src={gemIcon} alt="gem" style={{ width: "18px", height: "18px", objectFit: "contain" }} />
+                Highlight elements you like
+              </span>
+              <span className="flex items-center gap-1.5 text-sm text-gray-800 font-medium">
+                <svg viewBox="0 0 32 32" style={{ width: "18px", height: "18px", flexShrink: 0 }} xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <linearGradient id="hintCheckBg" x1="0%" y1="50%" x2="100%" y2="50%">
+                      <stop offset="0%" stopColor="#0F766E" />
+                      <stop offset="50%" stopColor="#7C3AED" />
+                      <stop offset="100%" stopColor="#DC2626" />
+                    </linearGradient>
+                    <radialGradient id="hintCheckGold" cx="50%" cy="50%" r="30%">
+                      <stop offset="0%" stopColor="#FBBF24" stopOpacity="0.9" />
+                      <stop offset="100%" stopColor="#FBBF24" stopOpacity="0" />
+                    </radialGradient>
+                  </defs>
+                  <polygon points="16,2 29,9 29,23 16,30 3,23 3,9" fill="url(#hintCheckBg)" />
+                  <polygon points="16,2 29,9 29,23 16,30 3,23 3,9" fill="url(#hintCheckGold)" />
+                  <path d="M9 16.5l5 5 9.5-10" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                </svg>
+                Check elements of interest
+              </span>
+              <span className="flex items-center gap-1.5 text-sm text-gray-800 font-medium">
+                <span style={{ fontSize: "18px", lineHeight: 1 }}>🪨</span>
+                Flag elements you want to avoid
               </span>
             </div>
           )}
@@ -1308,6 +1426,13 @@ export function AssessmentModal({
                   const roundLabel = (round as any).label || `Round ${round.roundNumber}`;
                   const isModerator = roundLabel.toLowerCase().includes("moderator");
                   const isFactChecker = roundLabel.toLowerCase().includes("fact");
+                  // Compute a display-friendly round number (1-based, counting only debate rounds)
+                  const debateRoundIndex = rounds
+                    .slice(0, idx + 1)
+                    .filter(r => {
+                      const l = ((r as any).label || '').toLowerCase();
+                      return r.roundNumber > 0 && !l.includes('moderator') && !l.includes('fact');
+                    }).length;
 
                   const borderClass = isModerator
                     ? "border-green-300"
@@ -1338,11 +1463,23 @@ export function AssessmentModal({
                           <span
                             className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white ${badgeClass}`}
                           >
-                            {round.roundNumber}
+                            {isModerator || isFactChecker ? (isModerator ? 'M' : 'F') : debateRoundIndex}
                           </span>
-                          <span className={`font-medium text-sm ${isLast ? "text-purple-900" : isModerator ? "text-green-900" : isFactChecker ? "text-amber-900" : "text-gray-700"}`}>
-                            {roundLabel}
-                          </span>
+                          <div className="flex flex-col items-start">
+                            <span className={`font-medium text-sm ${isLast ? "text-purple-900" : isModerator ? "text-green-900" : isFactChecker ? "text-amber-900" : "text-gray-700"}`}>
+                              {!isModerator && !isFactChecker && (
+                                <span className="text-gray-400 font-normal mr-1.5">Round {debateRoundIndex} ·</span>
+                              )}
+                              {/* Strip "Round N — " prefix from label since we show it separately */}
+                              {roundLabel.replace(/^Round \d+ — /, '')}
+                            </span>
+                            {(() => {
+                              const sub = getRoundSubtitle(roundLabel);
+                              return sub ? (
+                                <span className="text-xs text-gray-400 font-normal leading-tight mt-0.5">{sub}</span>
+                              ) : null;
+                            })()}
+                          </div>
                           {isLast && isRunning && (
                             <SpinHex className="w-3.5 h-3.5" />
                           )}
@@ -1367,7 +1504,7 @@ export function AssessmentModal({
                   <div className="bg-white border-2 border-dashed border-purple-200 rounded-lg px-4 py-3 flex items-center gap-3">
                     <SpinHex className="w-4 h-4" />
                     <span className="text-purple-600 text-sm">
-                      Round {currentRound + 1} in progress…
+                      Round {rounds.length + 1} in progress…
                     </span>
                   </div>
                 )}
@@ -1396,16 +1533,42 @@ export function AssessmentModal({
                   </div>
                 )}
 
-                {/* Gem count */}
-                {savedGemCount > 0 && (
-                  <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-4">
-                    <div className="flex items-center gap-2">
-                      <img src={gemIcon} alt="gem" className="w-5 h-5" />
-                      <span className="text-amber-800 font-medium text-sm">
-                        {savedGemCount} gem{savedGemCount !== 1 ? "s" : ""} saved from this assessment
-                      </span>
-                    </div>
-                    <p className="text-amber-700 text-xs mt-1">Gems tagged with {hexLabel} · {brand}</p>
+                {/* Gem / Check / Coal counts */}
+                {(savedGemCount > 0 || savedCheckCount > 0 || savedCoalCount > 0) && (
+                  <div className="space-y-2">
+                    {savedGemCount > 0 && (
+                      <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-3 flex items-center gap-2">
+                        <img src={gemIcon} alt="gem" style={{ width: "20px", height: "20px", objectFit: "contain" }} />
+                        <span className="text-amber-800 font-medium text-sm">
+                          {savedGemCount} element{savedGemCount !== 1 ? "s" : ""} highlighted
+                        </span>
+                      </div>
+                    )}
+                    {savedCheckCount > 0 && (
+                      <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-3 flex items-center gap-2">
+                        <svg viewBox="0 0 24 24" className="w-5 h-5 flex-shrink-0" fill="none">
+                          <defs>
+                            <linearGradient id="checkSummGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                              <stop offset="0%" stopColor="#E879F9" />
+                              <stop offset="50%" stopColor="#C026D3" />
+                              <stop offset="100%" stopColor="#FACC15" />
+                            </linearGradient>
+                          </defs>
+                          <path d="M4 13l5 5L20 7" stroke="url(#checkSummGrad)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                        <span className="text-purple-800 font-medium text-sm">
+                          {savedCheckCount} element{savedCheckCount !== 1 ? "s" : ""} checked for interest
+                        </span>
+                      </div>
+                    )}
+                    {savedCoalCount > 0 && (
+                      <div className="bg-gray-100 border-2 border-gray-300 rounded-lg p-3 flex items-center gap-2">
+                        <span className="text-lg leading-none">🪨</span>
+                        <span className="text-gray-800 font-medium text-sm">
+                          {savedCoalCount} element{savedCoalCount !== 1 ? "s" : ""} flagged to avoid
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1418,27 +1581,76 @@ export function AssessmentModal({
                 style={{
                   position: "absolute",
                   left: `${floatingBtn.x}px`,
-                  top: `${Math.max(4, floatingBtn.y + (contentRef.current?.scrollTop || 0))}px`,
+                  top: `${Math.max(4, floatingBtn.y + (contentRef.current?.scrollTop || 0) - 140)}px`,
                   transform: "translateX(-50%)",
                   zIndex: 100,
                   pointerEvents: "auto",
                 }}
               >
                 <div className="flex flex-col gap-1.5 items-center">
-                  <button onClick={handleSaveGem} disabled={savingGem} className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-amber-50 text-gray-900 text-sm font-medium rounded-full shadow-lg border border-amber-400 disabled:opacity-60 transition-all whitespace-nowrap">
-                    {savingGem ? <SpinHex className="w-4 h-4" /> : <img src={gemIcon} alt="gem" style={{ width: "18px", height: "18px", objectFit: "contain" }} />}
+                  {/* Gem — white pill, coloured icon */}
+                  <button
+                    onClick={handleSaveGem}
+                    disabled={savingGem}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-amber-50 text-gray-900 text-sm font-medium rounded-full shadow-lg border border-amber-400 disabled:opacity-60 transition-all whitespace-nowrap"
+                  >
+                    {savingGem ? (
+                      <SpinHex className="w-4 h-4" />
+                    ) : (
+                      <img src={gemIcon} alt="gem" style={{ width: "18px", height: "18px", objectFit: "contain" }} />
+                    )}
                     Highlight elements you like
                   </button>
-                  <button onClick={handleSaveCheck} disabled={savingCheck} className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-purple-50 text-gray-900 text-sm font-medium rounded-full shadow-lg border border-purple-400 disabled:opacity-60 transition-all whitespace-nowrap">
-                    {savingCheck ? <SpinHex className="w-4 h-4" /> : <svg viewBox="0 0 32 32" style={{ width: "18px", height: "18px", flexShrink: 0 }} xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="floatCheckBg" x1="0%" y1="50%" x2="100%" y2="50%"><stop offset="0%" stopColor="#0F766E" /><stop offset="50%" stopColor="#7C3AED" /><stop offset="100%" stopColor="#DC2626" /></linearGradient></defs><polygon points="16,2 29,9 29,23 16,30 3,23 3,9" fill="url(#floatCheckBg)" /><path d="M9 16.5l5 5 9.5-10" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" /></svg>}
+
+                  {/* Check — white pill, hex check icon */}
+                  <button
+                    onClick={handleSaveCheck}
+                    disabled={savingCheck}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-purple-50 text-gray-900 text-sm font-medium rounded-full shadow-lg border border-purple-400 disabled:opacity-60 transition-all whitespace-nowrap"
+                  >
+                    {savingCheck ? (
+                      <SpinHex className="w-4 h-4" />
+                    ) : (
+                      <svg viewBox="0 0 32 32" style={{ width: "18px", height: "18px", flexShrink: 0 }} xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                          <linearGradient id="floatCheckBg" x1="0%" y1="50%" x2="100%" y2="50%">
+                            <stop offset="0%" stopColor="#0F766E" />
+                            <stop offset="50%" stopColor="#7C3AED" />
+                            <stop offset="100%" stopColor="#DC2626" />
+                          </linearGradient>
+                          <radialGradient id="floatCheckGold" cx="50%" cy="50%" r="30%">
+                            <stop offset="0%" stopColor="#FBBF24" stopOpacity="0.9" />
+                            <stop offset="100%" stopColor="#FBBF24" stopOpacity="0" />
+                          </radialGradient>
+                        </defs>
+                        <polygon points="16,2 29,9 29,23 16,30 3,23 3,9" fill="url(#floatCheckBg)" />
+                        <polygon points="16,2 29,9 29,23 16,30 3,23 3,9" fill="url(#floatCheckGold)" />
+                        <path d="M9 16.5l5 5 9.5-10" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                      </svg>
+                    )}
                     Check elements of interest
                   </button>
-                  <button onClick={handleSaveCoal} disabled={savingCoal} className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-gray-100 text-gray-900 text-sm font-medium rounded-full shadow-lg border border-gray-400 disabled:opacity-60 transition-all whitespace-nowrap">
-                    {savingCoal ? <SpinHex className="w-4 h-4" /> : <span style={{ fontSize: "18px", lineHeight: 1 }}>🪨</span>}
+
+                  {/* Coal — white pill, rock emoji */}
+                  <button
+                    onClick={handleSaveCoal}
+                    disabled={savingCoal}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-gray-100 text-gray-900 text-sm font-medium rounded-full shadow-lg border border-gray-400 disabled:opacity-60 transition-all whitespace-nowrap"
+                  >
+                    {savingCoal ? (
+                      <SpinHex className="w-4 h-4" />
+                    ) : (
+                      <span style={{ fontSize: "18px", lineHeight: 1 }}>🪨</span>
+                    )}
                     Flag elements you want to avoid
                   </button>
+
                   {floatingBtn.fileName && (
-                    <span className="text-gray-400 text-xs mt-0.5">· {floatingBtn.fileName.length > 25 ? floatingBtn.fileName.substring(0, 25) + "…" : floatingBtn.fileName}</span>
+                    <span className="text-gray-400 text-xs mt-0.5">
+                      · {floatingBtn.fileName.length > 25
+                        ? floatingBtn.fileName.substring(0, 25) + "…"
+                        : floatingBtn.fileName}
+                    </span>
                   )}
                 </div>
               </div>
@@ -1453,20 +1665,35 @@ export function AssessmentModal({
                   if (onAcceptResults) {
                     onAcceptResults({ rounds, citedFiles, summary, hexId, hexLabel });
                   }
-                  // Build review items if any gems/checks/coal were saved
+                  // Build review items from persistent arrays — not toasts,
+                  // which expire after 3.5s and would cause the panel to not appear.
                   const ts = Date.now();
                   const allNew = [
                     ...savedGemItems.map((g, i) => ({
-                      id: `gem-${ts}-${i}`, text: g.text, type: 'gem' as const,
-                      included: true, hexId, hexLabel, fileName: g.fileName, fileId: null as null, rank: i,
+                      id: `gem-${ts}-${i}`,
+                      text: g.text,
+                      type: 'gem' as const,
+                      included: true,
+                      hexId, hexLabel,
+                      fileName: g.fileName,
+                      fileId: null as null,
+                      rank: i,
                     })),
                     ...savedCheckItems.map((c, i) => ({
-                      id: `chk-${ts}-${i}`, text: c.text, type: 'check' as const,
-                      included: true, hexId, hexLabel, rank: i,
+                      id: `chk-${ts}-${i}`,
+                      text: c.text,
+                      type: 'check' as const,
+                      included: true,
+                      hexId, hexLabel,
+                      rank: i,
                     })),
                     ...savedCoalItems.map((c, i) => ({
-                      id: `coal-${ts}-${i}`, text: c.text, type: 'coal' as const,
-                      included: true, hexId, hexLabel, rank: i,
+                      id: `coal-${ts}-${i}`,
+                      text: c.text,
+                      type: 'coal' as const,
+                      included: true,
+                      hexId, hexLabel,
+                      rank: i,
                     })),
                   ];
                   if (allNew.length > 0) {
@@ -1485,6 +1712,28 @@ export function AssessmentModal({
         </div>
       </div>
 
+      {/* Gem/Check/Coal Review Panel */}
+      {showReviewPanel && (
+        <GemCheckCoalReviewPanel
+          isOpen={showReviewPanel}
+          items={reviewItems}
+          brand={brand}
+          projectType={projectType}
+          hexLabel={hexLabel}
+          userEmail={userEmail || ''}
+          userRole={'research-leader'}
+          onConfirm={(confirmed) => {
+            setShowReviewPanel(false);
+            onReviewConfirmed?.(confirmed);
+            onClose();
+          }}
+          onClose={() => {
+            setShowReviewPanel(false);
+            onClose();
+          }}
+        />
+      )}
+
       {/* Toasts */}
       <div className="fixed bottom-6 right-6 space-y-2 z-[200] pointer-events-none">
         {gemToasts.map((toast) => (
@@ -1492,23 +1741,44 @@ export function AssessmentModal({
             key={toast.id}
             className="flex items-center gap-2 px-4 py-3 bg-amber-500 text-white rounded-lg shadow-lg text-sm max-w-xs"
           >
-            <img src={gemIcon} alt="gem" className="w-4 h-4 flex-shrink-0" />
+            <img src={gemIcon} alt="gem" style={{ width: "16px", height: "16px", objectFit: "contain", flexShrink: 0 }} />
             <div className="min-w-0">
-              <div className="font-medium">Gem saved!</div>
+              <div className="font-medium">Highlighted!</div>
               <div className="text-amber-100 text-xs truncate">{toast.text}</div>
             </div>
           </div>
         ))}
         {checkToasts.map((toast) => (
-          <div key={toast.id} className="flex items-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg shadow-lg text-sm max-w-xs">
-            <svg viewBox="0 0 24 24" className="w-4 h-4 flex-shrink-0" fill="none"><path d="M4 13l5 5L20 7" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            <div className="min-w-0"><div className="font-medium">Checked!</div><div className="text-purple-200 text-xs truncate">{toast.text}</div></div>
+          <div
+            key={toast.id}
+            className="flex items-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg shadow-lg text-sm max-w-xs"
+          >
+            <svg viewBox="0 0 24 24" className="w-4 h-4 flex-shrink-0" fill="none">
+              <defs>
+                <linearGradient id="checkToastGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#E879F9" />
+                  <stop offset="50%" stopColor="#C026D3" />
+                  <stop offset="100%" stopColor="#FACC15" />
+                </linearGradient>
+              </defs>
+              <path d="M4 13l5 5L20 7" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <div className="min-w-0">
+              <div className="font-medium">Checked!</div>
+              <div className="text-purple-200 text-xs truncate">{toast.text}</div>
+            </div>
           </div>
         ))}
         {coalToasts.map((toast) => (
-          <div key={toast.id} className="flex items-center gap-2 px-4 py-3 bg-gray-800 text-white rounded-lg shadow-lg text-sm max-w-xs">
+          <div
+            key={toast.id}
+            className="flex items-center gap-2 px-4 py-3 bg-gray-800 text-white rounded-lg shadow-lg text-sm max-w-xs"
+          >
             <span className="text-base leading-none flex-shrink-0">🪨</span>
-            <div className="min-w-0"><div className="font-medium">Flagged to avoid!</div><div className="text-gray-300 text-xs truncate">{toast.text}</div></div>
+            <div className="min-w-0">
+              <div className="font-medium">Flagged to avoid!</div>
+              <div className="text-gray-300 text-xs truncate">{toast.text}</div>
+            </div>
           </div>
         ))}
       </div>
