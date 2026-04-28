@@ -181,6 +181,7 @@ export default function ProcessWireframe() {
   }>({ insightType: 'General' });
   
   const [wisdomSuccessMessage, setWisdomSuccessMessage] = useState<string | null>(null);
+  const [wisdomErrorMessage, setWisdomErrorMessage] = useState<string | null>(null);
   const [isWisdomSaving, setIsWisdomSaving] = useState(false);
   const [isDatabricksLoading, setIsDatabricksLoading] = useState(false);
   const [databricksLoadingMessage, setDatabricksLoadingMessage] = useState('Communicating with Databricks...');
@@ -911,8 +912,11 @@ export default function ProcessWireframe() {
   };
 
   const handleSaveWisdomToDatabricks = async (fileName: string, content: string, insightType: string, inputMethod: string, brand?: string, projectType?: string) => {
-    if (!isDatabricksAuthenticated) { alert('⚠️ Please sign in to Databricks before saving to the Knowledge Base.\n\nClick the "Sign In" button in the header to authenticate.'); setShowLoginModal(true); return false; }
+    if (!isDatabricksAuthenticated) { setWisdomErrorMessage('⚠️ Please sign in to Databricks before saving. Click the Sign In button in the header.'); setShowLoginModal(true); return false; }
     setIsWisdomSaving(true);
+    setIsDatabricksLoading(true);
+    setDatabricksLoadingMessage('Saving to Knowledge Base…');
+    setWisdomErrorMessage(null);
     try {
       const mimeType = getMimeTypeFromFileName(fileName);
       let file: File;
@@ -938,14 +942,15 @@ export default function ProcessWireframe() {
         setWisdomSuccessMessage(`✅ "${fileName}" saved to Knowledge Base`);
         return true;
       } else {
-        alert(`Failed to save to Knowledge Base: ${result.error || 'Unknown error'}`);
+        setWisdomErrorMessage(`Failed to save: ${result.error || 'Unknown error'}`);
         return false;
       }
     } catch (error) {
-      alert(`Failed to save wisdom: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setWisdomErrorMessage(`Failed to save: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return false;
     } finally {
       setIsWisdomSaving(false);
+      setIsDatabricksLoading(false);
     }
   };
 
@@ -1316,6 +1321,12 @@ export default function ProcessWireframe() {
                         <button onClick={() => setWisdomSuccessMessage(null)} className="flex-shrink-0 px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700">OK</button>
                       </div>
                     )}
+                    {wisdomErrorMessage && activeStepId === 'Wisdom' && (
+                      <div className="mb-4 bg-red-50 border border-red-300 rounded-lg p-3 flex items-center justify-between gap-3">
+                        <p className="text-sm text-red-800">{wisdomErrorMessage}</p>
+                        <button onClick={() => setWisdomErrorMessage(null)} className="flex-shrink-0 px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700">✕</button>
+                      </div>
+                    )}
                     {currentContent.questions.map((question, idx) => {
                       const hasResponse = responses[activeStepId]?.[idx]?.trim().length > 0;
                       const showError = false;
@@ -1676,17 +1687,20 @@ export default function ProcessWireframe() {
                             const photoScope: 'general' | 'category' | 'brand' = insightType === 'General' ? 'general' : insightType === 'Category' ? 'category' : 'brand';
                             const MAX_PHOTO_BYTES = 3.4 * 1024 * 1024;
                             const uploadPhoto = async (file: File, label: string, e: React.ChangeEvent<HTMLInputElement>) => {
-                              if (!isDatabricksAuthenticated) { alert('⚠️ Please sign in to Databricks before saving to the Knowledge Base.'); setShowLoginModal(true); e.target.value = ''; return; }
-                              if (file.size > MAX_PHOTO_BYTES) { alert(`Photo is too large (${Math.round(file.size / 1024 / 1024 * 10) / 10}MB). Maximum is 3.4MB — please resize the image first.`); e.target.value = ''; return; }
+                              if (!isDatabricksAuthenticated) { setWisdomErrorMessage('⚠️ Please sign in to Databricks before saving. Click the Sign In button in the header.'); setShowLoginModal(true); e.target.value = ''; return; }
+                              if (file.size > MAX_PHOTO_BYTES) { setWisdomErrorMessage(`Photo is too large (${Math.round(file.size / 1024 / 1024 * 10) / 10}MB). Maximum is 3.4MB — please resize the image first.`); e.target.value = ''; return; }
                               const ext = file.name.split('.').pop() || 'jpg';
                               const renamed = new File([file], wisdomFileName(ext), { type: file.type });
                               setIsWisdomSaving(true);
+                              setIsDatabricksLoading(true);
+                              setDatabricksLoadingMessage('Saving photo…');
+                              setWisdomErrorMessage(null);
                               try {
                                 const result = await uploadToKnowledgeBase({ file: renamed, scope: photoScope, brand: photoScope === 'brand' ? (brand || undefined) : undefined, projectType: projectType || undefined, fileType: 'Wisdom', tags: [insightType, 'Photo'], insightType: insightType as 'Brand' | 'Category' | 'General', inputMethod: 'Photo', userEmail, userRole });
                                 if (result.success) { handleResponseChange(idx, label); setWisdomSuccessMessage(`✅ "${renamed.name}" saved to Knowledge Base`); }
-                                else { alert(`Failed to save photo: ${result.error || 'Unknown error'}`); }
-                              } catch (err) { alert(`Failed to save photo: ${err instanceof Error ? err.message : 'Unknown error'}`); }
-                              finally { setIsWisdomSaving(false); e.target.value = ''; }
+                                else { setWisdomErrorMessage(`Failed to save photo: ${result.error || 'Unknown error'}`); }
+                              } catch (err) { setWisdomErrorMessage(`Failed to save photo: ${err instanceof Error ? err.message : 'Unknown error'}`); }
+                              finally { setIsWisdomSaving(false); setIsDatabricksLoading(false); e.target.value = ''; }
                             };
                             return (
                               <div key={idx} className="mb-2">
@@ -1734,14 +1748,17 @@ export default function ProcessWireframe() {
                                               if (!blob) return;
                                               const captured = new File([blob], wisdomFileName('jpg'), { type: 'image/jpeg' });
                                               stopWisdomCamera();
-                                              if (!isDatabricksAuthenticated) { alert('⚠️ Please sign in to Databricks before saving.'); setShowLoginModal(true); return; }
+                                              if (!isDatabricksAuthenticated) { setWisdomErrorMessage('⚠️ Please sign in to Databricks before saving. Click the Sign In button in the header.'); setShowLoginModal(true); return; }
                                               setIsWisdomSaving(true);
+                                              setIsDatabricksLoading(true);
+                                              setDatabricksLoadingMessage('Saving photo…');
+                                              setWisdomErrorMessage(null);
                                               try {
                                                 const result = await uploadToKnowledgeBase({ file: captured, scope: photoScope, brand: photoScope === 'brand' ? (brand || undefined) : undefined, projectType: projectType || undefined, fileType: 'Wisdom', tags: [insightType, 'Photo'], insightType: insightType as 'Brand' | 'Category' | 'General', inputMethod: 'Photo', userEmail, userRole });
                                                 if (result.success) { handleResponseChange(idx, 'Camera photo saved'); setWisdomSuccessMessage(`✅ "${captured.name}" saved to Knowledge Base`); }
-                                                else { alert(`Failed to save photo: ${result.error || 'Unknown error'}`); }
-                                              } catch (err) { alert(`Failed to save photo: ${err instanceof Error ? err.message : 'Unknown error'}`); }
-                                              finally { setIsWisdomSaving(false); }
+                                                else { setWisdomErrorMessage(`Failed to save photo: ${result.error || 'Unknown error'}`); }
+                                              } catch (err) { setWisdomErrorMessage(`Failed to save photo: ${err instanceof Error ? err.message : 'Unknown error'}`); }
+                                              finally { setIsWisdomSaving(false); setIsDatabricksLoading(false); }
                                             }, 'image/jpeg', 0.92);
                                           }}
                                         >
@@ -1762,17 +1779,20 @@ export default function ProcessWireframe() {
                             const videoScope: 'general' | 'category' | 'brand' = insightType === 'General' ? 'general' : insightType === 'Category' ? 'category' : 'brand';
                             const MAX_VIDEO_BYTES = 3.4 * 1024 * 1024;
                             const uploadVideo = async (file: File, label: string, e: React.ChangeEvent<HTMLInputElement>) => {
-                              if (!isDatabricksAuthenticated) { alert('⚠️ Please sign in to Databricks before saving to the Knowledge Base.'); setShowLoginModal(true); e.target.value = ''; return; }
-                              if (file.size > MAX_VIDEO_BYTES) { alert(`Video is too large (${Math.round(file.size / 1024 / 1024 * 10) / 10}MB). Maximum size is 3.4MB — please trim or compress the clip first.`); e.target.value = ''; return; }
+                              if (!isDatabricksAuthenticated) { setWisdomErrorMessage('⚠️ Please sign in to Databricks before saving. Click the Sign In button in the header.'); setShowLoginModal(true); e.target.value = ''; return; }
+                              if (file.size > MAX_VIDEO_BYTES) { setWisdomErrorMessage(`Video is too large (${Math.round(file.size / 1024 / 1024 * 10) / 10}MB). Maximum is 3.4MB — please trim or compress the clip first.`); e.target.value = ''; return; }
                               const ext = file.name.split('.').pop() || 'mp4';
                               const renamed = new File([file], wisdomFileName(ext), { type: file.type });
                               setIsWisdomSaving(true);
+                              setIsDatabricksLoading(true);
+                              setDatabricksLoadingMessage('Saving video…');
+                              setWisdomErrorMessage(null);
                               try {
                                 const result = await uploadToKnowledgeBase({ file: renamed, scope: videoScope, brand: videoScope === 'brand' ? (brand || undefined) : undefined, projectType: projectType || undefined, fileType: 'Wisdom', tags: [insightType, 'Video'], insightType: insightType as 'Brand' | 'Category' | 'General', inputMethod: 'Video', userEmail, userRole });
                                 if (result.success) { handleResponseChange(idx, label); setWisdomSuccessMessage(`✅ "${renamed.name}" saved to Knowledge Base`); }
-                                else { alert(`Failed to save video: ${result.error || 'Unknown error'}`); }
-                              } catch (err) { alert(`Failed to save video: ${err instanceof Error ? err.message : 'Unknown error'}`); }
-                              finally { setIsWisdomSaving(false); e.target.value = ''; }
+                                else { setWisdomErrorMessage(`Failed to save video: ${result.error || 'Unknown error'}`); }
+                              } catch (err) { setWisdomErrorMessage(`Failed to save video: ${err instanceof Error ? err.message : 'Unknown error'}`); }
+                              finally { setIsWisdomSaving(false); setIsDatabricksLoading(false); e.target.value = ''; }
                             };
                             return (
                               <div key={idx} className="mb-2">
@@ -1811,18 +1831,21 @@ export default function ProcessWireframe() {
                                           if (cancelVideoRecordingRef.current) { cancelVideoRecordingRef.current = false; return; }
                                           const finalMime = rec.mimeType || 'video/webm';
                                           const blob = new Blob(chunks, { type: finalMime });
-                                          if (blob.size === 0) { alert('Recording appears to be empty. Please try again.'); return; }
-                                          if (blob.size > MAX_VIDEO_BYTES) { alert(`Recording is too large (${Math.round(blob.size / 1024 / 1024 * 10) / 10}MB). Keep under 3.4MB — try a shorter clip.`); return; }
+                                          if (blob.size === 0) { setWisdomErrorMessage('Recording appears to be empty. Please try again.'); return; }
+                                          if (blob.size > MAX_VIDEO_BYTES) { setWisdomErrorMessage(`Recording is too large (${Math.round(blob.size / 1024 / 1024 * 10) / 10}MB). Keep under 3.4MB — try a shorter clip.`); return; }
                                           const ext = finalMime.includes('mp4') ? 'mp4' : 'webm';
                                           const recorded = new File([blob], wisdomFileName(ext), { type: finalMime });
-                                          if (!isDatabricksAuthenticated) { alert('⚠️ Please sign in to Databricks before saving.'); setShowLoginModal(true); return; }
+                                          if (!isDatabricksAuthenticated) { setWisdomErrorMessage('⚠️ Please sign in to Databricks before saving. Click the Sign In button in the header.'); setShowLoginModal(true); return; }
                                           setIsWisdomSaving(true);
+                                          setIsDatabricksLoading(true);
+                                          setDatabricksLoadingMessage('Saving video…');
+                                          setWisdomErrorMessage(null);
                                           try {
                                             const result = await uploadToKnowledgeBase({ file: recorded, scope: videoScope, brand: videoScope === 'brand' ? (brand || undefined) : undefined, projectType: projectType || undefined, fileType: 'Wisdom', tags: [insightType, 'Video'], insightType: insightType as 'Brand' | 'Category' | 'General', inputMethod: 'Video', userEmail, userRole });
                                             if (result.success) { handleResponseChange(idx, 'Camera video saved'); setWisdomSuccessMessage(`✅ "${recorded.name}" saved to Knowledge Base`); }
-                                            else { alert(`Failed to save video: ${result.error || 'Unknown error'}`); }
-                                          } catch (err) { alert(`Failed to save video: ${err instanceof Error ? err.message : 'Unknown error'}`); }
-                                          finally { setIsWisdomSaving(false); }
+                                            else { setWisdomErrorMessage(`Failed to save video: ${result.error || 'Unknown error'}`); }
+                                          } catch (err) { setWisdomErrorMessage(`Failed to save video: ${err instanceof Error ? err.message : 'Unknown error'}`); }
+                                          finally { setIsWisdomSaving(false); setIsDatabricksLoading(false); }
                                         };
                                         setStream(s);
                                         setMediaRecorder(rec);
