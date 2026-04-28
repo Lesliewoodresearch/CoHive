@@ -275,6 +275,62 @@ export default function ProcessWireframe() {
     return file as File;
   };
 
+  const loadSharedConfig = async () => {
+    const DEFAULT_BRANDS = ['Nike', 'Adidas'];
+    const systemProjectTypeNames = systemProjectTypes.map(pt => pt.projectType);
+    try {
+      const result = await fetchSharedConfig();
+      if (result.success && result.brands && result.brands.length > 0) {
+        setAvailableBrands(result.brands);
+        localStorage.setItem('cohive_available_brands', JSON.stringify(result.brands));
+      } else {
+        const savedBrands = localStorage.getItem('cohive_available_brands');
+        if (savedBrands) { setAvailableBrands(JSON.parse(savedBrands)); } else { setAvailableBrands(DEFAULT_BRANDS); localStorage.setItem('cohive_available_brands', JSON.stringify(DEFAULT_BRANDS)); }
+      }
+      let userProjectTypes: string[] = [];
+      if (result.success && result.projectTypes && result.projectTypes.length > 0) {
+        userProjectTypes = result.projectTypes;
+        localStorage.setItem('cohive_available_project_types', JSON.stringify(userProjectTypes));
+      } else {
+        const savedProjectTypes = localStorage.getItem('cohive_available_project_types');
+        if (savedProjectTypes) { userProjectTypes = JSON.parse(savedProjectTypes); }
+      }
+      const allProjectTypes = [...new Set([...systemProjectTypeNames, ...userProjectTypes])].sort();
+      setAvailableProjectTypes(allProjectTypes);
+      try {
+        const configResult = await fetchProjectTypeConfigs();
+        let userConfigs: ProjectTypeConfig[] = [];
+        if (configResult.success && configResult.configs) {
+          userConfigs = configResult.configs;
+          localStorage.setItem('cohive_project_type_configs', JSON.stringify(userConfigs));
+        } else {
+          const savedConfigs = localStorage.getItem('cohive_project_type_configs');
+          if (savedConfigs) { try { userConfigs = JSON.parse(savedConfigs); } catch { userConfigs = []; } }
+        }
+        setProjectTypeConfigs([...systemProjectTypes, ...userConfigs]);
+      } catch (configError) {
+        console.warn('Failed to fetch project type configurations:', configError);
+        const savedConfigs = localStorage.getItem('cohive_project_type_configs');
+        let userConfigs: ProjectTypeConfig[] = [];
+        if (savedConfigs) { try { userConfigs = JSON.parse(savedConfigs); } catch { userConfigs = []; } }
+        setProjectTypeConfigs([...systemProjectTypes, ...userConfigs]);
+      }
+    } catch (error) {
+      console.warn('Failed to fetch shared config from Databricks, using localStorage:', error);
+      const savedBrands = localStorage.getItem('cohive_available_brands');
+      if (savedBrands) { try { setAvailableBrands(JSON.parse(savedBrands)); } catch { setAvailableBrands(DEFAULT_BRANDS); } } else { setAvailableBrands(DEFAULT_BRANDS); localStorage.setItem('cohive_available_brands', JSON.stringify(DEFAULT_BRANDS)); }
+      let userProjectTypes: string[] = [];
+      const savedProjectTypes = localStorage.getItem('cohive_available_project_types');
+      if (savedProjectTypes) { try { userProjectTypes = JSON.parse(savedProjectTypes); } catch { userProjectTypes = []; } }
+      const allProjectTypes = [...new Set([...systemProjectTypeNames, ...userProjectTypes])].sort();
+      setAvailableProjectTypes(allProjectTypes);
+      const savedConfigs = localStorage.getItem('cohive_project_type_configs');
+      let userConfigs: ProjectTypeConfig[] = [];
+      if (savedConfigs) { try { userConfigs = JSON.parse(savedConfigs); } catch { userConfigs = []; } }
+      setProjectTypeConfigs([...systemProjectTypes, ...userConfigs]);
+    }
+  };
+
   useEffect(() => {
     const savedResponses = localStorage.getItem('cohive_responses');
     if (savedResponses) {
@@ -336,61 +392,6 @@ export default function ProcessWireframe() {
     const savedSelectedResearchFiles = localStorage.getItem('cohive_selected_research_files');
     if (savedSelectedResearchFiles) { try { setSelectedResearchFiles(JSON.parse(savedSelectedResearchFiles)); } catch (e) { console.error('Failed to load selected research files', e); } }
 
-    const loadSharedConfig = async () => {
-      const DEFAULT_BRANDS = ['Nike', 'Adidas'];
-      const systemProjectTypeNames = systemProjectTypes.map(pt => pt.projectType);
-      try {
-        const result = await fetchSharedConfig();
-        if (result.success && result.brands && result.brands.length > 0) {
-          setAvailableBrands(result.brands);
-          localStorage.setItem('cohive_available_brands', JSON.stringify(result.brands));
-        } else {
-          const savedBrands = localStorage.getItem('cohive_available_brands');
-          if (savedBrands) { setAvailableBrands(JSON.parse(savedBrands)); } else { setAvailableBrands(DEFAULT_BRANDS); localStorage.setItem('cohive_available_brands', JSON.stringify(DEFAULT_BRANDS)); }
-        }
-        let userProjectTypes: string[] = [];
-        if (result.success && result.projectTypes && result.projectTypes.length > 0) {
-          userProjectTypes = result.projectTypes;
-          localStorage.setItem('cohive_available_project_types', JSON.stringify(userProjectTypes));
-        } else {
-          const savedProjectTypes = localStorage.getItem('cohive_available_project_types');
-          if (savedProjectTypes) { userProjectTypes = JSON.parse(savedProjectTypes); }
-        }
-        const allProjectTypes = [...new Set([...systemProjectTypeNames, ...userProjectTypes])].sort();
-        setAvailableProjectTypes(allProjectTypes);
-        try {
-          const configResult = await fetchProjectTypeConfigs();
-          let userConfigs: ProjectTypeConfig[] = [];
-          if (configResult.success && configResult.configs) {
-            userConfigs = configResult.configs;
-            localStorage.setItem('cohive_project_type_configs', JSON.stringify(userConfigs));
-          } else {
-            const savedConfigs = localStorage.getItem('cohive_project_type_configs');
-            if (savedConfigs) { try { userConfigs = JSON.parse(savedConfigs); } catch { userConfigs = []; } }
-          }
-          setProjectTypeConfigs([...systemProjectTypes, ...userConfigs]);
-        } catch (configError) {
-          console.warn('Failed to fetch project type configurations:', configError);
-          const savedConfigs = localStorage.getItem('cohive_project_type_configs');
-          let userConfigs: ProjectTypeConfig[] = [];
-          if (savedConfigs) { try { userConfigs = JSON.parse(savedConfigs); } catch { userConfigs = []; } }
-          setProjectTypeConfigs([...systemProjectTypes, ...userConfigs]);
-        }
-      } catch (error) {
-        console.warn('Failed to fetch shared config from Databricks, using localStorage:', error);
-        const savedBrands = localStorage.getItem('cohive_available_brands');
-        if (savedBrands) { try { setAvailableBrands(JSON.parse(savedBrands)); } catch { setAvailableBrands(DEFAULT_BRANDS); } } else { setAvailableBrands(DEFAULT_BRANDS); localStorage.setItem('cohive_available_brands', JSON.stringify(DEFAULT_BRANDS)); }
-        let userProjectTypes: string[] = [];
-        const savedProjectTypes = localStorage.getItem('cohive_available_project_types');
-        if (savedProjectTypes) { try { userProjectTypes = JSON.parse(savedProjectTypes); } catch { userProjectTypes = []; } }
-        const allProjectTypes = [...new Set([...systemProjectTypeNames, ...userProjectTypes])].sort();
-        setAvailableProjectTypes(allProjectTypes);
-        const savedConfigs = localStorage.getItem('cohive_project_type_configs');
-        let userConfigs: ProjectTypeConfig[] = [];
-        if (savedConfigs) { try { userConfigs = JSON.parse(savedConfigs); } catch { userConfigs = []; } }
-        setProjectTypeConfigs([...systemProjectTypes, ...userConfigs]);
-      }
-    };
     loadSharedConfig();
   }, []);
 
