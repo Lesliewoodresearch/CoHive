@@ -299,7 +299,7 @@ export function AssessmentModal({
   // kbMode and scope are user-selectable in the settings panel unless defaults provided.
   const hasDefaults = !!defaultKbMode && !!defaultScope;
 
-  const [kbMode, setKbMode] = useState<KbMode>(defaultKbMode ?? "equal-weight");
+  const [kbMode, setKbMode] = useState<KbMode>(defaultKbMode ?? "kb-only");
   const [scope, setScope] = useState<Scope>(defaultScope ?? "brand");
 
   // Show settings panel before running if no defaults provided

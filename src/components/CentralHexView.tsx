@@ -41,6 +41,7 @@ interface CentralHexViewProps {
   ) => void;
   databricksInstructions?: string;
   previousExecutions: HexExecution[];
+  crossHexExecutions?: HexExecution[];
   anyPriorPersonaRun?: boolean;
   onSaveRecommendation?: (recommendation: string, hexId: string) => void;
   projectType?: string;
@@ -61,6 +62,7 @@ export function CentralHexView({
   onExecute,
   databricksInstructions,
   previousExecutions,
+  crossHexExecutions = [],
   anyPriorPersonaRun = false,
   onSaveRecommendation,
   projectType,
@@ -303,9 +305,10 @@ export function CentralHexView({
       }
     }
 
-    // If there are prior executions on a persona hex, ask user what to include
-    const personaHexIds = ['Consumers', 'Luminaries', 'Colleagues', 'cultural', 'Grade', 'panelist'];
-    if (personaHexIds.includes(hexId) && previousExecutions.length > 0) {
+    // If there are prior executions on this or any other persona hex, ask user what to include
+    const personaHexIds = ['Consumers', 'Luminaries', 'Colleagues', 'cultural', 'Grade'];
+    const allPriorExecutions = [...previousExecutions, ...crossHexExecutions];
+    if (personaHexIds.includes(hexId) && allPriorExecutions.length > 0) {
       setPendingExecuteFiles(selectedFiles);
       setPendingExecuteType(assessmentType);
       setPendingExecuteAssessment(assessment);
@@ -1150,14 +1153,20 @@ export function CentralHexView({
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-gray-900 font-semibold text-base">Previous results available</h3>
               <p className="text-gray-500 text-sm mt-0.5">
-                You have {previousExecutions.length} prior run{previousExecutions.length !== 1 ? 's' : ''} in this hex. How would you like to proceed?
+                {previousExecutions.length > 0 && crossHexExecutions.length > 0
+                  ? `You have ${previousExecutions.length} run${previousExecutions.length !== 1 ? 's' : ''} in this hex plus results from other persona hexes.`
+                  : previousExecutions.length > 0
+                  ? `You have ${previousExecutions.length} prior run${previousExecutions.length !== 1 ? 's' : ''} in this hex.`
+                  : 'You have prior persona runs from other hexes.'
+                }{' '}How would you like to proceed?
               </p>
             </div>
             <div className="px-6 py-4 space-y-3">
               <button
                 onClick={() => {
                   setShowPriorPersonaModal(false);
-                  const priorPersonaNames = previousExecutions.flatMap(ex => (ex.selectedFiles || [])).filter((v, i, a) => a.indexOf(v) === i);
+                  const allPrior = [...previousExecutions, ...crossHexExecutions];
+                  const priorPersonaNames = allPrior.flatMap(ex => (ex.selectedFiles || [])).filter((v, i, a) => a.indexOf(v) === i);
                   const augmented = pendingExecuteAssessment + (priorPersonaNames.length > 0 ? `
 
 [PRIOR_PERSONAS: ${priorPersonaNames.join(', ')}]` : '');
@@ -1173,7 +1182,8 @@ export function CentralHexView({
               <button
                 onClick={() => {
                   setShowPriorPersonaModal(false);
-                  const summaryLines = previousExecutions.map((ex, i) => { const preview = (ex.assessment || '').substring(0, 200).replace(/\n/g, ' '); return `Run ${i + 1}: ${preview}${preview.length === 200 ? '...' : ''}`; });
+                  const allPriorForSummary = [...previousExecutions, ...crossHexExecutions];
+                  const summaryLines = allPriorForSummary.map((ex, i) => { const preview = (ex.assessment || '').substring(0, 200).replace(/\n/g, ' '); return `Run ${i + 1}: ${preview}${preview.length === 200 ? '...' : ''}`; });
                   const summaryBlock = `\n\n[PRIOR_SUMMARY:\n${summaryLines.join('\n')}\n]`;
                   onExecute(pendingExecuteFiles, pendingExecuteType, pendingExecuteAssessment + summaryBlock);
                   setPendingExecuteFiles([]); setPendingExecuteType([]); setPendingExecuteAssessment('');

@@ -56,12 +56,8 @@ export const stepContentData: StepContent[] = [
   {
     id: 'panelist',
     title: 'Panelist Personas',
-    description: 'Leverage data from consumer panel households',
-    questions: [
-      'How would various panel members respond?',
-      'What would various panel members recommend?',
-      'What additional research would be helpful to collect from these panel households?',
-    ]
+    description: 'Panelist Personas monitored by agents will be added in the future.',
+    questions: []
   },
   {
     id: 'Consumers',

@@ -206,6 +206,16 @@ export const hexPersonas: HexPersonaConfig[] = [
             roles: [
               { id: 'paula-scher', name: 'Paula Scher' }
             ]
+          },
+          {
+            id: 'direct-response',
+            name: 'Copywriters / Direct Response',
+            description: 'Results-driven copy and measurable persuasion',
+            roles: [
+              { id: 'drayton-bird', name: 'Drayton Bird' },
+              { id: 'eugene-schwartz', name: 'Eugene Schwartz' },
+              { id: 'joseph-sugarman', name: 'Joe Sugarman' }
+            ]
           }
         ]
       },
@@ -219,7 +229,8 @@ export const hexPersonas: HexPersonaConfig[] = [
             name: 'TV & Film Icons',
             description: 'Legendary characters from screen',
             roles: [
-              { id: 'don-draper', name: 'Don Draper' }
+              { id: 'don-draper', name: 'Don Draper' },
+              { id: 'willy-wonka', name: 'Willy Wonka' }
             ]
           }
         ]
@@ -287,7 +298,8 @@ export const hexPersonas: HexPersonaConfig[] = [
             description: 'Technical development teams',
             roles: [
               { id: 'colleagues-engineer-lead', name: 'Engineering Lead' },
-              { id: 'colleagues-engineer-architect', name: 'Solutions Architect' }
+              { id: 'colleagues-engineer-architect', name: 'Solutions Architect' },
+              { id: 'luminaries-tech-cto', name: 'Tech Industry CTO' }
             ]
           }
         ]
@@ -431,6 +443,26 @@ export const hexPersonas: HexPersonaConfig[] = [
             ]
           }
         ]
+      },
+      {
+        id: 'cultural-icons',
+        category: 'Cultural Icons',
+        description: 'Entrepreneurs, visionaries, and cultural figures',
+        subcategories: [
+          {
+            id: 'entrepreneurs-visionaries',
+            name: 'Entrepreneurs & Visionaries',
+            description: 'Founders and brand builders who shaped culture',
+            roles: [
+              { id: 'coco-chanel', name: 'Coco Chanel' },
+              { id: 'estee-lauder', name: 'Estée Lauder' },
+              { id: 'mary-kay-ash', name: 'Mary Kay Ash' },
+              { id: 'oprah-winfrey', name: 'Oprah Winfrey' },
+              { id: 'seth-godin', name: 'Seth Godin' },
+              { id: 'steve-jobs', name: 'Steve Jobs' }
+            ]
+          }
+        ]
       }
     ]
   },
@@ -504,6 +536,23 @@ export const hexPersonas: HexPersonaConfig[] = [
             description: 'Potential customers not yet purchasing',
             roles: [
               { id: 'consumers-non-buyer', name: 'Non-Buyer' }
+            ]
+          }
+        ]
+      },
+      {
+        id: 'b2c-profiles',
+        category: 'B2C Profiles',
+        description: 'Direct-to-consumer buying behavior and decision styles',
+        subcategories: [
+          {
+            id: 'b2c-decision-style',
+            name: 'Decision Style',
+            description: 'How B2C consumers make purchase decisions',
+            roles: [
+              { id: 'consumers-b2c-impulse', name: 'Impulse Buyer' },
+              { id: 'consumers-b2c-loyal', name: 'Brand Loyalist' },
+              { id: 'consumers-b2c-research', name: 'Research-Driven Buyer' }
             ]
           }
         ]
@@ -663,7 +712,8 @@ export const hexPersonas: HexPersonaConfig[] = [
               { id: 'grade-demo-couple', name: 'Couple (No Kids)' },
               { id: 'grade-demo-family-young', name: 'Family (Young Kids)' },
               { id: 'grade-demo-family-teen', name: 'Family (Teens)' },
-              { id: 'grade-demo-multi-gen', name: 'Multi-Generational' }
+              { id: 'grade-demo-multi-gen', name: 'Multi-Generational' },
+              { id: 'panelist-millennial-parent', name: 'Millennial Parent' }
             ]
           }
         ]

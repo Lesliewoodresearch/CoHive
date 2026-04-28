@@ -198,6 +198,7 @@ export default function ProcessWireframe() {
   const [wisdomInputMethod, setWisdomInputMethod] = useState<string | null>(null);
   const [wisdomCameraMode, setWisdomCameraMode] = useState<'photo' | 'video' | null>(null);
   const wisdomVideoRef = useRef<HTMLVideoElement>(null);
+  const cancelVideoRecordingRef = useRef(false);
   const { devices: micDevices, selectedDeviceId: selectedMicDeviceId, setSelectedDeviceId: setSelectedMicDeviceId } = useMicDevices();
   
   const isBrowser = typeof window !== 'undefined';
@@ -969,7 +970,7 @@ export default function ProcessWireframe() {
     setRecordedChunks([]);
   };
 
-  const centralHexIds = ['Luminaries', 'panelist', 'Consumers', 'competitors', 'Colleagues', 'cultural', 'test', 'Grade'];
+  const centralHexIds = ['Luminaries', 'Consumers', 'competitors', 'Colleagues', 'cultural', 'test', 'Grade'];
   const isCentralHex = centralHexIds.includes(activeStepId);
 
   const handleTemplateChange = (templateId: string) => {
@@ -1305,7 +1306,7 @@ export default function ProcessWireframe() {
                          ) : activeStepId === 'review' ? (
                   <ReviewView projectFiles={projectFiles} onDeleteFiles={handleDeleteProjectFiles} />
                          ) : isCentralHex ? (
-                  <CentralHexView key={activeStepId} hexId={activeStepId} hexLabel={currentContent.title} researchFiles={researchFiles} onExecute={handleCentralHexExecute} databricksInstructions={currentTemplate?.databricksInstructions?.[activeStepId] || ''} previousExecutions={hexExecutions[activeStepId] || []} anyPriorPersonaRun={['Consumers', 'Luminaries', 'Colleagues', 'cultural', 'Grade'].some(h => hexExecutions[h]?.length > 0)} onSaveRecommendation={handleSaveRecommendation} projectType={responses['Enter']?.[1] || ''} userBrand={responses['Enter']?.[0] || ''} lastResults={lastAssessmentResults} conversationMode={currentTemplate?.conversationSettings?.conversationMode || 'multi-round'} modelEndpoint={currentTemplate?.conversationSettings?.modelEndpoint || 'databricks-claude-haiku-4-5'} requestMode={deriveRequestMode()} userEmail={userEmail} userRole={userRole} onContextChange={(files, step) => setHexWidgetContext({ files, step })} onAddIterationDirection={handleAddIterationDirection} iterationDirections={iterationDirections} />
+                  <CentralHexView key={activeStepId} hexId={activeStepId} hexLabel={currentContent.title} researchFiles={researchFiles} onExecute={handleCentralHexExecute} databricksInstructions={currentTemplate?.databricksInstructions?.[activeStepId] || ''} previousExecutions={hexExecutions[activeStepId] || []} crossHexExecutions={['Consumers', 'Luminaries', 'Colleagues', 'cultural', 'Grade'].filter(h => h !== activeStepId).flatMap(h => hexExecutions[h] || [])} anyPriorPersonaRun={['Consumers', 'Luminaries', 'Colleagues', 'cultural', 'Grade'].some(h => hexExecutions[h]?.length > 0)} onSaveRecommendation={handleSaveRecommendation} projectType={responses['Enter']?.[1] || ''} userBrand={responses['Enter']?.[0] || ''} lastResults={lastAssessmentResults} conversationMode={currentTemplate?.conversationSettings?.conversationMode || 'multi-round'} modelEndpoint={currentTemplate?.conversationSettings?.modelEndpoint || 'databricks-claude-haiku-4-5'} requestMode={deriveRequestMode()} userEmail={userEmail} userRole={userRole} onContextChange={(files, step) => setHexWidgetContext({ files, step })} onAddIterationDirection={handleAddIterationDirection} iterationDirections={iterationDirections} />
                         ) : (
                     <>
                     {wisdomSuccessMessage && activeStepId === 'Wisdom' && (
@@ -1672,8 +1673,10 @@ export default function ProcessWireframe() {
                           // PHOTO — upload or use camera
                           if (inputMethod === 'Photo') {
                             const photoScope: 'general' | 'category' | 'brand' = insightType === 'General' ? 'general' : insightType === 'Category' ? 'category' : 'brand';
+                            const MAX_PHOTO_BYTES = 3.4 * 1024 * 1024;
                             const uploadPhoto = async (file: File, label: string, e: React.ChangeEvent<HTMLInputElement>) => {
-                              if (!isDatabricksAuthenticated) { alert('⚠️ Please sign in to Databricks before saving to the Knowledge Base.'); setShowLoginModal(true); return; }
+                              if (!isDatabricksAuthenticated) { alert('⚠️ Please sign in to Databricks before saving to the Knowledge Base.'); setShowLoginModal(true); e.target.value = ''; return; }
+                              if (file.size > MAX_PHOTO_BYTES) { alert(`Photo is too large (${Math.round(file.size / 1024 / 1024 * 10) / 10}MB). Maximum is 3.4MB — please resize the image first.`); e.target.value = ''; return; }
                               const ext = file.name.split('.').pop() || 'jpg';
                               const renamed = new File([file], wisdomFileName(ext), { type: file.type });
                               setIsWisdomSaving(true);
@@ -1691,6 +1694,7 @@ export default function ProcessWireframe() {
                                   {hasResponse && <CircleCheck className="w-5 h-5 text-green-600 flex-shrink-0" />}
                                 </label>
                                 <div className="space-y-2">
+                                  <p className="text-xs text-gray-500">Maximum file size: 3.4MB. For larger photos, resize before uploading.</p>
                                   <label className={`flex items-center justify-center gap-2 w-full px-4 py-3 rounded cursor-pointer ${isWisdomSaving ? 'bg-blue-400 text-white pointer-events-none' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
                                     {isWisdomSaving ? <SpinHex className="w-5 h-5" /> : <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>}
                                     {isWisdomSaving ? 'Saving...' : 'Upload Photo'}
@@ -1755,10 +1759,10 @@ export default function ProcessWireframe() {
                           // VIDEO — upload or use camera
                           if (inputMethod === 'Video') {
                             const videoScope: 'general' | 'category' | 'brand' = insightType === 'General' ? 'general' : insightType === 'Category' ? 'category' : 'brand';
-                            const MAX_VIDEO_BYTES = 37 * 1024 * 1024;
+                            const MAX_VIDEO_BYTES = 3.4 * 1024 * 1024;
                             const uploadVideo = async (file: File, label: string, e: React.ChangeEvent<HTMLInputElement>) => {
                               if (!isDatabricksAuthenticated) { alert('⚠️ Please sign in to Databricks before saving to the Knowledge Base.'); setShowLoginModal(true); e.target.value = ''; return; }
-                              if (file.size > MAX_VIDEO_BYTES) { alert(`Video is too large (${Math.round(file.size / 1024 / 1024)}MB). Maximum size is 37MB — please trim or compress the video first.`); e.target.value = ''; return; }
+                              if (file.size > MAX_VIDEO_BYTES) { alert(`Video is too large (${Math.round(file.size / 1024 / 1024 * 10) / 10}MB). Maximum size is 3.4MB — please trim or compress the clip first.`); e.target.value = ''; return; }
                               const ext = file.name.split('.').pop() || 'mp4';
                               const renamed = new File([file], wisdomFileName(ext), { type: file.type });
                               setIsWisdomSaving(true);
@@ -1776,7 +1780,7 @@ export default function ProcessWireframe() {
                                   {hasResponse && <CircleCheck className="w-5 h-5 text-green-600 flex-shrink-0" />}
                                 </label>
                                 <div className="space-y-2">
-                                  <p className="text-xs text-gray-500">Maximum file size: 37MB. For larger videos, trim or compress first.</p>
+                                  <p className="text-xs text-gray-500">Maximum file size: 3.4MB. Keep clips short — trim or compress longer videos first.</p>
                                   <label className={`flex items-center justify-center gap-2 w-full px-4 py-3 rounded cursor-pointer ${isWisdomSaving ? 'bg-blue-400 text-white pointer-events-none' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
                                     {isWisdomSaving ? <SpinHex className="w-5 h-5" /> : <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>}
                                     {isWisdomSaving ? 'Saving...' : 'Upload Video'}
@@ -1789,13 +1793,27 @@ export default function ProcessWireframe() {
                                       try {
                                         const s = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                                         const chunks: Blob[] = [];
-                                        const rec = new MediaRecorder(s);
+                                        const preferredMime = MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')
+                                          ? 'video/webm;codecs=vp8,opus'
+                                          : MediaRecorder.isTypeSupported('video/webm')
+                                          ? 'video/webm'
+                                          : '';
+                                        const rec = preferredMime ? new MediaRecorder(s, { mimeType: preferredMime }) : new MediaRecorder(s);
                                         rec.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
                                         rec.onstop = async () => {
-                                          const blob = new Blob(chunks, { type: 'video/webm' });
-                                          stopWisdomCamera();
-                                          if (blob.size > MAX_VIDEO_BYTES) { alert(`Recording is too large (${Math.round(blob.size / 1024 / 1024)}MB). Keep under 37MB.`); return; }
-                                          const recorded = new File([blob], wisdomFileName('webm'), { type: 'video/webm' });
+                                          s.getTracks().forEach(t => t.stop());
+                                          setStream(null);
+                                          setWisdomCameraMode(null);
+                                          setIsRecording(false);
+                                          setMediaRecorder(null);
+                                          setRecordedChunks([]);
+                                          if (cancelVideoRecordingRef.current) { cancelVideoRecordingRef.current = false; return; }
+                                          const finalMime = rec.mimeType || 'video/webm';
+                                          const blob = new Blob(chunks, { type: finalMime });
+                                          if (blob.size === 0) { alert('Recording appears to be empty. Please try again.'); return; }
+                                          if (blob.size > MAX_VIDEO_BYTES) { alert(`Recording is too large (${Math.round(blob.size / 1024 / 1024 * 10) / 10}MB). Keep under 3.4MB — try a shorter clip.`); return; }
+                                          const ext = finalMime.includes('mp4') ? 'mp4' : 'webm';
+                                          const recorded = new File([blob], wisdomFileName(ext), { type: finalMime });
                                           if (!isDatabricksAuthenticated) { alert('⚠️ Please sign in to Databricks before saving.'); setShowLoginModal(true); return; }
                                           setIsWisdomSaving(true);
                                           try {
@@ -1809,7 +1827,7 @@ export default function ProcessWireframe() {
                                         setMediaRecorder(rec);
                                         setWisdomCameraMode('video');
                                         setIsRecording(true);
-                                        rec.start();
+                                        rec.start(250);
                                       } catch { alert('Camera/microphone access denied. Please allow access and try again.'); }
                                     }}
                                   >
@@ -1832,7 +1850,7 @@ export default function ProcessWireframe() {
                                         >
                                           {isWisdomSaving ? <><SpinHex className="w-4 h-4" />Saving...</> : <><CircleStop className="w-4 h-4" />Stop &amp; Save</>}
                                         </button>
-                                        <button type="button" className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300" onClick={() => { mediaRecorder?.stop(); stopWisdomCamera(); }}>Cancel</button>
+                                        <button type="button" className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300" onClick={() => { cancelVideoRecordingRef.current = true; mediaRecorder?.stop(); }}>Cancel</button>
                                       </div>
                                     </div>
                                   )}

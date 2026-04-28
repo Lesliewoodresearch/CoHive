@@ -84,6 +84,7 @@ import colleaguesProductOwner from './persona-content/colleagues-product-owner.j
 import colleaguesSalesManager from './persona-content/colleagues-sales-manager.json';
 import colleaguesSalesRep from './persona-content/colleagues-sales-rep.json';
 import colleaguesSupportLead from './persona-content/colleagues-support-lead.json';
+import colleaguesCreativeDirector from './persona-content/colleagues-creative-director.json';
 
 // Import Cultural Voice personas
 import culturalEcoAdvocate from './persona-content/cultural-eco-advocate.json';
@@ -270,6 +271,7 @@ export const personaContentMap: Record<string, PersonaContent> = {
   'colleagues-sales-manager': colleaguesSalesManager as unknown as PersonaContent,
   'colleagues-sales-rep': colleaguesSalesRep as unknown as PersonaContent,
   'colleagues-support-lead': colleaguesSupportLead as unknown as PersonaContent,
+  'colleagues-creative-director': colleaguesCreativeDirector as unknown as PersonaContent,
   
   // Cultural Voices
   'cultural-eco-advocate': culturalEcoAdvocate as unknown as PersonaContent,
