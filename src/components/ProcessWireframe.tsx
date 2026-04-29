@@ -1,4 +1,4 @@
-import { Database, Cpu, GitBranch, BarChart3, Rocket, CirclePlay, Settings, FileText, Users, Globe, MessageSquare, TestTube2, CircleCheck, Save, CircleAlert, User, Download, Upload, RotateCcw, Mic, Camera, Video, CircleStop, File } from 'lucide-react';
+import { Database, Cpu, GitBranch, BarChart3, Rocket, CirclePlay, Settings, FileText, Users, Globe, MessageSquare, TestTube2, CircleCheck, Save, CircleAlert, User, Download, Upload, RotateCcw, Mic, Camera, Video, CircleStop } from 'lucide-react';
 import { ProcessFlow, processSteps } from './ProcessFlow';
 import { useState, useEffect, useRef } from 'react';
 import React from 'react';
