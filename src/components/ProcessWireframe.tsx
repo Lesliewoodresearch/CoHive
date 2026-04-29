@@ -1828,7 +1828,8 @@ export default function ProcessWireframe() {
                                     {isWisdomSaving ? 'Saving...' : 'Upload Video'}
                                     <input type="file" accept="video/*" className="hidden" disabled={isWisdomSaving} onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; await uploadVideo(file, `Video: ${file.name}`, e); }} />
                                   </label>
-                                  <button
+                                  {/* TODO: Camera video recording — hidden until lower-fidelity option is implemented */}
+                                  {false && <button
                                     type="button"
                                     className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-gray-700 text-white rounded hover:bg-gray-900"
                                     onClick={async () => {
@@ -1882,8 +1883,8 @@ export default function ProcessWireframe() {
                                   >
                                     <Video className="w-5 h-5" />
                                     Record Video with Camera
-                                  </button>
-                                  {wisdomCameraMode === 'video' && (
+                                  </button>}
+                                  {false && wisdomCameraMode === 'video' && (
                                     <div className="border-2 border-red-400 rounded overflow-hidden">
                                       <div className="flex items-center gap-2 px-3 py-1.5 bg-red-50">
                                         <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
