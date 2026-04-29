@@ -137,6 +137,7 @@ export default function ProcessWireframe() {
   const [iterationChecks, setIterationChecks] = useState<Array<{ text: string; hexId: string; hexLabel: string }>>([]);
   const [iterationCoal, setIterationCoal] = useState<Array<{ text: string; hexId: string; hexLabel: string }>>([]);
   const [iterationDirections, setIterationDirections] = useState<string[]>([]);
+  const [userNotes, setUserNotes] = useState<string>('');
 
   // Assessment Modal state
   const [assessmentModalOpen, setAssessmentModalOpen] = useState(false);
@@ -908,6 +909,11 @@ export default function ProcessWireframe() {
 
   const handleAddIterationDirection = (direction: string) => {
     setIterationDirections(prev => [...prev, direction]);
+    const hexLabel = currentContent?.title || activeStepId;
+    const totalRuns = Object.values(hexExecutions).reduce((sum, arr) => sum + (arr?.length || 0), 0);
+    const runLabel = totalRuns === 0 ? 'pre-assessment' : `run ${totalRuns}`;
+    const entry = `Added prompt [${hexLabel} · ${runLabel}]: ${direction}`;
+    setUserNotes(prev => prev ? `${prev}\n${entry}` : entry);
   };
 
   const handleSaveRecommendation = (recommendation: string, hexId: string) => {
@@ -1192,6 +1198,7 @@ export default function ProcessWireframe() {
         setIterationChecks([]);
         setIterationCoal([]);
         setIterationDirections([]);
+        setUserNotes('');
               }
               if (stepId === 'Enter' && !iterationSaved) {
                 setResponses(prev => ({ ...prev, 'Findings': { ...prev['Findings'], [0]: '' } }));
@@ -2043,6 +2050,13 @@ export default function ProcessWireframe() {
                                             iterationCoal.forEach(c => txtLines.push(`[${c.hexLabel}] ${c.text}`));
                                             txtLines.push('');
                                           }
+                                          if (userNotes.trim()) {
+                                            txtLines.push('='.repeat(60));
+                                            txtLines.push('USER NOTES');
+                                            txtLines.push('='.repeat(60));
+                                            txtLines.push(userNotes.trim());
+                                            txtLines.push('');
+                                          }
 
                                           const txtContent = txtLines.join('\n');
                                           const txtFileName = userEnteredFileName.endsWith('.txt') ? userEnteredFileName : `${userEnteredFileName}.txt`;
@@ -2062,7 +2076,8 @@ export default function ProcessWireframe() {
                                             setIterationGems([]);
         setIterationChecks([]);
         setIterationCoal([]);
-        setIterationDirections([]); // iteration boundary — clear gems
+        setIterationDirections([]);
+        setUserNotes('');
                                           } else { alert(`Failed to save to Databricks: ${result.error || 'Unknown error'}`); }
                                         }
                                       }}
@@ -2241,7 +2256,7 @@ export default function ProcessWireframe() {
                 <FileText className="w-4 h-4 text-gray-600" />
                 <h3 className="text-gray-900">User Notes</h3>
               </div>
-              <textarea className="w-full border-2 border-gray-300 bg-gray-50 rounded p-2 text-sm resize-none" style={{ height: 'calc(550px - 80px)' }} placeholder="Add notes to be saved with each iteration..." />
+              <textarea className="w-full border-2 border-gray-300 bg-gray-50 rounded p-2 text-sm resize-none" style={{ height: 'calc(550px - 80px)' }} placeholder="Add notes to be saved with each iteration..." value={userNotes} onChange={(e) => setUserNotes(e.target.value)} />
             </div>
           </div>
         </div>
