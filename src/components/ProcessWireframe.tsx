@@ -1723,7 +1723,7 @@ export default function ProcessWireframe() {
                                         const s = await navigator.mediaDevices.getUserMedia({ video: true });
                                         setStream(s);
                                         setWisdomCameraMode('photo');
-                                      } catch { alert('Camera access denied. Please allow camera access and try again.'); }
+                                      } catch (err) { setWisdomErrorMessage(`Camera error: ${err instanceof Error ? err.message : 'Unable to access camera'}`); }
                                     }}
                                   >
                                     <Camera className="w-5 h-5" />
@@ -1811,8 +1811,9 @@ export default function ProcessWireframe() {
                                     type="button"
                                     className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-gray-700 text-white rounded hover:bg-gray-900"
                                     onClick={async () => {
+                                      let s: MediaStream | null = null;
                                       try {
-                                        const s = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                                        s = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                                         const chunks: Blob[] = [];
                                         const preferredMime = MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')
                                           ? 'video/webm;codecs=vp8,opus'
@@ -1822,7 +1823,7 @@ export default function ProcessWireframe() {
                                         const rec = preferredMime ? new MediaRecorder(s, { mimeType: preferredMime }) : new MediaRecorder(s);
                                         rec.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
                                         rec.onstop = async () => {
-                                          s.getTracks().forEach(t => t.stop());
+                                          s!.getTracks().forEach(t => t.stop());
                                           setStream(null);
                                           setWisdomCameraMode(null);
                                           setIsRecording(false);
@@ -1847,12 +1848,15 @@ export default function ProcessWireframe() {
                                           } catch (err) { setWisdomErrorMessage(`Failed to save video: ${err instanceof Error ? err.message : 'Unknown error'}`); }
                                           finally { setIsWisdomSaving(false); setIsDatabricksLoading(false); }
                                         };
+                                        rec.start(250);
                                         setStream(s);
                                         setMediaRecorder(rec);
                                         setWisdomCameraMode('video');
                                         setIsRecording(true);
-                                        rec.start(250);
-                                      } catch { alert('Camera/microphone access denied. Please allow access and try again.'); }
+                                      } catch (err) {
+                                        if (s) s.getTracks().forEach(t => t.stop());
+                                        setWisdomErrorMessage(`Camera error: ${err instanceof Error ? err.message : 'Unable to access camera or microphone'}`);
+                                      }
                                     }}
                                   >
                                     <Video className="w-5 h-5" />
