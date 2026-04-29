@@ -597,7 +597,7 @@ export function AssessmentModal({
         if (modalRect) {
           setFloatingBtn({
             x: rect.left - modalRect.left + rect.width / 2,
-            y: rect.top - modalRect.top - 52,
+            y: rect.bottom - modalRect.top,
             text, fileId, fileName,
           });
         }
@@ -663,7 +663,7 @@ export function AssessmentModal({
     if (modalRect) {
       setFloatingBtn({
         x: rect.left - modalRect.left + rect.width / 2,
-        y: rect.top - modalRect.top - 52,
+        y: rect.bottom - modalRect.top,
         text, fileId, fileName,
       });
     }
@@ -1581,13 +1581,13 @@ export function AssessmentModal({
                 style={{
                   position: "absolute",
                   left: `${floatingBtn.x}px`,
-                  top: `${Math.max(4, floatingBtn.y + (contentRef.current?.scrollTop || 0) - 140)}px`,
+                  top: `${floatingBtn.y + (contentRef.current?.scrollTop || 0) + 6}px`,
                   transform: "translateX(-50%)",
                   zIndex: 100,
                   pointerEvents: "auto",
                 }}
               >
-                <div className="flex flex-col gap-1.5 items-center">
+                <div className="flex flex-col gap-1 items-center">
                   {/* Gem — white pill, coloured icon */}
                   <button
                     onClick={handleSaveGem}
