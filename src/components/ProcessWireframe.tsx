@@ -1232,11 +1232,15 @@ export default function ProcessWireframe() {
               {showTemplateManager && currentTemplate && (
                 <TemplateManager currentTemplate={currentTemplate} availableTemplates={templates} onTemplateChange={handleTemplateChange} onTemplateUpdate={handleTemplateUpdate} onTemplateCreate={handleTemplateCreate} />
               )}
-              <button className="w-full px-4 py-2 border-2 border-gray-400 text-gray-700 rounded flex items-center gap-2 hover:bg-gray-50" onClick={() => setShowModelTemplateManager(true)}>
-                <Cpu className="w-4 h-4" />Model Templates
-              </button>
-              {showModelTemplateManager && currentModelTemplate && (
-                <ModelTemplateManager currentTemplate={currentModelTemplate} availableTemplates={modelTemplates} onTemplateChange={handleModelTemplateChange} onTemplateUpdate={handleModelTemplateUpdate} onTemplateCreate={handleModelTemplateCreate} />
+              {currentTemplate?.permissions?.canEditTemplates && (
+                <>
+                  <button className="w-full px-4 py-2 border-2 border-gray-400 text-gray-700 rounded flex items-center gap-2 hover:bg-gray-50" onClick={() => setShowModelTemplateManager(true)}>
+                    <Cpu className="w-4 h-4" />Model Templates
+                  </button>
+                  {showModelTemplateManager && currentModelTemplate && (
+                    <ModelTemplateManager currentTemplate={currentModelTemplate} availableTemplates={modelTemplates} onTemplateChange={handleModelTemplateChange} onTemplateUpdate={handleModelTemplateUpdate} onTemplateCreate={handleModelTemplateCreate} />
+                  )}
+                </>
               )}
               {/* Diagnostic Panel button - Only for Test@cohive.com */}
               {(localStorage.getItem('cohive_pending_email') || '').toLowerCase() === 'test@cohive.com' && (
