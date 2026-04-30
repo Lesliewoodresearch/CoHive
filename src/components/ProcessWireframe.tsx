@@ -262,7 +262,10 @@ export default function ProcessWireframe() {
   const generateDefaultFileName = (brand: string, projectType: string, creationDate?: number, editDate?: number) => {
     const formatDate = (timestamp: number) => {
       const date = new Date(timestamp);
-      return date.toISOString().split('T')[0];
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
     };
     const cleanName = (str: string) => str.replace(/[^a-zA-Z0-9]/g, '');
     const brandPart = cleanName(brand) || 'Brand';

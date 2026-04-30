@@ -39,14 +39,21 @@ export function getSessionVersion(
   projectType: string
 ): SessionVersion {
   const sessionKey = `${brand}_${projectType}`;
-  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  const localDateStr = (ts: number) => {
+    const d = new Date(ts);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+  const today = localDateStr(Date.now()); // YYYY-MM-DD in local time
   const baseFileName = `${brand}_${projectType}_${today}`;
-  
+
   // Check if session exists and is from today
   const existingSession = sessionVersions[sessionKey];
-  
+
   if (existingSession) {
-    const existingDate = new Date(existingSession.lastModified).toISOString().split('T')[0];
+    const existingDate = localDateStr(existingSession.lastModified);
     
     // If session is from today, check for context switch
     if (existingDate === today) {
