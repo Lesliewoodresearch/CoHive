@@ -21,8 +21,6 @@ import {
 import {
   X,
   CircleCheck,
-  ChevronDown,
-  ChevronUp,
   CircleAlert,
   BookOpen,
   Globe,
@@ -330,7 +328,8 @@ export function AssessmentModal({
   const [showReviewPanel, setShowReviewPanel] = useState(false);
   const [reviewItems, setReviewItems] = useState<ReviewItem[]>([]);
   const [summary, setSummary] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"rounds" | "summary">("rounds");
+  // null = no rounds yet; number = that round's tab; "summary" = summary tab
+  const [activeTab, setActiveTab] = useState<number | "summary" | null>(null);
 
   // iterationGems is now owned by ProcessWireframe and passed as a prop —
   // it persists across multiple modal opens within the same iteration.
@@ -374,7 +373,7 @@ export function AssessmentModal({
     setIsComplete(false);
     setCitedFiles([]);
     setSummary(null);
-    setActiveTab("rounds");
+    setActiveTab(null);
     setSessionMeta({});
     // Don't reset sessionGems here — gems accumulate across re-runs within the same iteration
 
@@ -479,19 +478,14 @@ export function AssessmentModal({
           if (event === "round") {
             const round = payload as AssessmentRound;
             setCurrentRound(round.roundNumber);
-            setRounds((prev) => {
-              if (prev.length >= 1) {
-                setCollapsedRounds((prevCollapsed) =>
-                  new Set([...prevCollapsed, prev[prev.length - 1].roundNumber])
-                );
-              }
-              return [...prev, round];
-            });
+            setRounds((prev) => [...prev, round]);
+            // Auto-select the first round tab only; user controls navigation after that
+            setActiveTab((prev) => (prev === null ? round.roundNumber : prev));
           } else if (event === "complete") {
             setCitedFiles((payload.citedFiles as CitedFile[]) || []);
             if (payload.summary) {
               setSummary(payload.summary as string);
-              setActiveTab("summary");
+              // Don't auto-switch — user chooses when to read summary
             }
             // Store v3 session metadata for display
             setSessionMeta({
@@ -541,12 +535,6 @@ export function AssessmentModal({
       // iterationGems live in ProcessWireframe — cleared there on iteration boundary
     }
   }, [isOpen, showSettings, runAssessment]);
-
-  useEffect(() => {
-    if (contentRef.current) {
-      contentRef.current.scrollTop = contentRef.current.scrollHeight;
-    }
-  }, [rounds, currentRound]);
 
   // ── Text selection / gem handlers ─────────────────────────────────────────
 
@@ -778,6 +766,17 @@ export function AssessmentModal({
 
 
   // Returns a descriptive subtitle for each round type
+  const getRoundTabLabel = (label: string): string => {
+    const l = label.toLowerCase();
+    if (l.includes('moderator opening')) return 'Intro';
+    if (l.includes('moderator recap')) return 'Recap';
+    if (l.includes('moderator synthesis') || l.includes('moderator closing')) return 'Close';
+    if (l.includes('moderator')) return 'Mod';
+    if (l.includes('fact')) return 'Fact';
+    const stripped = label.replace(/^R\d+:\s*/i, '').replace(/^Round \d+ [—\-] /i, '');
+    return stripped.length > 13 ? stripped.substring(0, 12) + '…' : stripped;
+  };
+
   const getRoundSubtitle = (label: string): string => {
     const l = label.toLowerCase();
     if (l.includes('moderator opening')) return 'Session framing & objectives';
@@ -1292,30 +1291,48 @@ export function AssessmentModal({
             </div>
           )}
 
-          {/* Tabs */}
-          {isComplete && (
-            <div className="bg-white border-b-2 border-gray-200 px-6 flex items-center gap-1 flex-shrink-0">
-              <button
-                onClick={() => setActiveTab("rounds")}
-                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-0.5 ${
-                  activeTab === "rounds"
-                    ? "border-purple-600 text-purple-700"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                Rounds ({rounds.length})
-              </button>
-              <button
-                onClick={() => setActiveTab("summary")}
-                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-0.5 flex items-center gap-1.5 ${
-                  activeTab === "summary"
-                    ? "border-green-600 text-green-700"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                Summary
-                {summary && <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />}
-              </button>
+          {/* Per-round tabs — appear as rounds arrive, stay visible through completion */}
+          {rounds.length > 0 && (
+            <div className="bg-white border-b-2 border-gray-200 px-4 flex items-center flex-shrink-0 overflow-x-auto">
+              {rounds.map((round) => {
+                const roundLabel = (round as any).label || `Round ${round.roundNumber}`;
+                const isActive = activeTab === round.roundNumber;
+                const isMod = roundLabel.toLowerCase().includes('moderator');
+                const activeColor = isMod ? "border-green-600 text-green-700" : "border-purple-600 text-purple-700";
+                return (
+                  <button
+                    key={round.roundNumber}
+                    onClick={() => setActiveTab(round.roundNumber)}
+                    title={roundLabel}
+                    className={`px-3 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-0.5 whitespace-nowrap flex-shrink-0 ${
+                      isActive ? activeColor : "border-transparent text-gray-500 hover:text-gray-700"
+                    }`}
+                  >
+                    {getRoundTabLabel(roundLabel)}
+                  </button>
+                );
+              })}
+              {/* Spinner tab while next round is generating */}
+              {isRunning && (
+                <div className="px-3 py-2.5 -mb-0.5 flex items-center gap-1.5 text-gray-400 flex-shrink-0">
+                  <SpinHex className="w-3 h-3" />
+                </div>
+              )}
+              {/* Summary tab — appears when summary is ready */}
+              {summary && (
+                <button
+                  onClick={() => setActiveTab("summary")}
+                  title="Neutral Summary"
+                  className={`px-3 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-0.5 whitespace-nowrap flex-shrink-0 flex items-center gap-1.5 ${
+                    activeTab === "summary"
+                      ? "border-green-600 text-green-700"
+                      : "border-transparent text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  Summary
+                  <span className="w-2 h-2 rounded-full bg-green-500 inline-block flex-shrink-0" />
+                </button>
+              )}
             </div>
           )}
 
@@ -1392,127 +1409,56 @@ export function AssessmentModal({
               </div>
             )}
 
-            {/* Summary tab */}
-            {isComplete && activeTab === "summary" && (
-              <div className="p-6 max-w-4xl mx-auto">
-                {summary ? (
-                  <div className="bg-white border-2 border-green-200 rounded-lg p-6">
-                    <div className="flex items-center gap-2 mb-4 pb-3 border-b border-green-100">
-                      <CircleCheck className="w-5 h-5 text-green-600" />
-                      <h3 className="text-green-800 font-semibold">Neutral Summary</h3>
-                      <span className="text-green-600 text-xs ml-auto">
-                        Generated by neutral summarizer · not a persona
+            {/* Single round view */}
+            {typeof activeTab === "number" && (() => {
+              const round = rounds.find((r) => r.roundNumber === activeTab);
+              if (!round) return null;
+              const roundLabel = (round as any).label || `Round ${round.roundNumber}`;
+              const isModerator = roundLabel.toLowerCase().includes("moderator");
+              const isFactChecker = roundLabel.toLowerCase().includes("fact");
+              const headerColor = isModerator ? "text-green-800" : isFactChecker ? "text-amber-800" : "text-purple-900";
+              const borderColor = isModerator ? "border-green-200" : isFactChecker ? "border-amber-200" : "border-purple-200";
+              return (
+                <div
+                  className="p-6 max-w-4xl mx-auto space-y-4"
+                  onMouseUp={handleMouseUp}
+                  onMouseDown={handleMouseDown}
+                >
+                  <div className={`text-xs font-medium uppercase tracking-wide ${headerColor} mb-1`}>
+                    {roundLabel.replace(/^Round \d+ [—\-] /i, '')}
+                    {getRoundSubtitle(roundLabel) && (
+                      <span className="ml-2 text-gray-400 normal-case font-normal tracking-normal">
+                        · {getRoundSubtitle(roundLabel)}
                       </span>
-                    </div>
-                    <div>{formatSummary(summary)}</div>
+                    )}
                   </div>
-                ) : (
-                  <div className="bg-white border-2 border-gray-200 rounded-lg p-6 text-center text-gray-500 text-sm">
-                    No summary was generated for this assessment.
+                  <div className={`bg-white border-2 ${borderColor} rounded-lg p-6`}>
+                    {formatContent(round.content)}
                   </div>
-                )}
+                </div>
+              );
+            })()}
+
+            {/* Summary tab */}
+            {activeTab === "summary" && (
+              <div className="p-6 max-w-4xl mx-auto">
+                <div className="bg-white border-2 border-green-200 rounded-lg p-6">
+                  <div className="flex items-center gap-2 mb-4 pb-3 border-b border-green-100">
+                    <CircleCheck className="w-5 h-5 text-green-600" />
+                    <h3 className="text-green-800 font-semibold">Neutral Summary</h3>
+                    <span className="text-green-600 text-xs ml-auto">
+                      Generated by neutral summarizer · not a persona
+                    </span>
+                  </div>
+                  <div>{formatSummary(summary ?? '')}</div>
+                </div>
               </div>
             )}
 
-            {/* Rounds tab */}
-            {activeTab === "rounds" && (
-              <div
-                className="p-6 space-y-4 max-w-4xl mx-auto"
-                onMouseUp={handleMouseUp}
-                onMouseDown={handleMouseDown}
-              >
-                {rounds.map((round, idx) => {
-                  const isCollapsed = collapsedRounds.has(round.roundNumber);
-                  const isLast = idx === rounds.length - 1;
-                  // Use label from v3 rounds if available
-                  const roundLabel = (round as any).label || `Round ${round.roundNumber}`;
-                  const isModerator = roundLabel.toLowerCase().includes("moderator");
-                  const isFactChecker = roundLabel.toLowerCase().includes("fact");
-                  // Compute a display-friendly round number (1-based, counting only debate rounds)
-                  const debateRoundIndex = rounds
-                    .slice(0, idx + 1)
-                    .filter(r => {
-                      const l = ((r as any).label || '').toLowerCase();
-                      return r.roundNumber > 0 && !l.includes('moderator') && !l.includes('fact');
-                    }).length;
-
-                  const borderClass = isModerator
-                    ? "border-green-300"
-                    : isFactChecker
-                    ? "border-amber-300"
-                    : isLast
-                    ? "border-purple-300 shadow-sm"
-                    : "border-gray-200";
-
-                  const badgeClass = isModerator
-                    ? "bg-green-600"
-                    : isFactChecker
-                    ? "bg-amber-500"
-                    : isLast
-                    ? "bg-purple-600"
-                    : "bg-gray-200 text-gray-600";
-
-                  return (
-                    <div
-                      key={round.roundNumber}
-                      className={`bg-white border-2 rounded-lg overflow-hidden ${borderClass}`}
-                    >
-                      <button
-                        onClick={() => toggleRoundCollapse(round.roundNumber)}
-                        className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span
-                            className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white ${badgeClass}`}
-                          >
-                            {isModerator || isFactChecker ? (isModerator ? 'M' : 'F') : debateRoundIndex}
-                          </span>
-                          <div className="flex flex-col items-start">
-                            <span className={`font-medium text-sm ${isLast ? "text-purple-900" : isModerator ? "text-green-900" : isFactChecker ? "text-amber-900" : "text-gray-700"}`}>
-                              {!isModerator && !isFactChecker && (
-                                <span className="text-gray-400 font-normal mr-1.5">Round {debateRoundIndex} ·</span>
-                              )}
-                              {/* Strip "Round N — " prefix from label since we show it separately */}
-                              {roundLabel.replace(/^Round \d+ — /, '')}
-                            </span>
-                            {(() => {
-                              const sub = getRoundSubtitle(roundLabel);
-                              return sub ? (
-                                <span className="text-xs text-gray-400 font-normal leading-tight mt-0.5">{sub}</span>
-                              ) : null;
-                            })()}
-                          </div>
-                          {isLast && isRunning && (
-                            <SpinHex className="w-3.5 h-3.5" />
-                          )}
-                        </div>
-                        {isCollapsed ? (
-                          <ChevronDown className="w-4 h-4 text-gray-400" />
-                        ) : (
-                          <ChevronUp className="w-4 h-4 text-gray-400" />
-                        )}
-                      </button>
-                      {!isCollapsed && (
-                        <div className="px-5 pb-5 pt-1 border-t border-gray-100">
-                          {formatContent(round.content)}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-
-                {/* In-progress indicator */}
-                {isRunning && rounds.length > 0 && (
-                  <div className="bg-white border-2 border-dashed border-purple-200 rounded-lg px-4 py-3 flex items-center gap-3">
-                    <SpinHex className="w-4 h-4" />
-                    <span className="text-purple-600 text-sm">
-                      Round {rounds.length + 1} in progress…
-                    </span>
-                  </div>
-                )}
-
-                {/* Citations used */}
-                {isComplete && citedFiles.length > 0 && (
+            {/* Citations + gem/check/coal counts — shown at bottom when complete, any tab */}
+            {isComplete && (
+              <div className="px-6 pb-6 max-w-4xl mx-auto space-y-3">
+                {citedFiles.length > 0 && (
                   <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
                     <h4 className="text-gray-700 font-medium text-sm mb-3">
                       📚 Knowledge Base Citations Used
@@ -1534,8 +1480,6 @@ export function AssessmentModal({
                     </div>
                   </div>
                 )}
-
-                {/* Gem / Check / Coal counts */}
                 {(savedGemCount > 0 || savedCheckCount > 0 || savedCoalCount > 0) && (
                   <div className="space-y-2">
                     {savedGemCount > 0 && (
