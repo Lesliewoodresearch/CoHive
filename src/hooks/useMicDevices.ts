@@ -12,10 +12,9 @@ export function useMicDevices() {
   const loadDevices = async () => {
     if (!navigator.mediaDevices?.enumerateDevices) return;
     try {
-      // Request permission first — without it, labels are empty strings
-      const tempStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      tempStream.getTracks().forEach(t => t.stop());
-
+      // Passive enumeration only — no getUserMedia so we never activate the mic
+      // on load. Labels may be empty if permission hasn't been granted yet; that's
+      // fine — the recording button handlers call getUserMedia themselves.
       const all = await navigator.mediaDevices.enumerateDevices();
       const mics: MicDevice[] = all
         .filter(d => d.kind === 'audioinput')
@@ -29,14 +28,15 @@ export function useMicDevices() {
         mics.find(m => m.deviceId === prev) ? prev : (mics[0]?.deviceId ?? 'default')
       );
     } catch {
-      // Permission denied — leave devices empty
+      // No media devices available
     }
   };
 
   useEffect(() => {
     loadDevices();
-    navigator.mediaDevices?.addEventListener('devicechange', loadDevices);
-    return () => navigator.mediaDevices?.removeEventListener('devicechange', loadDevices);
+    const handler = () => loadDevices();
+    navigator.mediaDevices?.addEventListener('devicechange', handler);
+    return () => navigator.mediaDevices?.removeEventListener('devicechange', handler);
   }, []);
 
   return { devices, selectedDeviceId, setSelectedDeviceId, loadDevices };
