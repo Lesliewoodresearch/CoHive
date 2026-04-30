@@ -1051,7 +1051,7 @@ export function CentralHexView({
       <div className="p-3 border-t-2 border-gray-300 mt-4">
         {/* Gem — display only, interaction happens in assessment modal */}
         <div className="mb-3 flex items-center gap-2">
-          <img src={gemIcon} alt="gem" className="w-7 h-7 flex-shrink-0" />
+          <img src={gemIcon} alt="CoHive gem icon" className="w-7 h-7 flex-shrink-0" />
           <span className="text-gray-900">Highlight elements you like</span>
         </div>
 

@@ -190,7 +190,7 @@ function AIResponseModal({ isOpen, onClose, title, content, meta }: AIResponseMo
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => downloadAsMarkdown(title, content)} className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"><Download className="w-4 h-4" />Download</button>
-            <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
+            <button onClick={onClose} aria-label="Close" className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
           </div>
         </div>
         <div className="flex-1 overflow-y-auto px-6 py-5">{renderMarkdown(content)}</div>
@@ -844,7 +844,7 @@ export function ResearcherModes({
                 Uploaded by {previewFile.uploadedBy} · {new Date(previewFile.uploadDate).toLocaleDateString()}
               </p>
             </div>
-            <button onClick={handleClosePreview} className="text-gray-500 hover:text-gray-700"><X className="w-6 h-6" /></button>
+            <button onClick={handleClosePreview} aria-label="Close preview" className="text-gray-500 hover:text-gray-700"><X className="w-6 h-6" /></button>
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             <div className="grid grid-cols-2 gap-4">

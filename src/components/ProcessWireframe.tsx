@@ -15,6 +15,8 @@ import { DatabricksFileSaver } from './DatabricksFileSaver';
 import { InterviewDialog } from './InterviewDialog';
 import { useMicDevices } from '../hooks/useMicDevices';
 import { AssessmentModal, type IdeaElement, type IterationGem, type KbMode, type RequestMode } from './AssessmentModal';
+import { UserNotesBox, type NoteEntry } from './UserNotesBox';
+import type { ReviewItem } from './GemCheckCoalReviewPanel';
 import { MarkdownViewer } from './MarkdownViewer';
 import { LoadingGem, SpinHex } from './LoadingGem';
 import cohiveLogo from 'figma:asset/88105c0c8621f3d41d65e5be3ae75558f9de1753.png';
@@ -137,7 +139,7 @@ export default function ProcessWireframe() {
   const [iterationChecks, setIterationChecks] = useState<Array<{ text: string; hexId: string; hexLabel: string }>>([]);
   const [iterationCoal, setIterationCoal] = useState<Array<{ text: string; hexId: string; hexLabel: string }>>([]);
   const [iterationDirections, setIterationDirections] = useState<string[]>([]);
-  const [userNotes, setUserNotes] = useState<string>('');
+  const [noteEntries, setNoteEntries] = useState<NoteEntry[]>([{ id: 'init-note', type: 'note', text: '' }]);
 
   // Assessment Modal state
   const [assessmentModalOpen, setAssessmentModalOpen] = useState(false);
@@ -912,8 +914,48 @@ export default function ProcessWireframe() {
     const hexLabel = currentContent?.title || activeStepId;
     const totalRuns = Object.values(hexExecutions).reduce((sum, arr) => sum + (arr?.length || 0), 0);
     const runLabel = totalRuns === 0 ? 'pre-assessment' : `run ${totalRuns}`;
-    const entry = `Added prompt [${hexLabel} · ${runLabel}]: ${direction}`;
-    setUserNotes(prev => prev ? `${prev}\n${entry}` : entry);
+    const promptText = `[${hexLabel} · ${runLabel}]: ${direction}`;
+    setNoteEntries(prev => {
+      const next = [...prev];
+      next.push({ id: `prompt-${Date.now()}`, type: 'prompt', text: promptText, hexLabel });
+      // Ensure there's a note entry after for continued typing
+      const last = next[next.length - 1];
+      if (last?.type !== 'note' || last.text !== '') {
+        next.push({ id: `note-${Date.now() + 1}`, type: 'note', text: '' });
+      }
+      return next;
+    });
+  };
+
+  const handleReviewConfirmed = (items: ReviewItem[]) => {
+    const confirmed = items.filter((item) => item.included);
+    // Update iteration-level check/coal arrays for iteration save
+    setIterationChecks(prev => [
+      ...prev,
+      ...confirmed.filter(i => i.type === 'check').map(i => ({ text: i.text, hexId: i.hexId, hexLabel: i.hexLabel })),
+    ]);
+    setIterationCoal(prev => [
+      ...prev,
+      ...confirmed.filter(i => i.type === 'coal').map(i => ({ text: i.text, hexId: i.hexId, hexLabel: i.hexLabel })),
+    ]);
+    if (confirmed.length === 0) return;
+    setNoteEntries(prev => {
+      const next = [...prev];
+      confirmed.forEach((item) => {
+        next.push({
+          id: `${item.type}-${item.id}`,
+          type: item.type as 'gem' | 'check' | 'coal',
+          text: item.text,
+          hexLabel: item.hexLabel,
+        });
+      });
+      // Ensure a note entry follows for continued typing
+      const last = next[next.length - 1];
+      if (last?.type !== 'note') {
+        next.push({ id: `note-post-review-${Date.now()}`, type: 'note', text: '' });
+      }
+      return next;
+    });
   };
 
   const handleSaveRecommendation = (recommendation: string, hexId: string) => {
@@ -1195,10 +1237,10 @@ export default function ProcessWireframe() {
               // Clear iteration gems when navigating to Enter — iteration boundary
               if (stepId === 'Enter') {
                 setIterationGems([]);
-        setIterationChecks([]);
-        setIterationCoal([]);
-        setIterationDirections([]);
-        setUserNotes('');
+                setIterationChecks([]);
+                setIterationCoal([]);
+                setIterationDirections([]);
+                setNoteEntries([{ id: `note-enter-${Date.now()}`, type: 'note', text: '' }]);
               }
               if (stepId === 'Enter' && !iterationSaved) {
                 setResponses(prev => ({ ...prev, 'Findings': { ...prev['Findings'], [0]: '' } }));
@@ -2050,11 +2092,19 @@ export default function ProcessWireframe() {
                                             iterationCoal.forEach(c => txtLines.push(`[${c.hexLabel}] ${c.text}`));
                                             txtLines.push('');
                                           }
-                                          if (userNotes.trim()) {
+                                          const noteText = noteEntries
+                                            .filter(e => e.text.trim())
+                                            .map(e => {
+                                              if (e.type === 'note') return e.text.trim();
+                                              const prefix = e.type === 'gem' ? 'GEM' : e.type === 'check' ? 'CHECK' : e.type === 'coal' ? 'COAL' : 'DIRECTION';
+                                              return `[${prefix}${e.hexLabel ? ' · ' + e.hexLabel : ''}] ${e.text.trim()}`;
+                                            })
+                                            .join('\n\n');
+                                          if (noteText) {
                                             txtLines.push('='.repeat(60));
                                             txtLines.push('USER NOTES');
                                             txtLines.push('='.repeat(60));
-                                            txtLines.push(userNotes.trim());
+                                            txtLines.push(noteText);
                                             txtLines.push('');
                                           }
 
@@ -2074,10 +2124,10 @@ export default function ProcessWireframe() {
                                             localStorage.setItem('cohive_iteration_saved', 'true');
                                             setLastAssessmentResults(null);
                                             setIterationGems([]);
-        setIterationChecks([]);
-        setIterationCoal([]);
-        setIterationDirections([]);
-        setUserNotes('');
+                                            setIterationChecks([]);
+                                            setIterationCoal([]);
+                                            setIterationDirections([]);
+                                            setNoteEntries([{ id: `note-save-${Date.now()}`, type: 'note', text: '' }]);
                                           } else { alert(`Failed to save to Databricks: ${result.error || 'Unknown error'}`); }
                                         }
                                       }}
@@ -2256,7 +2306,9 @@ export default function ProcessWireframe() {
                 <FileText className="w-4 h-4 text-gray-600" />
                 <h3 className="text-gray-900">User Notes</h3>
               </div>
-              <textarea className="w-full border-2 border-gray-300 bg-gray-50 rounded p-2 text-sm resize-none" style={{ height: 'calc(550px - 80px)' }} placeholder="Add notes to be saved with each iteration..." value={userNotes} onChange={(e) => setUserNotes(e.target.value)} />
+              <div className="border-2 border-gray-300 bg-gray-50 rounded p-2" style={{ height: 'calc(550px - 80px)' }}>
+                <UserNotesBox entries={noteEntries} onEntriesChange={setNoteEntries} />
+              </div>
             </div>
           </div>
         </div>
@@ -2332,6 +2384,7 @@ export default function ProcessWireframe() {
           iterationCoal={iterationCoal}
           iterationDirections={iterationDirections}
           onGemSaved={handleGemSaved}
+          onReviewConfirmed={handleReviewConfirmed}
         />
       )}
 

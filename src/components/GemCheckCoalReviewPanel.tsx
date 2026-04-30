@@ -60,7 +60,7 @@ function GemIcon({ size = 20 }: { size?: number }) {
   return (
     <img
       src={gemIcon}
-      alt="gem"
+      alt="CoHive gem icon"
       style={{ width: size, height: size, flexShrink: 0, objectFit: 'contain' }}
     />
   );
@@ -280,7 +280,7 @@ export function GemCheckCoalReviewPanel({
               From {hexLabel} · {includedCount} of {items.length} included
             </p>
           </div>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
+          <button onClick={onClose} aria-label="Close" className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
             <X className="w-5 h-5" />
           </button>
         </div>

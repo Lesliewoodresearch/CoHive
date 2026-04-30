@@ -214,6 +214,7 @@ export function ModelTemplateManager({
           <p className="text-gray-600 text-sm">Configure which AI model to use for each hex and purpose</p>
         </div>
         <button
+          aria-label="Close"
           className="p-2 hover:bg-gray-100 rounded"
           onClick={() => { setIsOpen(false); setViewMode('select'); setEditingTemplate(null); }}
         >

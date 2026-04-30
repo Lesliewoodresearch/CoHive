@@ -984,6 +984,7 @@ export function AssessmentModal({
             </div>
             <button
               onClick={onClose}
+              aria-label="Close"
               className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <X className="w-5 h-5" />
@@ -1206,7 +1207,7 @@ export function AssessmentModal({
                 <div className="flex items-center gap-1.5">
                   {savedGemCount > 0 && (
                     <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 border border-amber-200 rounded-full">
-                      <img src={gemIcon} alt="gem" style={{ width: "16px", height: "16px", objectFit: "contain" }} />
+                      <img src={gemIcon} alt="CoHive gem icon" style={{ width: "16px", height: "16px", objectFit: "contain" }} />
                       <span className="text-amber-800 text-xs font-semibold">{savedGemCount}</span>
                     </div>
                   )}
@@ -1249,6 +1250,7 @@ export function AssessmentModal({
               )}
               <button
                 onClick={onClose}
+                aria-label="Close"
                 className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <X className="w-5 h-5" />
@@ -1322,7 +1324,7 @@ export function AssessmentModal({
             <div className="bg-white border-b border-gray-200 px-6 py-2.5 flex items-center gap-4 flex-shrink-0 flex-wrap">
               <span className="text-gray-500 text-sm font-medium">Select any text:</span>
               <span className="flex items-center gap-1.5 text-sm text-gray-800 font-medium">
-                <img src={gemIcon} alt="gem" style={{ width: "18px", height: "18px", objectFit: "contain" }} />
+                <img src={gemIcon} alt="CoHive gem icon" style={{ width: "18px", height: "18px", objectFit: "contain" }} />
                 Highlight elements you like
               </span>
               <span className="flex items-center gap-1.5 text-sm text-gray-800 font-medium">
@@ -1538,7 +1540,7 @@ export function AssessmentModal({
                   <div className="space-y-2">
                     {savedGemCount > 0 && (
                       <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-3 flex items-center gap-2">
-                        <img src={gemIcon} alt="gem" style={{ width: "20px", height: "20px", objectFit: "contain" }} />
+                        <img src={gemIcon} alt="CoHive gem icon" style={{ width: "20px", height: "20px", objectFit: "contain" }} />
                         <span className="text-amber-800 font-medium text-sm">
                           {savedGemCount} element{savedGemCount !== 1 ? "s" : ""} highlighted
                         </span>
@@ -1597,7 +1599,7 @@ export function AssessmentModal({
                     {savingGem ? (
                       <SpinHex className="w-4 h-4" />
                     ) : (
-                      <img src={gemIcon} alt="gem" style={{ width: "18px", height: "18px", objectFit: "contain" }} />
+                      <img src={gemIcon} alt="CoHive gem icon" style={{ width: "18px", height: "18px", objectFit: "contain" }} />
                     )}
                     Highlight elements you like
                   </button>
@@ -1741,7 +1743,7 @@ export function AssessmentModal({
             key={toast.id}
             className="flex items-center gap-2 px-4 py-3 bg-amber-500 text-white rounded-lg shadow-lg text-sm max-w-xs"
           >
-            <img src={gemIcon} alt="gem" style={{ width: "16px", height: "16px", objectFit: "contain", flexShrink: 0 }} />
+            <img src={gemIcon} alt="CoHive gem icon" style={{ width: "16px", height: "16px", objectFit: "contain", flexShrink: 0 }} />
             <div className="min-w-0">
               <div className="font-medium">Highlighted!</div>
               <div className="text-amber-100 text-xs truncate">{toast.text}</div>

@@ -107,6 +107,7 @@ export function TemplateManager({
           <p className="text-gray-600 text-sm">Configure user roles, permissions, and workflow customization</p>
         </div>
         <button
+          aria-label="Close"
           className="p-2 hover:bg-gray-100 rounded"
           onClick={() => {
             setIsOpen(false);

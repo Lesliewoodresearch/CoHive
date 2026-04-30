@@ -354,6 +354,7 @@ ${summarySection}
           </div>
           <button
             onClick={onClose}
+            aria-label="Close interview"
             className="text-gray-400 hover:text-gray-600 transition-colors"
             disabled={isSaving}
           >

@@ -3222,7 +3222,7 @@ return (
               {currentInfo?.title || 'Hexagon Information'}
             </h3>
             {/* Close button */}
-            <button onClick={() => setShowInfo(false)}>
+            <button onClick={() => setShowInfo(false)} aria-label="Close">
               <X className="w-3 h-3 text-gray-600" />
             </button>
           </div>

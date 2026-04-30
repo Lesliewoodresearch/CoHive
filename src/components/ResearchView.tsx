@@ -231,7 +231,7 @@ export function ResearchView({
                         : <span className="ml-2 px-1.5 py-0.5 bg-yellow-100 text-yellow-800 rounded text-xs">Pending</span>}
                     </p>
                   </div>
-                  <button onClick={() => setSelectedFile(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+                  <button onClick={() => setSelectedFile(null)} aria-label="Close file detail" className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4">
                   <div className="bg-gray-50 border-2 border-gray-200 rounded p-4 text-sm">
@@ -274,7 +274,7 @@ export function ResearchView({
               <div className="bg-white rounded-lg max-w-2xl w-full" onClick={e => e.stopPropagation()}>
                 <div className="border-b-2 border-gray-300 p-4 flex items-center justify-between">
                   <h3 className="text-gray-900 font-medium">Recommend Edit: {file.fileName}</h3>
-                  <button onClick={() => { setShowSuggestionForm(false); setNewSuggestion(''); }} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+                  <button onClick={() => { setShowSuggestionForm(false); setNewSuggestion(''); }} aria-label="Close suggestion form" className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
                 </div>
                 <div className="p-4">
                   <textarea
@@ -421,7 +421,7 @@ export function ResearchView({
                       : <span className="ml-2 px-1.5 py-0.5 bg-yellow-100 text-yellow-800 rounded text-xs">Pending</span>}
                   </p>
                 </div>
-                <button onClick={() => setSelectedFile(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+                <button onClick={() => setSelectedFile(null)} aria-label="Close file detail" className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
               </div>
               <div className="flex-1 overflow-y-auto p-4">
                 <div className="bg-gray-50 border-2 border-gray-300 rounded p-4 text-sm">
