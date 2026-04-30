@@ -78,6 +78,7 @@ export function UserNotesBox({ entries, onEntriesChange }: UserNotesBoxProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevLengthRef = useRef(entries.length);
 
+  const hasNoteContent = entries.some((e) => e.type === 'note' && e.text.trim() !== '');
   const hasGemEntries = entries.some((e) => ['gem', 'check', 'coal'].includes(e.type));
   const hasPromptEntries = entries.some((e) => e.type === 'prompt');
 
@@ -99,15 +100,17 @@ export function UserNotesBox({ entries, onEntriesChange }: UserNotesBoxProps) {
     <div className="flex flex-col h-full gap-1.5">
       {/* Progressive checkboxes */}
       <div className="flex items-center gap-3 text-xs text-gray-500 flex-shrink-0">
-        <label className="flex items-center gap-1 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={showNotes}
-            onChange={(e) => setShowNotes(e.target.checked)}
-            className="w-3 h-3"
-          />
-          Notes
-        </label>
+        {hasNoteContent && (
+          <label className="flex items-center gap-1 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={showNotes}
+              onChange={(e) => setShowNotes(e.target.checked)}
+              className="w-3 h-3"
+            />
+            Notes
+          </label>
+        )}
         {hasGemEntries && (
           <label className="flex items-center gap-1 cursor-pointer select-none">
             <input
