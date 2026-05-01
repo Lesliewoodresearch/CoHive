@@ -53,6 +53,7 @@ interface ResearcherModesProps {
   onPendingCountChange?: (count: number) => void;
   processingModelEndpoint?: string;
   onRefreshFiles?: () => void;
+  onLoadingChange?: (loading: boolean, message?: string) => void;
 }
 
 const centralHexagons = [
@@ -209,7 +210,7 @@ export function ResearcherModes({
   availableBrands = [], availableProjectTypes = [], projectTypeConfigs = [],
   onAddBrand, onAddProjectType, onAddProjectTypeWithPrompt,
   userRole = 'marketing-manager', onModeChange, onFileOpen, onPendingCountChange,
-  processingModelEndpoint, onRefreshFiles,
+  processingModelEndpoint, onRefreshFiles, onLoadingChange,
 }: ResearcherModesProps) {
 
   const [mode, setMode] = useState<'synthesis' | 'personas' | 'read-edit-approve' | 'workspace' | 'custom-prompt' | null>(() => {
@@ -503,13 +504,17 @@ export function ResearcherModes({
     const init: { [id: string]: 'pending' | 'processing' | 'success' | 'error' } = {};
     selectedArray.forEach(id => { init[id] = 'pending'; });
     setProcessingStatus(init);
+    onLoadingChange?.(true, `Processing 1 of ${selectedArray.length}…`);
 
     const metadataEntries: MetadataAssignmentEntry[] = [];
+    let doneCount = 0;
 
     try {
       const processFile = async (fileId: string) => {
         setProcessingStatus(prev => ({ ...prev, [fileId]: 'processing' }));
         const result = await processKnowledgeBaseFile(fileId, processingModelEndpoint, availableBrands, availableProjectTypes);
+        doneCount++;
+        onLoadingChange?.(true, `Processing ${doneCount} of ${selectedArray.length}: ${result.fileName || fileId}`);
         if (result.success) {
           setProcessingStatus(prev => ({ ...prev, [fileId]: 'success' }));
           metadataEntries.push({
@@ -542,7 +547,7 @@ export function ResearcherModes({
       if (metadataEntries.length > 0) { setMetadataQueue(metadataEntries); setShowMetadataModal(true); }
       else alert('Processing complete, but no files succeeded.');
     } catch (e) { alert(`❌ Processing failed: ${e instanceof Error ? e.message : 'Unknown'}`); }
-    finally { setIsProcessing(false); setProcessingStatus({}); }
+    finally { setIsProcessing(false); setProcessingStatus({}); onLoadingChange?.(false); }
   };
 
   const handleSaveMetadataAssignments = async () => {
@@ -695,8 +700,11 @@ export function ResearcherModes({
     if (!isAuthenticated()) { alert('⚠️ Please sign in to Databricks first.'); event.target.value = ''; return; }
     const fileArray = Array.from(files);
     let ok = 0; let fail = 0; const failed: string[] = [];
+    onLoadingChange?.(true, fileArray.length === 1 ? `Uploading "${fileArray[0].name}"…` : `Uploading 1 of ${fileArray.length}: ${fileArray[0].name}`);
     try {
-      for (const file of fileArray) {
+      for (let i = 0; i < fileArray.length; i++) {
+        const file = fileArray[i];
+        onLoadingChange?.(true, fileArray.length === 1 ? `Uploading "${file.name}"…` : `Uploading ${i + 1} of ${fileArray.length}: ${file.name}`);
         try {
           const r = await uploadToKnowledgeBase({ file, scope: 'general', fileType: 'Synthesis', tags: ['unprocessed'], userEmail, userRole: canApproveResearch ? 'research-leader' : 'research-analyst' });
           if (r.success) {
@@ -707,13 +715,15 @@ export function ResearcherModes({
           } else { fail++; failed.push(file.name); }
         } catch { fail++; failed.push(file.name); }
       }
+      onLoadingChange?.(true, 'Refreshing knowledge base…');
       await refreshPendingQueues();
+      event.target.value = '';
       alert(fileArray.length === 1
         ? ok === 1 ? `✅ "${fileArray[0].name}" uploaded. Go to Read/Edit/Approve to process it.` : `❌ Failed to upload "${fileArray[0].name}".`
         : `✅ ${ok} uploaded${fail > 0 ? `, ❌ ${fail} failed:\n${failed.join('\n')}` : ''}\n\nProcess files in Read/Edit/Approve.`
       );
-      event.target.value = '';
     } catch { alert('Failed to upload. Please try again.'); event.target.value = ''; }
+    finally { onLoadingChange?.(false); }
   };
 
   // Upload directly to KB as approved brand-scoped file — bypasses read/edit/approve
