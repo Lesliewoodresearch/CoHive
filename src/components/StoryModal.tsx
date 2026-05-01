@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, CircleCheck, CircleAlert, BookOpen, Tag, Globe, Building2 } from 'lucide-react';
 import gemIcon from 'figma:asset/53dc6cf554f69e479cfbd60a46741f158d11dd21.png';
 import { GemCheckCoalReviewPanel, type ReviewItem } from './GemCheckCoalReviewPanel';
-import { saveGem } from '../utils/databricksAPI';
+import { saveGem, readKnowledgeBaseFile } from '../utils/databricksAPI';
 import { getValidSession } from '../utils/databricksAuth';
 import { LoadingGem, SpinHex } from './LoadingGem';
 import { executeAIPrompt } from '../utils/databricksAI';
@@ -92,11 +92,15 @@ function buildStoryPrompt(params: {
 }): { systemPrompt: string; prompt: string } {
   const { brand, projectType, category, subtype, kbMode, scope, kbContent, roundIndex, iterationDirections } = params;
 
-  const kbInstruction = kbMode === 'hard-forbidden'
-    ? 'You MUST draw exclusively from the provided Knowledge Base content. General knowledge is strictly forbidden. Every claim must be grounded in the KB material.'
+  const hasKbContent = kbContent.trim().length > 0;
+
+  const kbInstruction = !hasKbContent
+    ? 'No Knowledge Base files were loaded. Use your general knowledge about the brand carefully and conservatively — do not invent product names, campaigns, or attributes that you are not confident are real.'
+    : kbMode === 'hard-forbidden'
+    ? 'You MUST draw exclusively from the provided Knowledge Base content below. General knowledge is strictly forbidden. Every brand name, product name, campaign, attribute, and claim must come directly from the KB files. If a detail is not in the KB, omit it rather than invent it.'
     : kbMode === 'strong-preference'
-    ? 'Strongly prefer the provided Knowledge Base content. Only use general knowledge when the KB is completely silent on a topic.'
-    : 'Use both the Knowledge Base content and your general knowledge equally. All specific brand claims must reference the KB material.';
+    ? 'The provided Knowledge Base content is your primary source. Ground all brand-specific details — names, products, campaigns, attributes — in the KB files. Only supplement with general knowledge when the KB is completely silent on a topic, and flag when you do.'
+    : 'Ground all brand-specific details — names, products, campaigns, attributes — in the provided Knowledge Base content. You may supplement with general market knowledge, but every specific brand claim must be traceable to the KB files.';
 
   const scopeInstruction = scope === 'brand'
     ? `Focus exclusively on ${brand} brand data and brand-specific insights.`
@@ -121,14 +125,16 @@ The CONSUMER (customer, user, audience member) is ALWAYS the protagonist and her
 - THE VILLAIN / ANTAGONIST / INCUMBENT (the oppressive force, the trap, the thing to overcome): The brand (or a named competitor) is what the consumer must confront, escape from, or outsmart. The consumer's victory is the story.
 Never make the brand the protagonist. The brand's power is revealed entirely through what it does FOR or AGAINST the consumer.
 
+KNOWLEDGE BASE GROUNDING — this is non-negotiable:
 ${kbInstruction}
+${hasKbContent ? `You have been given Knowledge Base files below. Read them carefully before writing. Every specific brand detail in your story (product names, campaigns, slogans, consumer insights, competitive facts) must be drawn from those files. Do not substitute fictional or generic brand details when real ones are available in the KB.` : ''}
 
 ${scopeInstruction}
 
 Writing style:
 - Write in fluid, engaging prose — not bullet points
 - Each story step should flow into the next as a continuous narrative
-- Be specific: use concrete details, real brand attributes, and human-scale moments
+- Be specific: use concrete details drawn from the Knowledge Base
 - Stories should be 400–600 words total
 - Each story step should be clearly labeled with a heading`;
 
@@ -185,6 +191,7 @@ export function StoryModal({
   const [rounds, setRounds] = useState<StoryRound[]>([]);
   const [activeTab, setActiveTab] = useState<number | null>(null);
   const [isRunning, setIsRunning] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('Loading knowledge base files…');
   const [isComplete, setIsComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [floatingBtn, setFloatingBtn] = useState<{
@@ -218,10 +225,29 @@ export function StoryModal({
     setActiveTab(null);
 
     try {
-      const kbContent = researchFiles
-        .filter(f => f.isApproved && kbFileNames.includes(f.fileName) && f.content)
-        .map(f => `[${f.fileName}]\n${f.content}`)
-        .join('\n\n---\n\n');
+      // Fetch actual file content from Databricks for selected KB files
+      const selectedFiles = researchFiles.filter(
+        f => f.isApproved && kbFileNames.includes(f.fileName)
+      );
+
+      setLoadingMessage('Loading knowledge base files…');
+
+      const fileContents = await Promise.all(
+        selectedFiles.map(async f => {
+          const result = await readKnowledgeBaseFile(f.id);
+          if (result.success && result.content?.trim()) {
+            // Truncate large files to keep prompt manageable (~3000 chars each)
+            const text = result.content.trim();
+            const truncated = text.length > 3000 ? text.slice(0, 3000) + '\n[... content truncated ...]' : text;
+            return `[FILE: ${f.fileName}]\n${truncated}`;
+          }
+          return null;
+        })
+      );
+
+      const kbContent = fileContents.filter(Boolean).join('\n\n---\n\n');
+
+      setLoadingMessage(`Generating ${subtype.label} story…`);
 
       const totalRounds = subtype.dualPOV ? 2 : 1;
 
@@ -264,6 +290,7 @@ export function StoryModal({
       setActiveTab(null);
       setIsComplete(false);
       setError(null);
+      setLoadingMessage('Loading knowledge base files…');
       setFloatingBtn(null);
       setSavedGemItems([]);
       setSavedCheckItems([]);
@@ -539,8 +566,8 @@ export function StoryModal({
         {/* Loading */}
         {isRunning && rounds.length === 0 && (
           <div className="flex-1 flex flex-col items-center justify-center gap-4 py-12">
-            <LoadingGem />
-            <p className="text-gray-600 font-medium">Generating {subtype.label} story…</p>
+            <LoadingGem size="large" />
+            <p className="text-gray-700 font-medium">{loadingMessage}</p>
             <p className="text-gray-400 text-sm">Writing for {brand}</p>
           </div>
         )}
