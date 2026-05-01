@@ -622,7 +622,11 @@ export function StoryModal({
             )}
 
             {isComplete && (
-              <div className="bg-white border-t-2 border-gray-200 px-6 py-4 flex items-center justify-end flex-shrink-0 rounded-b-xl">
+              <div className="bg-white border-t-2 border-gray-200 px-6 py-4 flex items-center justify-between flex-shrink-0 rounded-b-xl">
+                <button onClick={onClose}
+                  className="px-4 py-2 border-2 border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm">
+                  Discard
+                </button>
                 <button onClick={handleAcceptAndClose}
                   className="flex items-center gap-2 px-5 py-2 bg-gray-900 text-white rounded-lg hover:bg-black transition-colors font-medium text-sm">
                   <CircleCheck className="w-4 h-4" />

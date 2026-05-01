@@ -2146,10 +2146,10 @@ export default function ProcessWireframe() {
                                             txtLines.push('');
                                           }
                                           const noteText = noteEntries
-                                            .filter(e => e.text.trim())
+                                            .filter(e => e.text.trim() && e.type !== 'story')
                                             .map(e => {
                                               if (e.type === 'note') return e.text.trim();
-                                              const prefix = e.type === 'gem' ? 'GEM' : e.type === 'check' ? 'CHECK' : e.type === 'coal' ? 'COAL' : e.type === 'story' ? 'STORY' : 'DIRECTION';
+                                              const prefix = e.type === 'gem' ? 'GEM' : e.type === 'check' ? 'CHECK' : e.type === 'coal' ? 'COAL' : 'DIRECTION';
                                               return `[${prefix}${e.hexLabel ? ' · ' + e.hexLabel : ''}] ${e.text.trim()}`;
                                             })
                                             .join('\n\n');
