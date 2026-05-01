@@ -486,6 +486,22 @@ export default function ProcessWireframe() {
     fetchUserEmail();
   }, [isDatabricksAuthenticated]);
 
+  // Detect session expiry while the app is open — check on tab focus and every 2 minutes
+  useEffect(() => {
+    const checkExpiry = () => {
+      if (isDatabricksAuthenticated && !isAuthenticated()) {
+        setIsDatabricksAuthenticated(false);
+      }
+    };
+    const handleVisibility = () => { if (document.visibilityState === 'visible') checkExpiry(); };
+    document.addEventListener('visibilitychange', handleVisibility);
+    const interval = setInterval(checkExpiry, 2 * 60 * 1000);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      clearInterval(interval);
+    };
+  }, [isDatabricksAuthenticated]);
+
   useEffect(() => {
     const loadResearchFilesFromDatabricks = async () => {
       if (isDatabricksAuthenticated && !isCheckingAuth) {
@@ -1209,7 +1225,11 @@ export default function ProcessWireframe() {
     setDatabricksLoadingMessage('Loading knowledge base…');
     try {
       const session = await getValidSession();
-      if (!session) { setResearchFiles([]); return; }
+      if (!session) {
+        setResearchFiles([]);
+        setIsDatabricksAuthenticated(false);
+        return;
+      }
       if (!currentTemplate) return;
       let kbFiles: KnowledgeBaseFile[] = [];
       kbFiles = await listKnowledgeBaseFiles({ sortBy: 'upload_date', sortOrder: 'DESC', limit: 500 });
@@ -1386,7 +1406,7 @@ export default function ProcessWireframe() {
                 <div className="mb-3">
                   {isCheckingAuth ? (
                     <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-2.5">
-                      <div className="flex items-center gap-2"><Database className="w-4 h-4 text-blue-600 animate-pulse" /><span className="text-gray-700 text-sm">Checking Databricks authentication...</span></div>
+                      <div className="flex items-center gap-2"><SpinHex className="w-4 h-4" /><span className="text-gray-700 text-sm">Checking Databricks authentication...</span></div>
                     </div>
                   ) : isDatabricksAuthenticated ? (
                     <div className="bg-green-50 border-2 border-green-300 rounded-lg p-2.5">

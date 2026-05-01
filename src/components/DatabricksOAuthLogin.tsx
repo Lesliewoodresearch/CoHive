@@ -5,6 +5,7 @@ import { Alert, AlertDescription } from './ui/alert';
 import { Database, LogIn, AlertCircle, ArrowLeft } from 'lucide-react';
 import { colors } from '../styles/cohive-theme';
 import { initiateLogin, clearSession } from '../utils/databricksAuth';
+import { SpinHex } from './LoadingGem';
 
 interface DatabricksOAuthLoginProps {
   open: boolean;
@@ -130,8 +131,8 @@ export function DatabricksOAuthLogin({ open, onClose, currentStep, onBackToLogin
               </div>
             </>
           ) : (
-            <div className="flex items-center justify-center gap-3 py-4">
-              <Database className="h-6 w-6 animate-pulse" style={{ color: colors.hex.purple.light }} />
+            <div className="flex flex-col items-center justify-center gap-4 py-4">
+              <SpinHex className="w-14 h-14" />
               <span style={{ color: colors.text.secondary }}>Redirecting to Databricks...</span>
             </div>
           )}
