@@ -38,8 +38,10 @@ export function StoriesView({
   const selectedSubtype = selectedCategory?.subtypes.find(s => s.id === selectedSubtypeId) ?? null;
 
   const handleCategoryChange = (id: string) => {
+    const cat = STORY_CATEGORIES.find(c => c.id === id);
     setSelectedCategoryId(id);
-    setSelectedSubtypeId(null);
+    // Auto-select if there's only one subtype — no second click needed
+    setSelectedSubtypeId(cat?.subtypes.length === 1 ? cat.subtypes[0].id : null);
   };
 
   const handleGenerate = () => {
@@ -70,7 +72,7 @@ export function StoriesView({
               </div>
             </label>
 
-            {selectedCategoryId === cat.id && (
+            {selectedCategoryId === cat.id && cat.subtypes.length > 1 && (
               <div style={{ marginLeft: '24px', paddingLeft: '12px', borderLeft: '3px solid #d8b4fe', marginTop: '4px', marginBottom: '4px' }}>
                 {cat.subtypes.map(sub => (
                   <label key={sub.id} className="flex items-start gap-2 p-0.5 cursor-pointer hover:bg-gray-50 rounded transition-colors">
