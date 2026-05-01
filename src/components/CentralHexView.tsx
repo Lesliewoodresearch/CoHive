@@ -1154,10 +1154,10 @@ export function CentralHexView({
               <h3 className="text-gray-900 font-semibold text-base">Previous results available</h3>
               <p className="text-gray-500 text-sm mt-0.5">
                 {previousExecutions.length > 0 && crossHexExecutions.length > 0
-                  ? `You have ${previousExecutions.length} run${previousExecutions.length !== 1 ? 's' : ''} in this hex plus results from other persona hexes.`
+                  ? `You have ${previousExecutions.length} run${previousExecutions.length !== 1 ? 's' : ''} in this hex plus results from other hexes (stories, personas).`
                   : previousExecutions.length > 0
                   ? `You have ${previousExecutions.length} prior run${previousExecutions.length !== 1 ? 's' : ''} in this hex.`
-                  : 'You have prior persona runs from other hexes.'
+                  : 'You have prior results from other hexes (stories or personas).'
                 }{' '}How would you like to proceed?
               </p>
             </div>
@@ -1176,8 +1176,8 @@ export function CentralHexView({
                 }}
                 className="w-full text-left px-4 py-3 border-2 border-gray-200 rounded-xl hover:border-purple-400 hover:bg-purple-50 transition-all"
               >
-                <div className="font-medium text-gray-900 text-sm">Include previous personas in this run</div>
-                <div className="text-gray-500 text-xs mt-0.5">Previous personas join this session and can build on or challenge prior results</div>
+                <div className="font-medium text-gray-900 text-sm">Include previous results in this run</div>
+                <div className="text-gray-500 text-xs mt-0.5">Stories and prior persona results join this session and can inform or challenge the discussion</div>
               </button>
               <button
                 onClick={() => {
