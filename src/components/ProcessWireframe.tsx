@@ -1425,9 +1425,10 @@ export default function ProcessWireframe() {
                          ) : activeStepId === 'stories' ? (
                   <StoriesView
                     brand={responses['Enter']?.[0]?.trim() || ''}
-                    projectType={responses['Enter']?.[1]?.trim() || ''}
-                    researchFiles={researchFiles}
+                    iterationDirections={iterationDirections}
                     onGenerate={handleStoriesGenerate}
+                    onAddIterationDirection={handleAddIterationDirection}
+                    onSaveRecommendation={handleSaveRecommendation}
                   />
                          ) : isCentralHex ? (
                   <CentralHexView key={activeStepId} hexId={activeStepId} hexLabel={currentContent.title} researchFiles={researchFiles} onExecute={handleCentralHexExecute} databricksInstructions={currentTemplate?.databricksInstructions?.[activeStepId] || ''} previousExecutions={hexExecutions[activeStepId] || []} crossHexExecutions={['Consumers', 'Luminaries', 'Colleagues', 'cultural', 'Grade'].filter(h => h !== activeStepId).flatMap(h => hexExecutions[h] || [])} anyPriorPersonaRun={['Consumers', 'Luminaries', 'Colleagues', 'cultural', 'Grade'].some(h => hexExecutions[h]?.length > 0)} onSaveRecommendation={handleSaveRecommendation} projectType={responses['Enter']?.[1] || ''} userBrand={responses['Enter']?.[0] || ''} lastResults={lastAssessmentResults} conversationMode={currentTemplate?.conversationSettings?.conversationMode || 'multi-round'} modelEndpoint={currentTemplate?.conversationSettings?.modelEndpoint || 'databricks-claude-haiku-4-5'} requestMode={deriveRequestMode()} userEmail={userEmail} userRole={userRole} onContextChange={(files, step) => setHexWidgetContext({ files, step })} onAddIterationDirection={handleAddIterationDirection} iterationDirections={iterationDirections} />
