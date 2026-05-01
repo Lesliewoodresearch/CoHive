@@ -293,6 +293,8 @@ export default function ProcessWireframe() {
   const loadSharedConfig = async () => {
     const DEFAULT_BRANDS = ['Nike', 'Adidas'];
     const systemProjectTypeNames = systemProjectTypes.map(pt => pt.projectType);
+    setIsDatabricksLoading(true);
+    setDatabricksLoadingMessage('Loading workspace config…');
     try {
       const result = await fetchSharedConfig();
       if (result.success && result.brands && result.brands.length > 0) {
@@ -343,6 +345,8 @@ export default function ProcessWireframe() {
       let userConfigs: ProjectTypeConfig[] = [];
       if (savedConfigs) { try { userConfigs = JSON.parse(savedConfigs); } catch { userConfigs = []; } }
       setProjectTypeConfigs([...systemProjectTypes, ...userConfigs]);
+    } finally {
+      setIsDatabricksLoading(false);
     }
   };
 
@@ -1201,6 +1205,8 @@ export default function ProcessWireframe() {
   };
 
   const loadKnowledgeBaseFiles = async () => {
+    setIsDatabricksLoading(true);
+    setDatabricksLoadingMessage('Loading knowledge base…');
     try {
       const session = await getValidSession();
       if (!session) { setResearchFiles([]); return; }
@@ -1240,6 +1246,8 @@ export default function ProcessWireframe() {
     } catch (error) {
       console.error('Failed to load knowledge base files:', error);
       setResearchFiles([]);
+    } finally {
+      setIsDatabricksLoading(false);
     }
   };
 
@@ -1259,14 +1267,7 @@ export default function ProcessWireframe() {
 
   return (
     <div className="p-8">
-      {isCheckingAuth && (
-        <div className="fixed inset-y-0 left-0 right-[350px] bg-white flex items-center justify-center z-50">
-          <div className="text-center">
-            <Cpu className="w-12 h-12 text-blue-500 animate-spin mx-auto mb-4" />
-            <p className="text-gray-700">Loading CoHive...</p>
-          </div>
-        </div>
-      )}
+      {isCheckingAuth && <LoadingGem message="Starting CoHive…" />}
 
       <div className="flex gap-6 mb-6">
         <div className="flex-shrink-0">
