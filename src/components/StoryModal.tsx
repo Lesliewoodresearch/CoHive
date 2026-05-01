@@ -1,14 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, CircleCheck, CircleAlert } from 'lucide-react';
+import { X, CircleCheck, CircleAlert, BookOpen, Tag, Globe, Building2 } from 'lucide-react';
 import gemIcon from 'figma:asset/53dc6cf554f69e479cfbd60a46741f158d11dd21.png';
 import { GemCheckCoalReviewPanel, type ReviewItem } from './GemCheckCoalReviewPanel';
-import { saveGem, type CitedFile } from '../utils/databricksAPI';
+import { saveGem } from '../utils/databricksAPI';
 import { getValidSession } from '../utils/databricksAuth';
 import { LoadingGem, SpinHex } from './LoadingGem';
 import { executeAIPrompt } from '../utils/databricksAI';
 import type { StoryCategory, StorySubtype } from '../data/storyTypes';
-import type { KbMode, Scope } from './AssessmentModal';
-import type { IterationGem } from './AssessmentModal';
+import type { KbMode, Scope, IterationGem } from './AssessmentModal';
 
 interface ResearchFile {
   id: string;
@@ -35,8 +34,6 @@ interface StoryModalProps {
   projectType: string;
   category: StoryCategory;
   subtype: StorySubtype;
-  kbMode: KbMode;
-  scope: Scope;
   researchFiles: ResearchFile[];
   kbFileNames: string[];
   userEmail: string;
@@ -47,14 +44,40 @@ interface StoryModalProps {
   iterationCoal?: Array<{ text: string; hexId: string; hexLabel: string }>;
   onGemSaved?: (gem: IterationGem) => void;
   onReviewConfirmed?: (items: ReviewItem[]) => void;
-  onAcceptResults?: (results: {
-    rounds: StoryRound[];
-    hexId: string;
-    hexLabel: string;
-  }) => void;
+  onAcceptResults?: (results: { rounds: StoryRound[]; hexId: string; hexLabel: string }) => void;
 }
 
-// Build the story generation prompt for a given round/POV
+// ─── KB / Scope config (mirrors AssessmentModal) ──────────────────────────────
+
+const KB_MODE_OPTIONS: { value: KbMode; label: string; description: string; activeClasses: string }[] = [
+  {
+    value: 'hard-forbidden',
+    label: 'Knowledge Base Only',
+    description: 'Every claim must come from KB files — general knowledge strictly forbidden',
+    activeClasses: 'bg-red-50 border-red-400 text-red-800',
+  },
+  {
+    value: 'strong-preference',
+    label: 'Knowledge Base Preferred',
+    description: 'Strongly prefer KB — general knowledge only when KB is completely silent',
+    activeClasses: 'bg-amber-50 border-amber-400 text-amber-800',
+  },
+  {
+    value: 'equal-weight',
+    label: 'Knowledge Base + General',
+    description: 'KB and general knowledge equally weighted — all claims cited',
+    activeClasses: 'bg-blue-50 border-blue-400 text-blue-800',
+  },
+];
+
+const SCOPE_OPTIONS: { value: Scope; label: string; description: string; icon: React.ReactNode }[] = [
+  { value: 'brand', label: 'Brand', description: 'Brand-specific data only', icon: <Building2 className="w-3.5 h-3.5" /> },
+  { value: 'category', label: 'Category', description: 'Brand + category benchmarks', icon: <Tag className="w-3.5 h-3.5" /> },
+  { value: 'general', label: 'General', description: 'Broad market + brand + category', icon: <Globe className="w-3.5 h-3.5" /> },
+];
+
+// ─── Story prompt builder ─────────────────────────────────────────────────────
+
 function buildStoryPrompt(params: {
   brand: string;
   projectType: string;
@@ -63,7 +86,7 @@ function buildStoryPrompt(params: {
   kbMode: KbMode;
   scope: Scope;
   kbContent: string;
-  roundIndex: number; // 0 = first POV/single, 1 = second POV
+  roundIndex: number;
 }): { systemPrompt: string; prompt: string } {
   const { brand, projectType, category, subtype, kbMode, scope, kbContent, roundIndex } = params;
 
@@ -123,6 +146,8 @@ Write the complete story now, with each step as a clearly labeled section. Make 
   return { systemPrompt, prompt };
 }
 
+// ─── Component ────────────────────────────────────────────────────────────────
+
 export function StoryModal({
   isOpen,
   onClose,
@@ -130,27 +155,27 @@ export function StoryModal({
   projectType,
   category,
   subtype,
-  kbMode,
-  scope,
   researchFiles,
   kbFileNames,
   userEmail,
   userRole = 'user',
   modelEndpoint = 'databricks-claude-sonnet-4-6',
-  iterationGems,
-  iterationChecks,
-  iterationCoal,
   onGemSaved,
   onReviewConfirmed,
   onAcceptResults,
 }: StoryModalProps) {
+  // Settings state — shown before generation starts
+  const [showSettings, setShowSettings] = useState(true);
+  const [kbMode, setKbMode] = useState<KbMode>('equal-weight');
+  const [scope, setScope] = useState<Scope>('brand');
+
   const [rounds, setRounds] = useState<StoryRound[]>([]);
   const [activeTab, setActiveTab] = useState<number | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [floatingBtn, setFloatingBtn] = useState<{
-    x: number; y: number; text: string; fileId: string | null; fileName: string | null;
+    x: number; y: number; text: string;
   } | null>(null);
   const [savingGem, setSavingGem] = useState(false);
   const [savingCheck, setSavingCheck] = useState(false);
@@ -169,6 +194,8 @@ export function StoryModal({
   const hexId = 'stories';
   const hexLabel = 'Stories';
 
+  const activeRound = rounds.find(r => r.roundNumber === activeTab);
+
   const runStory = useCallback(async () => {
     if (hasStarted.current) return;
     hasStarted.current = true;
@@ -178,7 +205,6 @@ export function StoryModal({
     setActiveTab(null);
 
     try {
-      // Gather KB content from approved research files matching scope
       const kbContent = researchFiles
         .filter(f => f.isApproved && kbFileNames.includes(f.fileName) && f.content)
         .map(f => `[${f.fileName}]\n${f.content}`)
@@ -189,34 +215,19 @@ export function StoryModal({
       for (let i = 0; i < totalRounds; i++) {
         const roundLabel = totalRounds === 1
           ? subtype.label
-          : i === 0
-          ? `${subtype.label} — Protagonist`
-          : `${subtype.label} — Challenger`;
+          : i === 0 ? `${subtype.label} — Protagonist` : `${subtype.label} — Challenger`;
 
         const { systemPrompt, prompt } = buildStoryPrompt({
           brand, projectType, category, subtype, kbMode, scope, kbContent, roundIndex: i,
         });
 
         const result = await executeAIPrompt({
-          prompt,
-          systemPrompt,
-          modelEndpoint,
-          maxTokens: 1200,
-          temperature: 0.75,
-          userEmail,
-          userRole,
+          prompt, systemPrompt, modelEndpoint, maxTokens: 1200, temperature: 0.75, userEmail, userRole,
         });
 
-        if (!result.success) {
-          throw new Error(result.error || 'Story generation failed');
-        }
+        if (!result.success) throw new Error(result.error || 'Story generation failed');
 
-        const round: StoryRound = {
-          roundNumber: i + 1,
-          label: roundLabel,
-          content: result.response,
-        };
-
+        const round: StoryRound = { roundNumber: i + 1, label: roundLabel, content: result.response };
         setRounds(prev => [...prev, round]);
         setActiveTab(prev => prev === null ? round.roundNumber : prev);
       }
@@ -229,16 +240,13 @@ export function StoryModal({
     }
   }, [brand, projectType, category, subtype, kbMode, scope, researchFiles, kbFileNames, userEmail, userRole, modelEndpoint]);
 
-  useEffect(() => {
-    if (isOpen && !hasStarted.current) {
-      runStory();
-    }
-  }, [isOpen, runStory]);
-
   // Reset on close
   useEffect(() => {
     if (!isOpen) {
       hasStarted.current = false;
+      setShowSettings(true);
+      setKbMode('equal-weight');
+      setScope('brand');
       setRounds([]);
       setActiveTab(null);
       setIsComplete(false);
@@ -256,37 +264,23 @@ export function StoryModal({
     const handleSelectionChange = () => {
       setTimeout(() => {
         const selection = window.getSelection();
-        if (!selection || selection.isCollapsed || !selection.toString().trim()) {
-          setFloatingBtn(null);
-          return;
-        }
+        if (!selection || selection.isCollapsed || !selection.toString().trim()) { setFloatingBtn(null); return; }
         const text = selection.toString().trim();
         if (text.length < 10) { setFloatingBtn(null); return; }
-
         const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
-        if (!range || !contentRef.current?.contains(range.commonAncestorContainer)) {
-          setFloatingBtn(null);
-          return;
-        }
-
+        if (!range || !contentRef.current?.contains(range.commonAncestorContainer)) { setFloatingBtn(null); return; }
         const rect = range.getBoundingClientRect();
         const modalRect = contentRef.current?.getBoundingClientRect();
-        if (modalRect) {
-          setFloatingBtn({ x: rect.left - modalRect.left + rect.width / 2, y: rect.bottom - modalRect.top, text, fileId: null, fileName: null });
-        }
+        if (modalRect) setFloatingBtn({ x: rect.left - modalRect.left + rect.width / 2, y: rect.bottom - modalRect.top, text });
       }, 50);
     };
-
     document.addEventListener('selectionchange', handleSelectionChange);
     return () => document.removeEventListener('selectionchange', handleSelectionChange);
   }, [activeTab]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (floatingBtn && (e.key === 'Enter' || (e.key === 's' && (e.metaKey || e.ctrlKey)))) {
-        e.preventDefault();
-        handleSaveGem();
-      }
+      if (floatingBtn && (e.key === 'Enter' || (e.key === 's' && (e.metaKey || e.ctrlKey)))) { e.preventDefault(); handleSaveGem(); }
       if (e.key === 'Escape') { setFloatingBtn(null); window.getSelection()?.removeAllRanges(); }
     };
     document.addEventListener('keydown', handleKeyDown);
@@ -301,9 +295,7 @@ export function StoryModal({
     const range = selection.getRangeAt(0);
     const rect = range.getBoundingClientRect();
     const modalRect = contentRef.current?.getBoundingClientRect();
-    if (modalRect) {
-      setFloatingBtn({ x: rect.left - modalRect.left + rect.width / 2, y: rect.bottom - modalRect.top, text, fileId: null, fileName: null });
-    }
+    if (modalRect) setFloatingBtn({ x: rect.left - modalRect.left + rect.width / 2, y: rect.bottom - modalRect.top, text });
   }, []);
 
   const handleSaveGem = async () => {
@@ -312,23 +304,14 @@ export function StoryModal({
     try {
       const session = await getValidSession();
       if (!session) throw new Error('Not authenticated');
-      const result = await saveGem({
-        gemText: floatingBtn.text,
-        assessmentType: subtype.label,
-        hexId, hexLabel, brand, projectType,
-        createdBy: userEmail,
-        accessToken: session.accessToken,
-        workspaceHost: session.workspaceHost,
-      });
+      const result = await saveGem({ gemText: floatingBtn.text, assessmentType: subtype.label, hexId, hexLabel, brand, projectType, createdBy: userEmail, accessToken: session.accessToken, workspaceHost: session.workspaceHost });
       if (result.success) {
         setSavedGemItems(prev => [...prev, { text: floatingBtn.text }]);
         onGemSaved?.({ gemText: floatingBtn.text, fileName: null, hexId, hexLabel });
         const toastId = Date.now().toString();
         setGemToasts(prev => [...prev, { id: toastId, text: floatingBtn.text.substring(0, 60) + (floatingBtn.text.length > 60 ? '…' : '') }]);
         setTimeout(() => setGemToasts(prev => prev.filter(t => t.id !== toastId)), 3500);
-      } else {
-        throw new Error(result.error || 'Save failed');
-      }
+      } else throw new Error(result.error || 'Save failed');
     } catch (err) {
       alert(`Failed to save gem: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
@@ -350,9 +333,7 @@ export function StoryModal({
       setTimeout(() => setCoalToasts(prev => prev.filter(t => t.id !== toastId)), 3500);
       setFloatingBtn(null);
       window.getSelection()?.removeAllRanges();
-    } finally {
-      setSavingCoal(false);
-    }
+    } finally { setSavingCoal(false); }
   };
 
   const handleSaveCheck = () => {
@@ -367,18 +348,15 @@ export function StoryModal({
       setTimeout(() => setCheckToasts(prev => prev.filter(t => t.id !== toastId)), 3500);
       setFloatingBtn(null);
       window.getSelection()?.removeAllRanges();
-    } finally {
-      setSavingCheck(false);
-    }
+    } finally { setSavingCheck(false); }
   };
 
   const handleAcceptAndClose = () => {
     const items: ReviewItem[] = [
-      ...savedGemItems.map((g, i) => ({ id: `gem-${Date.now()}-${i}`, type: 'gem' as const, text: g.text, hexId, hexLabel, included: true, rank: i })),
-      ...savedCheckItems.map((c, i) => ({ id: `check-${Date.now()}-${i}`, type: 'check' as const, text: c.text, hexId, hexLabel, included: true, rank: i })),
-      ...savedCoalItems.map((c, i) => ({ id: `coal-${Date.now()}-${i}`, type: 'coal' as const, text: c.text, hexId, hexLabel, included: true, rank: i })),
+      ...savedGemItems.map((g, i) => ({ id: `gem-${i}`, type: 'gem' as const, text: g.text, hexId, hexLabel, included: true, rank: i })),
+      ...savedCheckItems.map((c, i) => ({ id: `check-${i}`, type: 'check' as const, text: c.text, hexId, hexLabel, included: true, rank: i })),
+      ...savedCoalItems.map((c, i) => ({ id: `coal-${i}`, type: 'coal' as const, text: c.text, hexId, hexLabel, included: true, rank: i })),
     ];
-
     if (items.length > 0) {
       setShowReviewPanel(true);
     } else {
@@ -393,8 +371,6 @@ export function StoryModal({
     setShowReviewPanel(false);
     onClose();
   };
-
-  const activeRound = rounds.find(r => r.roundNumber === activeTab);
 
   if (!isOpen) return null;
 
@@ -419,6 +395,116 @@ export function StoryModal({
     );
   }
 
+  // ── Settings panel (shown before generation) ────────────────────────────────
+  if (showSettings) {
+    const activeKbOption = KB_MODE_OPTIONS.find(o => o.value === kbMode) ?? KB_MODE_OPTIONS[2];
+    const activeScopeOption = SCOPE_OPTIONS.find(o => o.value === scope) ?? SCOPE_OPTIONS[0];
+
+    return (
+      <div className="fixed inset-y-0 left-0 right-[350px] z-50 flex items-center justify-center p-8"
+        style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+        <div className="bg-white rounded-xl shadow-2xl flex flex-col" style={{ width: '560px', maxHeight: '85vh' }}>
+
+          {/* Header */}
+          <div className="bg-white border-b-2 border-gray-200 px-6 py-4 flex items-center justify-between flex-shrink-0 rounded-t-xl">
+            <div>
+              <h2 className="text-gray-900 font-semibold text-lg leading-tight">Story Settings</h2>
+              <p className="text-gray-500 text-sm mt-0.5">{brand} · {category.label} · {subtype.label}</p>
+            </div>
+            <button onClick={onClose} aria-label="Close" className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Body */}
+          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+
+            {/* Story info */}
+            <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+              <p className="text-xs text-purple-800 font-medium mb-1">
+                {subtype.label} · {subtype.arcDescription}
+              </p>
+              <p className="text-xs text-purple-600">
+                {subtype.steps.length} steps · {subtype.dualPOV ? '2 rounds (dual perspective)' : '1 round'}
+              </p>
+            </div>
+
+            {/* KB Mode */}
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <BookOpen className="w-4 h-4 text-gray-500" />
+                <label className="block text-sm font-semibold text-gray-800">Knowledge Base Usage</label>
+              </div>
+              <p className="text-xs text-gray-500 mb-3">Controls how strictly the story draws from your KB files.</p>
+              <div className="space-y-2">
+                {KB_MODE_OPTIONS.map(opt => (
+                  <button key={opt.value} onClick={() => setKbMode(opt.value)}
+                    className={`w-full flex items-start gap-3 p-3 rounded-lg border-2 text-left transition-all ${kbMode === opt.value ? opt.activeClasses : 'border-gray-200 hover:border-gray-300 bg-white'}`}>
+                    <div className={`w-4 h-4 rounded-full border-2 mt-0.5 flex-shrink-0 flex items-center justify-center ${kbMode === opt.value ? 'border-current' : 'border-gray-300'}`}>
+                      {kbMode === opt.value && <div className="w-2 h-2 rounded-full bg-current" />}
+                    </div>
+                    <div>
+                      <span className="font-semibold text-sm block">{opt.label}</span>
+                      <span className="text-xs opacity-80 leading-snug">{opt.description}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Scope */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-1">Information Scope</label>
+              <p className="text-xs text-gray-500 mb-3">How broadly should the story draw when generating?</p>
+              <div className="grid grid-cols-3 gap-2">
+                {SCOPE_OPTIONS.map(opt => (
+                  <button key={opt.value} onClick={() => setScope(opt.value)}
+                    className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border-2 text-center transition-all ${scope === opt.value ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                    <span className={scope === opt.value ? 'text-blue-600' : 'text-gray-400'}>{opt.icon}</span>
+                    <span className={`font-semibold text-xs ${scope === opt.value ? 'text-blue-800' : 'text-gray-700'}`}>{opt.label}</span>
+                    <span className="text-xs text-gray-500 leading-tight">{opt.description}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* KB files preview */}
+            {kbFileNames.length > 0 && (
+              <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <p className="text-xs text-gray-600 font-medium mb-2">📚 Knowledge Base files ({kbFileNames.length}):</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {kbFileNames.map((name, i) => (
+                    <span key={i} className="px-2 py-0.5 bg-white border border-gray-300 rounded text-xs text-gray-600">{name}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="bg-white border-t-2 border-gray-200 px-6 py-4 flex items-center justify-between flex-shrink-0 rounded-b-xl">
+            <div className="flex items-center gap-2">
+              <span className={`px-2 py-1 rounded text-xs font-medium border ${activeKbOption.activeClasses}`}>
+                {activeKbOption.label}
+              </span>
+              <span className="px-2 py-1 rounded text-xs font-medium bg-blue-50 border border-blue-300 text-blue-800 flex items-center gap-1">
+                {activeScopeOption.icon}
+                {activeScopeOption.label}
+              </span>
+            </div>
+            <button
+              onClick={() => { setShowSettings(false); runStory(); }}
+              className="px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-black transition-colors font-medium text-sm"
+            >
+              Start Story →
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Story content ────────────────────────────────────────────────────────────
   return (
     <div className="fixed inset-y-0 left-0 right-[350px] z-50 flex items-center justify-center p-8"
       style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
@@ -439,7 +525,7 @@ export function StoryModal({
           </button>
         </div>
 
-        {/* Loading state */}
+        {/* Loading */}
         {isRunning && rounds.length === 0 && (
           <div className="flex-1 flex flex-col items-center justify-center gap-4 py-12">
             <LoadingGem />
@@ -448,89 +534,61 @@ export function StoryModal({
           </div>
         )}
 
-        {/* Error state */}
+        {/* Error */}
         {error && (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6">
             <CircleAlert className="w-10 h-10 text-red-500" />
             <p className="text-red-700 font-medium text-center">{error}</p>
-            <button onClick={onClose} className="px-4 py-2 bg-gray-200 rounded-lg text-sm hover:bg-gray-300">
-              Close
-            </button>
+            <button onClick={onClose} className="px-4 py-2 bg-gray-200 rounded-lg text-sm hover:bg-gray-300">Close</button>
           </div>
         )}
 
-        {/* Content */}
+        {/* Tabs + content */}
         {rounds.length > 0 && (
           <>
-            {/* Tab bar */}
             <div className="flex items-center gap-1 px-4 pt-3 pb-0 border-b border-gray-200 overflow-x-auto flex-shrink-0">
               {rounds.map(r => (
-                <button
-                  key={r.roundNumber}
-                  onClick={() => setActiveTab(r.roundNumber)}
+                <button key={r.roundNumber} onClick={() => setActiveTab(r.roundNumber)}
                   className={`px-3 py-1.5 text-xs font-medium rounded-t-lg border border-b-0 transition-colors whitespace-nowrap ${
                     activeTab === r.roundNumber
                       ? 'bg-white text-gray-900 border-gray-300 -mb-px'
                       : 'bg-gray-50 text-gray-500 border-transparent hover:text-gray-700'
-                  }`}
-                >
+                  }`}>
                   {r.label}
                 </button>
               ))}
               {isRunning && rounds.length < (subtype.dualPOV ? 2 : 1) && (
                 <div className="px-3 py-1.5 text-xs text-gray-400 flex items-center gap-1.5">
-                  <SpinHex className="w-3 h-3" />
-                  Generating…
+                  <SpinHex className="w-3 h-3" /> Generating…
                 </div>
               )}
             </div>
 
-            {/* Story content */}
-            <div
-              ref={contentRef}
-              className="flex-1 overflow-y-auto px-6 py-5 relative"
-              onMouseUp={handleMouseUp}
-            >
+            <div ref={contentRef} className="flex-1 overflow-y-auto px-6 py-5 relative" onMouseUp={handleMouseUp}>
               {activeRound && (
-                <div className="prose prose-sm max-w-none">
-                  <div className="p-4 rounded-lg border border-purple-200 bg-purple-50/40 whitespace-pre-wrap text-sm text-gray-800 leading-relaxed">
-                    {activeRound.content}
-                  </div>
+                <div className="p-4 rounded-lg border border-purple-200 bg-purple-50/40 whitespace-pre-wrap text-sm text-gray-800 leading-relaxed">
+                  {activeRound.content}
                 </div>
               )}
 
-              {/* Floating gem/check/coal buttons */}
+              {/* Floating gem/check/coal */}
               {floatingBtn && (
-                <div
-                  className="absolute z-10 flex items-center gap-1 bg-white border border-gray-300 rounded-lg shadow-lg px-2 py-1.5"
-                  style={{ left: floatingBtn.x - 60, top: floatingBtn.y + 8 }}
-                >
-                  <button
-                    onClick={handleSaveGem}
-                    disabled={savingGem}
-                    title="Save as Gem"
-                    className="flex items-center gap-1 px-2 py-1 rounded hover:bg-yellow-50 text-xs font-medium text-yellow-800 transition-colors"
-                  >
+                <div className="absolute z-10 flex items-center gap-1 bg-white border border-gray-300 rounded-lg shadow-lg px-2 py-1.5"
+                  style={{ left: floatingBtn.x - 60, top: floatingBtn.y + 8 }}>
+                  <button onClick={handleSaveGem} disabled={savingGem} title="Save as Gem"
+                    className="flex items-center gap-1 px-2 py-1 rounded hover:bg-yellow-50 text-xs font-medium text-yellow-800 transition-colors">
                     <img src={gemIcon} alt="Gem" className="w-3.5 h-3.5" />
                     {savingGem ? '…' : 'Gem'}
                   </button>
                   <div className="w-px h-4 bg-gray-300" />
-                  <button
-                    onClick={handleSaveCheck}
-                    disabled={savingCheck}
-                    title="Save as Check"
-                    className="flex items-center gap-1 px-2 py-1 rounded hover:bg-green-50 text-xs font-medium text-green-800 transition-colors"
-                  >
+                  <button onClick={handleSaveCheck} disabled={savingCheck} title="Save as Check"
+                    className="flex items-center gap-1 px-2 py-1 rounded hover:bg-green-50 text-xs font-medium text-green-800 transition-colors">
                     <CircleCheck className="w-3.5 h-3.5" />
                     {savingCheck ? '…' : 'Check'}
                   </button>
                   <div className="w-px h-4 bg-gray-300" />
-                  <button
-                    onClick={handleSaveCoal}
-                    disabled={savingCoal}
-                    title="Save as Coal"
-                    className="flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100 text-xs font-medium text-gray-700 transition-colors"
-                  >
+                  <button onClick={handleSaveCoal} disabled={savingCoal} title="Save as Coal"
+                    className="flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100 text-xs font-medium text-gray-700 transition-colors">
                     🪨 {savingCoal ? '…' : 'Coal'}
                   </button>
                 </div>
@@ -558,13 +616,10 @@ export function StoryModal({
               </div>
             )}
 
-            {/* Footer */}
             {isComplete && (
               <div className="bg-white border-t-2 border-gray-200 px-6 py-4 flex items-center justify-end flex-shrink-0 rounded-b-xl">
-                <button
-                  onClick={handleAcceptAndClose}
-                  className="flex items-center gap-2 px-5 py-2 bg-gray-900 text-white rounded-lg hover:bg-black transition-colors font-medium text-sm"
-                >
+                <button onClick={handleAcceptAndClose}
+                  className="flex items-center gap-2 px-5 py-2 bg-gray-900 text-white rounded-lg hover:bg-black transition-colors font-medium text-sm">
                   <CircleCheck className="w-4 h-4" />
                   Accept &amp; Close
                 </button>
@@ -573,7 +628,7 @@ export function StoryModal({
           </>
         )}
 
-        {/* Gem toasts */}
+        {/* Toasts */}
         <div className="fixed bottom-6 right-[370px] z-60 flex flex-col gap-2 pointer-events-none">
           {gemToasts.map(t => (
             <div key={t.id} className="flex items-center gap-2 bg-yellow-50 border border-yellow-300 rounded-lg px-3 py-2 shadow-md text-xs text-yellow-800">

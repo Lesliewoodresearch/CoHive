@@ -151,8 +151,6 @@ export default function ProcessWireframe() {
   const [storyModalParams, setStoryModalParams] = useState<{
     category: StoryCategory;
     subtype: StorySubtype;
-    kbMode: KbMode;
-    scope: Scope;
   } | null>(null);
 
   const [showTemplateManager, setShowTemplateManager] = useState(false);
@@ -1053,7 +1051,7 @@ export default function ProcessWireframe() {
   const centralHexIds = ['Luminaries', 'Consumers', 'competitors', 'Colleagues', 'cultural', 'test', 'Grade'];
   const isCentralHex = centralHexIds.includes(activeStepId);
 
-  const handleStoriesGenerate = (params: { category: StoryCategory; subtype: StorySubtype; kbMode: KbMode; scope: Scope }) => {
+  const handleStoriesGenerate = (params: { category: StoryCategory; subtype: StorySubtype }) => {
     setStoryModalParams(params);
     setStoryModalOpen(true);
   };
@@ -2451,8 +2449,6 @@ export default function ProcessWireframe() {
           projectType={responses['Enter']?.[1]?.trim() || ''}
           category={storyModalParams.category}
           subtype={storyModalParams.subtype}
-          kbMode={storyModalParams.kbMode}
-          scope={storyModalParams.scope}
           researchFiles={researchFiles}
           kbFileNames={selectedResearchFiles}
           userEmail={userEmail}
