@@ -2454,6 +2454,7 @@ export default function ProcessWireframe() {
           kbFileNames={selectedResearchFiles}
           userEmail={userEmail}
           userRole={userRole}
+          iterationDirections={iterationDirections}
           iterationGems={iterationGems}
           iterationChecks={iterationChecks}
           iterationCoal={iterationCoal}

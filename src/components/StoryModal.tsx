@@ -42,6 +42,7 @@ interface StoryModalProps {
   iterationGems?: IterationGem[];
   iterationChecks?: Array<{ text: string; hexId: string; hexLabel: string }>;
   iterationCoal?: Array<{ text: string; hexId: string; hexLabel: string }>;
+  iterationDirections?: string[];
   onGemSaved?: (gem: IterationGem) => void;
   onReviewConfirmed?: (items: ReviewItem[]) => void;
   onAcceptResults?: (results: { rounds: StoryRound[]; hexId: string; hexLabel: string }) => void;
@@ -87,8 +88,9 @@ function buildStoryPrompt(params: {
   scope: Scope;
   kbContent: string;
   roundIndex: number;
+  iterationDirections?: string[];
 }): { systemPrompt: string; prompt: string } {
-  const { brand, projectType, category, subtype, kbMode, scope, kbContent, roundIndex } = params;
+  const { brand, projectType, category, subtype, kbMode, scope, kbContent, roundIndex, iterationDirections } = params;
 
   const kbInstruction = kbMode === 'hard-forbidden'
     ? 'You MUST draw exclusively from the provided Knowledge Base content. General knowledge is strictly forbidden. Every claim must be grounded in the KB material.'
@@ -132,6 +134,10 @@ Writing style:
     ? `\n\n## Knowledge Base Content\n${kbContent.trim()}`
     : '';
 
+  const directionsSection = iterationDirections && iterationDirections.length > 0
+    ? `\n\n## Additional Focus & Direction\n${iterationDirections.map(d => `- ${d}`).join('\n')}`
+    : '';
+
   const prompt = `Generate a ${subtype.label} story (${category.label} category) for ${brand}.
 
 ${isDualPOV ? `**Perspective:** ${povLabel}\n\n` : ''}Project context: ${projectType || 'Brand strategy'}
@@ -139,7 +145,7 @@ ${isDualPOV ? `**Perspective:** ${povLabel}\n\n` : ''}Project context: ${project
 Follow these story steps exactly:
 
 ${stepsBlock}
-${kbSection}
+${kbSection}${directionsSection}
 
 Write the complete story now, with each step as a clearly labeled section. Make it vivid, brand-specific, and strategically useful.`;
 
@@ -160,6 +166,7 @@ export function StoryModal({
   userEmail,
   userRole = 'user',
   modelEndpoint = 'databricks-claude-sonnet-4-6',
+  iterationDirections = [],
   onGemSaved,
   onReviewConfirmed,
   onAcceptResults,
@@ -218,7 +225,7 @@ export function StoryModal({
           : i === 0 ? `${subtype.label} — Protagonist` : `${subtype.label} — Challenger`;
 
         const { systemPrompt, prompt } = buildStoryPrompt({
-          brand, projectType, category, subtype, kbMode, scope, kbContent, roundIndex: i,
+          brand, projectType, category, subtype, kbMode, scope, kbContent, roundIndex: i, iterationDirections,
         });
 
         const result = await executeAIPrompt({
@@ -238,7 +245,7 @@ export function StoryModal({
     } finally {
       setIsRunning(false);
     }
-  }, [brand, projectType, category, subtype, kbMode, scope, researchFiles, kbFileNames, userEmail, userRole, modelEndpoint]);
+  }, [brand, projectType, category, subtype, kbMode, scope, researchFiles, kbFileNames, userEmail, userRole, modelEndpoint, iterationDirections]);
 
   // Reset on close
   useEffect(() => {
@@ -270,8 +277,7 @@ export function StoryModal({
         const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
         if (!range || !contentRef.current?.contains(range.commonAncestorContainer)) { setFloatingBtn(null); return; }
         const rect = range.getBoundingClientRect();
-        const modalRect = contentRef.current?.getBoundingClientRect();
-        if (modalRect) setFloatingBtn({ x: rect.left - modalRect.left + rect.width / 2, y: rect.bottom - modalRect.top, text });
+        setFloatingBtn({ x: rect.left + rect.width / 2, y: rect.bottom, text });
       }, 50);
     };
     document.addEventListener('selectionchange', handleSelectionChange);
@@ -294,8 +300,7 @@ export function StoryModal({
     if (text.length < 10) { setFloatingBtn(null); return; }
     const range = selection.getRangeAt(0);
     const rect = range.getBoundingClientRect();
-    const modalRect = contentRef.current?.getBoundingClientRect();
-    if (modalRect) setFloatingBtn({ x: rect.left - modalRect.left + rect.width / 2, y: rect.bottom - modalRect.top, text });
+    setFloatingBtn({ x: rect.left + rect.width / 2, y: rect.bottom, text });
   }, []);
 
   const handleSaveGem = async () => {
@@ -564,36 +569,36 @@ export function StoryModal({
               )}
             </div>
 
-            <div ref={contentRef} className="flex-1 overflow-y-auto px-6 py-5 relative" onMouseUp={handleMouseUp}>
+            <div ref={contentRef} className="flex-1 overflow-y-auto px-6 py-5" onMouseUp={handleMouseUp}>
               {activeRound && (
                 <div className="p-4 rounded-lg border border-purple-200 bg-purple-50/40 whitespace-pre-wrap text-sm text-gray-800 leading-relaxed">
                   {activeRound.content}
                 </div>
               )}
-
-              {/* Floating gem/check/coal */}
-              {floatingBtn && (
-                <div className="absolute z-10 flex items-center gap-1 bg-white border border-gray-300 rounded-lg shadow-lg px-2 py-1.5"
-                  style={{ left: floatingBtn.x - 60, top: floatingBtn.y + 8 }}>
-                  <button onClick={handleSaveGem} disabled={savingGem} title="Save as Gem"
-                    className="flex items-center gap-1 px-2 py-1 rounded hover:bg-yellow-50 text-xs font-medium text-yellow-800 transition-colors">
-                    <img src={gemIcon} alt="Gem" className="w-3.5 h-3.5" />
-                    {savingGem ? '…' : 'Gem'}
-                  </button>
-                  <div className="w-px h-4 bg-gray-300" />
-                  <button onClick={handleSaveCheck} disabled={savingCheck} title="Save as Check"
-                    className="flex items-center gap-1 px-2 py-1 rounded hover:bg-green-50 text-xs font-medium text-green-800 transition-colors">
-                    <CircleCheck className="w-3.5 h-3.5" />
-                    {savingCheck ? '…' : 'Check'}
-                  </button>
-                  <div className="w-px h-4 bg-gray-300" />
-                  <button onClick={handleSaveCoal} disabled={savingCoal} title="Save as Coal"
-                    className="flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100 text-xs font-medium text-gray-700 transition-colors">
-                    🪨 {savingCoal ? '…' : 'Coal'}
-                  </button>
-                </div>
-              )}
             </div>
+
+            {/* Floating gem/check/coal — fixed to viewport so overflow-y:auto can't clip it */}
+            {floatingBtn && (
+              <div className="fixed z-[60] flex items-center gap-1 bg-white border border-gray-300 rounded-lg shadow-lg px-2 py-1.5"
+                style={{ left: floatingBtn.x - 60, top: floatingBtn.y + 8 }}>
+                <button onClick={handleSaveGem} disabled={savingGem} title="Save as Gem"
+                  className="flex items-center gap-1 px-2 py-1 rounded hover:bg-yellow-50 text-xs font-medium text-yellow-800 transition-colors">
+                  <img src={gemIcon} alt="Gem" className="w-3.5 h-3.5" />
+                  {savingGem ? '…' : 'Gem'}
+                </button>
+                <div className="w-px h-4 bg-gray-300" />
+                <button onClick={handleSaveCheck} disabled={savingCheck} title="Save as Check"
+                  className="flex items-center gap-1 px-2 py-1 rounded hover:bg-green-50 text-xs font-medium text-green-800 transition-colors">
+                  <CircleCheck className="w-3.5 h-3.5" />
+                  {savingCheck ? '…' : 'Check'}
+                </button>
+                <div className="w-px h-4 bg-gray-300" />
+                <button onClick={handleSaveCoal} disabled={savingCoal} title="Save as Coal"
+                  className="flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100 text-xs font-medium text-gray-700 transition-colors">
+                  🪨 {savingCoal ? '…' : 'Coal'}
+                </button>
+              </div>
+            )}
 
             {/* Saved counts */}
             {isComplete && (savedGemItems.length + savedCheckItems.length + savedCoalItems.length) > 0 && (
