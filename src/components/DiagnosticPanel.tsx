@@ -60,7 +60,7 @@ const TEST_CATEGORIES = {
   colleagues: 'Colleagues',
   luminaries: 'Luminaries',
   culturalVoices: 'Cultural Voices',
-  panelist: 'Panelist',
+  stories: 'Stories',
   competitors: 'Competitors',
   socialListening: 'Social Listening',
   consumers: 'Consumers',
@@ -132,7 +132,7 @@ export function DiagnosticPanel({ onClose }: DiagnosticPanelProps) {
           status: 'fail',
           message: `✗ BROKEN: Only ${hexagons.length}/13 hexagons rendered. Missing hexagons may indicate template visibility issues or component rendering errors. Check ProcessFlow.tsx for all 13 hex definitions. See Troubleshooting Guide for detailed fix instructions.`,
           duration: Date.now() - startTime,
-          expected: '13 hexagons: Enter, Colleagues, Luminaries, Cultural Voices, Panelist, Competitors, Social Listening, Consumers, Score Results, Findings, Knowledge Base, Share Your Wisdom, My Files',
+          expected: '13 hexagons: Enter, Colleagues, Luminaries, Cultural Voices, Stories, Competitors, Social Listening, Consumers, Score Results, Findings, Knowledge Base, Share Your Wisdom, My Files',
           received: `${hexagons.length} hexagons found: ${hexIds || 'none'}`,
           element: '[data-hex-id] in /components/ProcessFlow.tsx'
         });
@@ -2080,24 +2080,24 @@ export function DiagnosticPanel({ onClose }: DiagnosticPanelProps) {
     }
   };
 
-  const runPanelistTests = async () => {
+  const runStoriesTests = async () => {
     const startTime = Date.now();
     
     try {
       addResult({
-        id: 'panelist-configuration',
-        category: 'panelist',
+        id: 'stories-configuration',
+        category: 'stories',
         name: 'Panel configuration options',
         status: 'pass',
-        message: 'Panelist configuration interface available',
+        message: 'Stories configuration interface available',
         duration: Date.now() - startTime,
         expected: 'Panel selection and configuration',
         received: 'Interface implemented'
       });
     } catch (error) {
       addResult({
-        id: 'panelist-configuration',
-        category: 'panelist',
+        id: 'stories-configuration',
+        category: 'stories',
         name: 'Panel configuration options',
         status: 'fail',
         message: `Error: ${error}`,
@@ -2112,13 +2112,13 @@ export function DiagnosticPanel({ onClose }: DiagnosticPanelProps) {
       const hasCheckboxes = personaCheckboxes.length > 0;
       
       addResult({
-        id: 'panelist-persona-selection',
-        category: 'panelist',
+        id: 'stories-persona-selection',
+        category: 'stories',
         name: 'Persona selection functionality',
         status: hasCheckboxes ? 'pass' : 'warning',
         message: hasCheckboxes ? 
           `${personaCheckboxes.length} persona checkboxes found and functional` : 
-          'No persona checkboxes detected (navigate to Panelist hex Step 2)',
+          'No persona checkboxes detected (navigate to Stories hex Step 2)',
         duration: Date.now() - startTime,
         expected: 'Checkbox inputs for persona selection',
         received: hasCheckboxes ? `${personaCheckboxes.length} checkboxes` : 'None found',
@@ -2126,8 +2126,8 @@ export function DiagnosticPanel({ onClose }: DiagnosticPanelProps) {
       });
     } catch (error) {
       addResult({
-        id: 'panelist-persona-selection',
-        category: 'panelist',
+        id: 'stories-persona-selection',
+        category: 'stories',
         name: 'Persona selection functionality',
         status: 'fail',
         message: `Error: ${error}`,
@@ -2141,21 +2141,21 @@ export function DiagnosticPanel({ onClose }: DiagnosticPanelProps) {
       const hasFiles = researchFiles && JSON.parse(researchFiles).length > 0;
       
       addResult({
-        id: 'panelist-file-selection',
-        category: 'panelist',
+        id: 'stories-file-selection',
+        category: 'stories',
         name: 'Research file selection (Step 1)',
         status: hasFiles ? 'pass' : 'warning',
         message: hasFiles ? 
           `${JSON.parse(researchFiles).length} research files available for selection` : 
           'No research files found in Knowledge Base',
         duration: Date.now() - startTime,
-        expected: 'Research files available for Panelist hex',
+        expected: 'Research files available for Stories hex',
         received: hasFiles ? `${JSON.parse(researchFiles).length} files` : 'No files'
       });
     } catch (error) {
       addResult({
-        id: 'panelist-file-selection',
-        category: 'panelist',
+        id: 'stories-file-selection',
+        category: 'stories',
         name: 'Research file selection (Step 1)',
         status: 'fail',
         message: `Error: ${error}`,
@@ -2171,13 +2171,13 @@ export function DiagnosticPanel({ onClose }: DiagnosticPanelProps) {
       const hasAssessmentOptions = assessRadios.length > 0 || assessButtons.length > 0;
       
       addResult({
-        id: 'panelist-assessment-type',
-        category: 'panelist',
+        id: 'stories-assessment-type',
+        category: 'stories',
         name: 'Assessment type configuration',
         status: hasAssessmentOptions ? 'pass' : 'warning',
         message: hasAssessmentOptions ? 
           'Assessment type options (recommend/assess/unified) available' : 
-          'No assessment type controls detected (navigate to Panelist hex)',
+          'No assessment type controls detected (navigate to Stories hex)',
         duration: Date.now() - startTime,
         expected: 'Assessment type selection controls',
         received: hasAssessmentOptions ? 'Found controls' : 'Not found',
@@ -2185,8 +2185,8 @@ export function DiagnosticPanel({ onClose }: DiagnosticPanelProps) {
       });
     } catch (error) {
       addResult({
-        id: 'panelist-assessment-type',
-        category: 'panelist',
+        id: 'stories-assessment-type',
+        category: 'stories',
         name: 'Assessment type configuration',
         status: 'fail',
         message: `Error: ${error}`,
@@ -2202,21 +2202,21 @@ export function DiagnosticPanel({ onClose }: DiagnosticPanelProps) {
       const hasWorkflowNav = nextButtons.length > 0 || stepIndicators.length > 0;
       
       addResult({
-        id: 'panelist-workflow-nav',
-        category: 'panelist',
+        id: 'stories-workflow-nav',
+        category: 'stories',
         name: '3-step workflow navigation',
         status: hasWorkflowNav ? 'pass' : 'warning',
         message: hasWorkflowNav ? 
           'Workflow navigation controls detected (Step 1→2→3)' : 
-          'No workflow navigation detected (navigate to Panelist hex)',
+          'No workflow navigation detected (navigate to Stories hex)',
         duration: Date.now() - startTime,
         expected: 'Step navigation controls (Next/Back buttons, step indicators)',
         received: hasWorkflowNav ? 'Navigation controls found' : 'Not found'
       });
     } catch (error) {
       addResult({
-        id: 'panelist-workflow-nav',
-        category: 'panelist',
+        id: 'stories-workflow-nav',
+        category: 'stories',
         name: '3-step workflow navigation',
         status: 'fail',
         message: `Error: ${error}`,
@@ -2229,25 +2229,25 @@ export function DiagnosticPanel({ onClose }: DiagnosticPanelProps) {
       const hexExecutions = localStorage.getItem('cohive_hex_executions');
       if (hexExecutions) {
         const parsed = JSON.parse(hexExecutions);
-        const panelistExecutions = parsed['Panelist'] || [];
-        const hasExecutions = panelistExecutions.length > 0;
+        const storiesExecutions = parsed['Stories'] || [];
+        const hasExecutions = storiesExecutions.length > 0;
         
         addResult({
-          id: 'panelist-results-persistence',
-          category: 'panelist',
+          id: 'stories-results-persistence',
+          category: 'stories',
           name: 'Execution results persistence',
           status: hasExecutions ? 'pass' : 'warning',
           message: hasExecutions ? 
-            `${panelistExecutions.length} execution(s) saved in history` : 
-            'No Panelist executions found (run assessment to test)',
+            `${storiesExecutions.length} execution(s) saved in history` : 
+            'No Stories executions found (run assessment to test)',
           duration: Date.now() - startTime,
-          expected: 'Panelist executions in cohive_hex_executions',
-          received: hasExecutions ? `${panelistExecutions.length} execution(s)` : 'No executions'
+          expected: 'Stories executions in cohive_hex_executions',
+          received: hasExecutions ? `${storiesExecutions.length} execution(s)` : 'No executions'
         });
       } else {
         addResult({
-          id: 'panelist-results-persistence',
-          category: 'panelist',
+          id: 'stories-results-persistence',
+          category: 'stories',
           name: 'Execution results persistence',
           status: 'warning',
           message: 'No hex executions found (no assessments run yet)',
@@ -2258,8 +2258,8 @@ export function DiagnosticPanel({ onClose }: DiagnosticPanelProps) {
       }
     } catch (error) {
       addResult({
-        id: 'panelist-results-persistence',
-        category: 'panelist',
+        id: 'stories-results-persistence',
+        category: 'stories',
         name: 'Execution results persistence',
         status: 'fail',
         message: `Error: ${error}`,
@@ -3995,7 +3995,7 @@ export function DiagnosticPanel({ onClose }: DiagnosticPanelProps) {
       
       // Known hex titles from hexInfo
       const hexTitles = [
-        'Enter', 'Knowledge Base', 'Luminaries', 'Panelist', 'Consumers',
+        'Enter', 'Knowledge Base', 'Luminaries', 'Stories', 'Consumers',
         'Competitors', 'Colleagues', 'Cultural', 'Social', 'Wisdom',
         'Score', 'Findings', 'My Files'
       ];
@@ -4070,7 +4070,7 @@ export function DiagnosticPanel({ onClose }: DiagnosticPanelProps) {
       // Test 7: Complete hex coverage validation
       // This tests that hexInfo object has all required hexes defined
       const requiredHexes = [
-        'Enter', 'research', 'Luminaries', 'panelist', 'Consumers',
+        'Enter', 'research', 'Luminaries', 'stories', 'Consumers',
         'competitors', 'Colleagues', 'cultural', 'social', 'Wisdom',
         'Grade', 'Findings', 'review'
       ];
@@ -4099,7 +4099,7 @@ export function DiagnosticPanel({ onClose }: DiagnosticPanelProps) {
           ? `All 13 hexes have info content defined in ProcessFlow.tsx hexInfo object (${hexCoverageCount} hex navigation elements found in DOM)` 
           : `Partial hex coverage detected (${hexCoverageCount} hex elements found) - all 13 hexes should have info defined`,
         duration: Date.now() - startTime,
-        expected: '13 hexes with complete info (title, description, details[]): Enter, research, Luminaries, panelist, Consumers, competitors, Colleagues, cultural, social, Wisdom, Grade, Findings, review',
+        expected: '13 hexes with complete info (title, description, details[]): Enter, research, Luminaries, stories, Consumers, competitors, Colleagues, cultural, social, Wisdom, Grade, Findings, review',
         received: `${hexCoverageCount} hex navigation elements detected`,
         element: 'hexInfo object in ProcessFlow.tsx lines 163-432'
       });
@@ -4261,8 +4261,8 @@ export function DiagnosticPanel({ onClose }: DiagnosticPanelProps) {
       await new Promise(resolve => setTimeout(resolve, 300));
     }
     
-    if (selectedCategory === 'all' || selectedCategory === 'panelist') {
-      await runPanelistTests();
+    if (selectedCategory === 'all' || selectedCategory === 'stories') {
+      await runStoriesTests();
       await new Promise(resolve => setTimeout(resolve, 300));
     }
     

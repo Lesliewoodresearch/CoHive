@@ -43,8 +43,8 @@ import steveJobs from './persona-content/steve-jobs.json';
 import tiffanyRolfe from './persona-content/tiffany-rolfe.json';
 import willyWonka from './persona-content/willy-wonka.json';
 
-// Import Panelist personas
-import panelistMillennialParent from './persona-content/panelist-millennial-parent.json';
+// Import Stories personas
+import storiesMillennialParent from './persona-content/stories-millennial-parent.json';
 
 // Import Consumer personas
 import consumersB2BDepartment from './persona-content/consumers-b2b-department.json';
@@ -230,8 +230,8 @@ export const personaContentMap: Record<string, PersonaContent> = {
   'tiffany-rolfe': tiffanyRolfe as unknown as PersonaContent,
   'willy-wonka': willyWonka as unknown as PersonaContent,
   
-  // Panelists
-  'panelist-millennial-parent': panelistMillennialParent as unknown as PersonaContent,
+  // Storiess
+  'stories-millennial-parent': storiesMillennialParent as unknown as PersonaContent,
   
   // Consumers
   'consumers-b2b-department': consumersB2BDepartment as unknown as PersonaContent,

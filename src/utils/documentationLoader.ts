@@ -22,7 +22,7 @@ CoHive is a structured AI-powered analysis platform. Work flows through a sequen
 1. Enter (required first) — initialise your project
 2. Research (Knowledge Base) — manage files and data
 3. Luminaries — external expert perspectives
-4. Panelist — consumer panel household insights
+4. Stories — consumer panel household insights
 5. Consumers — buyer persona analysis
 6. Competitors — competitive intelligence
 7. Colleagues — internal stakeholder perspectives
@@ -192,7 +192,7 @@ You can select both Assess and Recommend. Unified replaces the need for both sep
   personaHexes: `
 # Persona Hexes — Common Structure
 
-Luminaries, Consumers, Panelist, Colleagues, Cultural, and Grade all follow a 2-step structure:
+Luminaries, Consumers, Stories, Colleagues, Cultural, and Grade all follow a 2-step structure:
 
 ## Step 1: Select Personas
 - Browse persona library organised by category
@@ -262,10 +262,10 @@ Alcohol/beverage specific: Heavy Alcohol Users, Light Alcohol Users, RTD buyers,
 - Understanding which segments need different strategies
 `,
 
-  panelistHex: `
-# Panelist Hex (Panel Homes)
+  storiesHex: `
+# Stories Hex (Panel Homes)
 
-Panelist personas represent specific household types, evaluating work through the lens of real domestic life.
+Stories personas represent specific household types, evaluating work through the lens of real domestic life.
 
 ## Focus:
 - How products and brands fit into household routines
@@ -826,7 +826,7 @@ export function getDocumentationForHex(hexId: string): string {
     'review':      ['reviewHex'],
     'Luminaries':  ['luminariesHex', 'personaHexes', 'assessmentModal', 'assessmentTypes', 'gemsAndCoal'],
     'Consumers':   ['consumersHex', 'personaHexes', 'assessmentModal', 'assessmentTypes', 'gemsAndCoal'],
-    'panelist':    ['panelistHex', 'personaHexes', 'assessmentModal', 'assessmentTypes', 'gemsAndCoal'],
+    'stories':    ['storiesHex', 'personaHexes', 'assessmentModal', 'assessmentTypes', 'gemsAndCoal'],
     'Colleagues':  ['colleaguesHex', 'personaHexes', 'assessmentModal', 'assessmentTypes', 'gemsAndCoal'],
     'cultural':    ['culturalHex', 'personaHexes', 'assessmentModal', 'assessmentTypes', 'gemsAndCoal'],
     'competitors': ['competitorsHex', 'warGames', 'assessmentModal', 'assessmentTypes', 'gemsAndCoal'],

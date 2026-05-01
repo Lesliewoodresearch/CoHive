@@ -3,7 +3,7 @@ import gemIcon from 'figma:asset/53dc6cf554f69e479cfbd60a46741f158d11dd21.png';
 
 export interface NoteEntry {
   id: string;
-  type: 'note' | 'gem' | 'check' | 'coal' | 'prompt';
+  type: 'note' | 'gem' | 'check' | 'coal' | 'prompt' | 'story';
   text: string;
   hexLabel?: string;
 }
@@ -37,6 +37,12 @@ const AUTO_ENTRY_STYLES = {
     border: 'border-blue-300',
     text: 'text-blue-800',
     label: '→ Direction',
+  },
+  story: {
+    bg: 'bg-purple-50',
+    border: 'border-purple-300',
+    text: 'text-purple-900',
+    label: '📖 Story',
   },
 } as const;
 
@@ -75,12 +81,14 @@ export function UserNotesBox({ entries, onEntriesChange }: UserNotesBoxProps) {
   const [showNotes, setShowNotes] = React.useState(true);
   const [showGems, setShowGems] = React.useState(true);
   const [showPrompts, setShowPrompts] = React.useState(true);
+  const [showStories, setShowStories] = React.useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevLengthRef = useRef(entries.length);
 
   const hasNoteContent = entries.some((e) => e.type === 'note' && e.text.trim() !== '');
   const hasGemEntries = entries.some((e) => ['gem', 'check', 'coal'].includes(e.type));
   const hasPromptEntries = entries.some((e) => e.type === 'prompt');
+  const hasStoryEntries = entries.some((e) => e.type === 'story');
 
   useEffect(() => {
     if (entries.length > prevLengthRef.current) {
@@ -132,6 +140,17 @@ export function UserNotesBox({ entries, onEntriesChange }: UserNotesBoxProps) {
               className="w-3 h-3"
             />
             Prompts
+          </label>
+        )}
+        {hasStoryEntries && (
+          <label className="flex items-center gap-1 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={showStories}
+              onChange={(e) => setShowStories(e.target.checked)}
+              className="w-3 h-3"
+            />
+            Stories
           </label>
         )}
       </div>
@@ -193,6 +212,27 @@ export function UserNotesBox({ entries, onEntriesChange }: UserNotesBoxProps) {
                   <span className="opacity-60 mr-1">[{entry.hexLabel}]</span>
                 )}
                 <span>{entry.text}</span>
+              </div>
+            );
+          }
+
+          if (entry.type === 'story') {
+            if (!showStories) return null;
+            const style = AUTO_ENTRY_STYLES.story;
+            return (
+              <div
+                key={entry.id}
+                className={`text-xs px-2 py-1.5 rounded border flex-shrink-0 ${style.bg} ${style.border} ${style.text}`}
+              >
+                <div className="flex items-center gap-1 mb-1">
+                  <span className="font-semibold">{style.label}</span>
+                  {entry.hexLabel && (
+                    <span className="opacity-60">[{entry.hexLabel}]</span>
+                  )}
+                </div>
+                <span className="leading-snug whitespace-pre-line">
+                  {entry.text.length > 200 ? entry.text.substring(0, 200) + '…' : entry.text}
+                </span>
               </div>
             );
           }

@@ -19,7 +19,7 @@ export const colors = {
     Grade: '#AAC864',        // 1C9D76   22D3EECyan - Testing phase
  
     Luminaries: '#78206E',      // 78206E   8B5CF6Gold/Yellow - Project initiation
-    panelist: '#7E15A2',         // 7E15A2  8B5CF6
+    stories: '#7E15A2',         // 7E15A2  8B5CF6
     Colleagues: '#684CC1',      // 684CC1  8B5CF6 Teal Green - Final action/completion
     social: '#8133D6',        // 8133D6  8B5CF6 Cyan - Testing phase
     Wisdom: '#0A78AA',          // 9B49EB  New purple shade for Wisdom
@@ -29,7 +29,7 @@ export const colors = {
     
    // Purple spectrum for expert/voice hexagons
     purple: {
-      light: '#8B5CF6',     // Light Purple - Luminaries/Panelist/Consumers/Colleagues 8B5CF6
+      light: '#8B5CF6',     // Light Purple - Luminaries/Stories/Consumers/Colleagues 8B5CF6
       medium: '#8B5CF6',    // Medium Purple - Competitors/Cultural/Social  7C3AED
       dark: '#8B5CF6',      // Dark Purple - Reserved for future use  6D28D9
     },
@@ -229,7 +229,7 @@ export const stepColors: Record<string, string> = {
   
   // Expert/Voice steps - purple spectrum
   Luminaries: colors.hex.Luminaries,
-  panelist: colors.hex.panelist,
+  stories: colors.hex.stories,
   Consumers: colors.hex.Consumers,
   Colleagues: colors.hex.Colleagues,
   competitors: colors.hex.competitors,

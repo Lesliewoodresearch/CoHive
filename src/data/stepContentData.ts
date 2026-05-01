@@ -54,9 +54,9 @@ export const stepContentData: StepContent[] = [
     ]
   },
   {
-    id: 'panelist',
-    title: 'Panelist Personas',
-    description: 'Panelist Personas monitored by agents will be added in the future.',
+    id: 'stories',
+    title: 'Stories',
+    description: 'Generate AI-powered narrative stories from diverse perspectives.',
     questions: []
   },
   {

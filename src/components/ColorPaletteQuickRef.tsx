@@ -87,7 +87,7 @@ export function ColorPaletteQuickRef() {
           <p className="text-xs text-gray-500 mb-1">Step Assignments</p>
           <div className="space-y-1 text-xs">
             <StepColorRow label="Luminaries" color={stepColors.Luminaries} />
-            <StepColorRow label="Panelist" color={stepColors.panelist} />
+            <StepColorRow label="Stories" color={stepColors.stories} />
             <StepColorRow label="Consumers" color={stepColors.Consumers} />
             <StepColorRow label="colleagues" color={stepColors.colleagues} />
             <StepColorRow label="Competitors" color={stepColors.competitors} />

@@ -41,9 +41,9 @@ const processSteps: ProcessStep[] = [
     row: 3,
   },
   {
-    id: "panelist",
-    label: "Panelist",
-    color: stepColors.panelist,
+    id: "stories",
+    label: "Stories",
+    color: stepColors.stories,
     position: { x: 120, y: 305 },
     row: 5,
   },
@@ -139,7 +139,7 @@ const researchInfoForResearchers = {
     "Choose between Synthesis and Personas modes",
     "Synthesis: Combine multiple studies, create new brand/project analyses",
     "Synthesis: Edit/approve existing synthesis files",
-    "Personas: Create persona profiles for each hexagon (Luminaries, Panelist, Consumers, etc.)",
+    "Personas: Create persona profiles for each hexagon (Luminaries, Stories, Consumers, etc.)",
     "Personas: Edit/read existing persona files",
     "Approve or reject research files for use in the workflow",
     "Upload and manage research documents",
@@ -203,8 +203,8 @@ const hexInfo: {
       "Can be visited multiple times throughout the workflow",
     ],
   },
-  panelist: {
-    title: "Panelist",
+  stories: {
+    title: "Stories",
     description:
       "Leverage data and insights from consumer panel households.",
     details: [
@@ -357,7 +357,7 @@ export function ProcessFlow({
     if (projectType === "War Games") {
       const disabledHexes = [
         "Luminaries",
-        "panelist",
+        "stories",
         "Colleagues",
         "Consumers",
         "cultural",
@@ -373,7 +373,7 @@ export function ProcessFlow({
     if (stepId === "Grade" || stepId === "Findings") {
       const centerHexes = [
         "Luminaries",
-        "panelist",
+        "stories",
         "Consumers",
         "competitors",
         "Colleagues",

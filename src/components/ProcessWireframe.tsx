@@ -14,7 +14,10 @@ import { DatabricksOAuthLogin } from './DatabricksOAuthLogin';
 import { DatabricksFileSaver } from './DatabricksFileSaver';
 import { InterviewDialog } from './InterviewDialog';
 import { useMicDevices } from '../hooks/useMicDevices';
-import { AssessmentModal, type IdeaElement, type IterationGem, type KbMode, type RequestMode } from './AssessmentModal';
+import { AssessmentModal, type IdeaElement, type IterationGem, type KbMode, type RequestMode, type Scope } from './AssessmentModal';
+import { StoriesView } from './StoriesView';
+import { StoryModal } from './StoryModal';
+import type { StoryCategory, StorySubtype } from '../data/storyTypes';
 import { UserNotesBox, type NoteEntry } from './UserNotesBox';
 import type { ReviewItem } from './GemCheckCoalReviewPanel';
 import { MarkdownViewer } from './MarkdownViewer';
@@ -144,6 +147,13 @@ export default function ProcessWireframe() {
   // Assessment Modal state
   const [assessmentModalOpen, setAssessmentModalOpen] = useState(false);
   const [assessmentModalProps, setAssessmentModalProps] = useState<AssessmentModalPropsState | null>(null);
+  const [storyModalOpen, setStoryModalOpen] = useState(false);
+  const [storyModalParams, setStoryModalParams] = useState<{
+    category: StoryCategory;
+    subtype: StorySubtype;
+    kbMode: KbMode;
+    scope: Scope;
+  } | null>(null);
 
   const [showTemplateManager, setShowTemplateManager] = useState(false);
   const [showModelTemplateManager, setShowModelTemplateManager] = useState(false);
@@ -1043,6 +1053,40 @@ export default function ProcessWireframe() {
   const centralHexIds = ['Luminaries', 'Consumers', 'competitors', 'Colleagues', 'cultural', 'test', 'Grade'];
   const isCentralHex = centralHexIds.includes(activeStepId);
 
+  const handleStoriesGenerate = (params: { category: StoryCategory; subtype: StorySubtype; kbMode: KbMode; scope: Scope }) => {
+    setStoryModalParams(params);
+    setStoryModalOpen(true);
+  };
+
+  const handleStoryAcceptResults = (results: { rounds: Array<{ roundNumber: number; label: string; content: string }>; hexId: string; hexLabel: string }) => {
+    const execData = {
+      id: `story-${Date.now()}`,
+      selectedFiles: selectedResearchFiles,
+      assessmentType: [results.rounds[0]?.label ?? 'Story'],
+      assessment: results.rounds.map(r => `## ${r.label}\n\n${r.content}`).join('\n\n---\n\n'),
+      timestamp: Date.now(),
+    };
+    setHexExecutions(prev => ({
+      ...prev,
+      stories: [...(prev['stories'] || []), execData],
+    }));
+
+    // Add each round as a story NoteEntry
+    results.rounds.forEach(round => {
+      const storyEntry: NoteEntry = {
+        id: `story-${Date.now()}-${round.roundNumber}`,
+        type: 'story',
+        text: round.content,
+        hexLabel: round.label,
+      };
+      setNoteEntries(prev => [
+        ...prev,
+        storyEntry,
+        { id: `note-${Date.now()}-${round.roundNumber}`, type: 'note', text: '' },
+      ]);
+    });
+  };
+
   const handleTemplateChange = (templateId: string) => {
     const newTemplate = templates.find(t => t.id === templateId);
     if (newTemplate) { setCurrentTemplateId(templateId); localStorage.setItem('cohive_current_template_id', templateId); }
@@ -1133,7 +1177,7 @@ export default function ProcessWireframe() {
     const dateStr = today.toISOString().split('T')[0];
     const filename = `${brandName}_${projectType}_${dateStr}_V1.md`;
     let markdown = `# CoHive Project Export\n\n**Brand:** ${brandName}\n**Project Type:** ${projectType}\n**Export Date:** ${new Date().toLocaleString()}\n**Template:** ${currentTemplate?.name || 'Default'}\n**User Role:** ${currentTemplate?.role || 'N/A'}\n\n---\n\n## Workflow Responses\n\n`;
-    const stepOrder = ['Enter', 'Research', 'Luminaries', 'Panelist', 'Consumers', 'Competitors', 'Colleagues', 'Cultural Voices', 'Social Voices', 'Wisdom', 'Grade', 'Action'];
+    const stepOrder = ['Enter', 'Research', 'Luminaries', 'Stories', 'Consumers', 'Competitors', 'Colleagues', 'Cultural Voices', 'Social Voices', 'Wisdom', 'Grade', 'Action'];
     stepOrder.forEach(stepId => {
       if (responses[stepId] && Object.keys(responses[stepId]).length > 0) {
         markdown += `### ${stepId}\n\n`;
@@ -1380,6 +1424,13 @@ export default function ProcessWireframe() {
                          )
                          ) : activeStepId === 'review' ? (
                   <ReviewView projectFiles={projectFiles} onDeleteFiles={handleDeleteProjectFiles} />
+                         ) : activeStepId === 'stories' ? (
+                  <StoriesView
+                    brand={responses['Enter']?.[0]?.trim() || ''}
+                    projectType={responses['Enter']?.[1]?.trim() || ''}
+                    researchFiles={researchFiles}
+                    onGenerate={handleStoriesGenerate}
+                  />
                          ) : isCentralHex ? (
                   <CentralHexView key={activeStepId} hexId={activeStepId} hexLabel={currentContent.title} researchFiles={researchFiles} onExecute={handleCentralHexExecute} databricksInstructions={currentTemplate?.databricksInstructions?.[activeStepId] || ''} previousExecutions={hexExecutions[activeStepId] || []} crossHexExecutions={['Consumers', 'Luminaries', 'Colleagues', 'cultural', 'Grade'].filter(h => h !== activeStepId).flatMap(h => hexExecutions[h] || [])} anyPriorPersonaRun={['Consumers', 'Luminaries', 'Colleagues', 'cultural', 'Grade'].some(h => hexExecutions[h]?.length > 0)} onSaveRecommendation={handleSaveRecommendation} projectType={responses['Enter']?.[1] || ''} userBrand={responses['Enter']?.[0] || ''} lastResults={lastAssessmentResults} conversationMode={currentTemplate?.conversationSettings?.conversationMode || 'multi-round'} modelEndpoint={currentTemplate?.conversationSettings?.modelEndpoint || 'databricks-claude-haiku-4-5'} requestMode={deriveRequestMode()} userEmail={userEmail} userRole={userRole} onContextChange={(files, step) => setHexWidgetContext({ files, step })} onAddIterationDirection={handleAddIterationDirection} iterationDirections={iterationDirections} />
                         ) : (
@@ -2022,7 +2073,7 @@ export default function ProcessWireframe() {
                         const projectType = responses['Enter']?.[1]?.trim();
                         const currentFileName = responses['Enter']?.[2]?.trim();
                         const findingsChoice = responses['Findings']?.[0];
-                        const workflowHexes = ['research', 'Luminaries', 'panelist', 'Consumers', 'competitors', 'Colleagues', 'cultural', 'social', 'Grade'];
+                        const workflowHexes = ['research', 'Luminaries', 'stories', 'Consumers', 'competitors', 'Colleagues', 'cultural', 'social', 'Grade'];
                         const hasHexExecutions = workflowHexes.some(hexId => { const executions = hexExecutions[hexId]; return executions && executions.length > 0; });
                         if (idx === 0 && question === 'Save Iteration or Summarize') {
                           return (
@@ -2056,8 +2107,8 @@ export default function ProcessWireframe() {
                                             txtLines.push(`Completed Hexes: ${Array.from(completedSteps).join(', ')}`);
                                             txtLines.push('');
                                           }
-                                          const hexOrder = ['research','Luminaries','panelist','Consumers','competitors','Colleagues','cultural','social','Grade','Wisdom'];
-                                          const hexLabels: Record<string,string> = { research:'Research', Luminaries:'Luminaries', panelist:'Panelist', Consumers:'Consumers', competitors:'Competitors', Colleagues:'Colleagues', cultural:'Cultural', social:'Social', Grade:'Grade', Wisdom:'Wisdom' };
+                                          const hexOrder = ['research','Luminaries','stories','Consumers','competitors','Colleagues','cultural','social','Grade','Wisdom'];
+                                          const hexLabels: Record<string,string> = { research:'Research', Luminaries:'Luminaries', stories:'Stories', Consumers:'Consumers', competitors:'Competitors', Colleagues:'Colleagues', cultural:'Cultural', social:'Social', Grade:'Grade', Wisdom:'Wisdom' };
                                           const orderedHexes = [...hexOrder.filter(h => hexExecutions[h]?.length > 0), ...Object.keys(hexExecutions).filter(h => !hexOrder.includes(h) && hexExecutions[h]?.length > 0)];
                                           for (const hexId of orderedHexes) {
                                             const execs = hexExecutions[hexId];
@@ -2099,7 +2150,7 @@ export default function ProcessWireframe() {
                                             .filter(e => e.text.trim())
                                             .map(e => {
                                               if (e.type === 'note') return e.text.trim();
-                                              const prefix = e.type === 'gem' ? 'GEM' : e.type === 'check' ? 'CHECK' : e.type === 'coal' ? 'COAL' : 'DIRECTION';
+                                              const prefix = e.type === 'gem' ? 'GEM' : e.type === 'check' ? 'CHECK' : e.type === 'coal' ? 'COAL' : e.type === 'story' ? 'STORY' : 'DIRECTION';
                                               return `[${prefix}${e.hexLabel ? ' · ' + e.hexLabel : ''}] ${e.text.trim()}`;
                                             })
                                             .join('\n\n');
@@ -2388,6 +2439,30 @@ export default function ProcessWireframe() {
           iterationDirections={iterationDirections}
           onGemSaved={handleGemSaved}
           onReviewConfirmed={handleReviewConfirmed}
+        />
+      )}
+
+      {/* ── Story Modal ── */}
+      {storyModalOpen && storyModalParams && (
+        <StoryModal
+          isOpen={storyModalOpen}
+          onClose={() => setStoryModalOpen(false)}
+          brand={responses['Enter']?.[0]?.trim() || ''}
+          projectType={responses['Enter']?.[1]?.trim() || ''}
+          category={storyModalParams.category}
+          subtype={storyModalParams.subtype}
+          kbMode={storyModalParams.kbMode}
+          scope={storyModalParams.scope}
+          researchFiles={researchFiles}
+          kbFileNames={selectedResearchFiles}
+          userEmail={userEmail}
+          userRole={userRole}
+          iterationGems={iterationGems}
+          iterationChecks={iterationChecks}
+          iterationCoal={iterationCoal}
+          onGemSaved={handleGemSaved}
+          onReviewConfirmed={handleReviewConfirmed}
+          onAcceptResults={handleStoryAcceptResults}
         />
       )}
 

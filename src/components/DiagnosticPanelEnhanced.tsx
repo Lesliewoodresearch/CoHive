@@ -20,7 +20,7 @@ WHERE TO FIX:
 - Check /components/ProcessFlow.tsx for all 13 hex definitions
 - Verify current template in TemplateManager allows all hexes to be visible
 - Check browser console for React rendering errors`,
-      expected: '13 hexagons: Enter, Colleagues, Luminaries, Cultural Voices, Panelist, Competitors, Social Listening, Consumers, Score Results, Findings, Knowledge Base, Share Your Wisdom, My Files',
+      expected: '13 hexagons: Enter, Colleagues, Luminaries, Cultural Voices, Stories, Competitors, Social Listening, Consumers, Score Results, Findings, Knowledge Base, Share Your Wisdom, My Files',
       received: `${found} hexagons found: ${hexIds || 'none'}`,
     }),
     pass: (count: number) => `✓ All ${count} hexagons rendered correctly with proper data-hex-id attributes`,

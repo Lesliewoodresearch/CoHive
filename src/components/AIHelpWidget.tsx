@@ -7,7 +7,7 @@
  * - Knowledge Base (research)
  * - My Files (review)
  * - Wisdom
- * - Non-hex content steps (Findings, social, panelist, etc.)
+ * - Non-hex content steps (Findings, social, stories, etc.)
  *
  * Receives rich page context via props so it always knows exactly
  * what the user is doing and can give precise, relevant help.
@@ -83,13 +83,13 @@ const HELP_MANUAL: Record<string, { guess: string; steps: string[] }> = {
       "Highlight text in the results to save as a Gem (keep this direction) or Coal (avoid this direction).",
     ],
   },
-  panelist: {
-    guess: "run a Panelist (Panel Homes) analysis",
+  stories: {
+    guess: "run a Stories (Panel Homes) analysis",
     steps: [
-      "Step 1: Select one or more panelist household personas.",
+      "Step 1: Select one or more stories household personas.",
       "Step 2: Choose your assessment type — Assess, Recommend, or Unified.",
-      "Click Execute. Each panelist evaluates from their specific household context — routines, family dynamics, purchase patterns.",
-      "Panelists compare their household realities directly in debate rounds.",
+      "Click Execute. Each stories evaluates from their specific household context — routines, family dynamics, purchase patterns.",
+      "Storiess compare their household realities directly in debate rounds.",
     ],
   },
   Consumers: {

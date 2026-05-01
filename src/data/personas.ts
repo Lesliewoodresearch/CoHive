@@ -713,7 +713,7 @@ export const hexPersonas: HexPersonaConfig[] = [
               { id: 'grade-demo-family-young', name: 'Family (Young Kids)' },
               { id: 'grade-demo-family-teen', name: 'Family (Teens)' },
               { id: 'grade-demo-multi-gen', name: 'Multi-Generational' },
-              { id: 'panelist-millennial-parent', name: 'Millennial Parent' }
+              { id: 'stories-millennial-parent', name: 'Millennial Parent' }
             ]
           }
         ]

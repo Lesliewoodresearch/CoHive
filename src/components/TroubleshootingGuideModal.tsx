@@ -54,7 +54,7 @@ const processSteps = [
   { id: 'colleagues', label: 'Colleagues', ... },
   { id: 'luminaries', label: 'Luminaries', ... },
   { id: 'culturalVoices', label: 'Cultural Voices', ... },
-  { id: 'panelist', label: 'Panelist', ... },
+  { id: 'stories', label: 'Stories', ... },
   { id: 'competitors', label: 'Competitors', ... },
   { id: 'socialListening', label: 'Social Listening', ... },
   { id: 'consumers', label: 'Consumers', ... },
@@ -558,7 +558,7 @@ useEffect(() => {
     codeExample: `// Assessment available on these hexes:
 const personaHexes = [
   'colleagues', 'luminaries', 'consumers',
-  'culturalVoices', 'panelist', 'competitors', 'socialListening'
+  'culturalVoices', 'stories', 'competitors', 'socialListening'
 ];
 
 // CentralHexView.tsx
@@ -1130,26 +1130,26 @@ const culturalExecutions = JSON.parse(
     relatedFiles: ['/components/ProcessWireframe.tsx', '/components/CentralHexView.tsx']
   },
 
-  // ── PANELIST HEX TESTS ──────────────────────────────────────────────────────
-  'panelist-persona-selection': {
+  // ── STORIES HEX TESTS ──────────────────────────────────────────────────────
+  'stories-persona-selection': {
     title: 'Persona Selection Not Working',
-    symptom: 'Cannot select panelist personas with checkboxes',
+    symptom: 'Cannot select stories personas with checkboxes',
     whatThisMeans: [
       'Persona checkboxes not rendering',
-      'Not on Panelist hex Step 2',
+      'Not on Stories hex Step 2',
       'Persona library not loaded'
     ],
     commonCauses: [
-      'Wrong Step - Must be on Step 2 (Select Personas) in Panelist hex',
+      'Wrong Step - Must be on Step 2 (Select Personas) in Stories hex',
       'Persona Data Missing - Persona library not loaded from /data/personas.ts',
       'Checkbox Rendering Error - CentralHexView not rendering persona checkboxes',
       'No Personas for Hex - getPersonasForHex() returning empty array'
     ],
-    howToFix: '1. Navigate to Panelist hex\n2. Complete Step 1 (select files) and click Next\n3. Verify Step 2 displays persona checkboxes\n4. Check /data/personas.ts has Panelist personas defined',
+    howToFix: '1. Navigate to Stories hex\n2. Complete Step 1 (select files) and click Next\n3. Verify Step 2 displays persona checkboxes\n4. Check /data/personas.ts has Stories personas defined',
     codeExample: `// CentralHexView.tsx - Persona rendering
 import { getPersonasForHex } from '../data/personas';
 
-const personaConfig = getPersonasForHex('Panelist');
+const personaConfig = getPersonasForHex('Stories');
 
 // Render checkboxes
 {personaConfig.level1Personas.map(persona => (
@@ -1166,9 +1166,9 @@ const personaConfig = getPersonasForHex('Panelist');
     relatedFiles: ['/components/CentralHexView.tsx', '/data/personas.ts']
   },
 
-  'panelist-file-selection': {
+  'stories-file-selection': {
     title: 'Research File Selection Not Working',
-    symptom: 'No research files available for Panelist hex',
+    symptom: 'No research files available for Stories hex',
     whatThisMeans: [
       'Knowledge Base has no research files',
       'Files not approved for use',
@@ -1180,7 +1180,7 @@ const personaConfig = getPersonasForHex('Panelist');
       'localStorage Empty - cohive_research_files not populated',
       'Filter Error - Files being filtered out incorrectly'
     ],
-    howToFix: '1. Navigate to Knowledge Base hex\n2. Upload research files in Synthesis mode\n3. If non-researcher, ensure files are approved\n4. Return to Panelist hex and verify files appear in Step 1',
+    howToFix: '1. Navigate to Knowledge Base hex\n2. Upload research files in Synthesis mode\n3. If non-researcher, ensure files are approved\n4. Return to Stories hex and verify files appear in Step 1',
     codeExample: `// Expected localStorage structure:
 localStorage.setItem('cohive_research_files', JSON.stringify([
   {
@@ -1199,7 +1199,7 @@ const relevantFiles = researchFiles.filter(file => file.isApproved);`,
     relatedFiles: ['/components/CentralHexView.tsx', '/components/ResearchView.tsx']
   },
 
-  'panelist-assessment-type': {
+  'stories-assessment-type': {
     title: 'Assessment Type Configuration Missing',
     symptom: 'Cannot select recommend/assess/unified options',
     whatThisMeans: [
@@ -1208,19 +1208,19 @@ const relevantFiles = researchFiles.filter(file => file.isApproved);`,
       'Not on persona hex workflow'
     ],
     commonCauses: [
-      'Not on Persona Hex - Panelist should be treated as persona hex',
-      'isPersonaHex Logic Broken - "Panelist" not in isPersonaHex array',
+      'Not on Persona Hex - Stories should be treated as persona hex',
+      'isPersonaHex Logic Broken - "Stories" not in isPersonaHex array',
       'Controls Not Rendered - Assessment type checkboxes/buttons missing',
       'Conditional Hidden - UI hidden by template or state logic'
     ],
-    howToFix: '1. Navigate to Panelist hex\n2. Check that "Panelist" is in isPersonaHex array\n3. Verify assessment type controls render in Step 3\n4. Default should be "recommend" for persona hexes',
+    howToFix: '1. Navigate to Stories hex\n2. Check that "Stories" is in isPersonaHex array\n3. Verify assessment type controls render in Step 3\n4. Default should be "recommend" for persona hexes',
     codeExample: `// CentralHexView.tsx - Persona hex detection
 const isPersonaHex = [
   'Consumers', 
   'Luminaries',
   'Colleagues', 
   'cultural',
-  'Panelist',  // ← Ensure this is included
+  'Stories',  // ← Ensure this is included
   'Grade'
 ].includes(hexId);
 
@@ -1231,7 +1231,7 @@ const [assessmentType, setAssessmentType] = useState<string[]>(
     relatedFiles: ['/components/CentralHexView.tsx']
   },
 
-  'panelist-workflow-nav': {
+  'stories-workflow-nav': {
     title: '3-Step Workflow Navigation Broken',
     symptom: 'Cannot navigate between Step 1→2→3',
     whatThisMeans: [
@@ -1271,9 +1271,9 @@ const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
     relatedFiles: ['/components/CentralHexView.tsx']
   },
 
-  'panelist-results-persistence': {
+  'stories-results-persistence': {
     title: 'Execution Results Not Persisting',
-    symptom: 'Panelist hex results not saved or not appearing in history',
+    symptom: 'Stories hex results not saved or not appearing in history',
     whatThisMeans: [
       'Assessment results are lost',
       'Cannot view previous executions',
@@ -1286,7 +1286,7 @@ const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
       'Parse Error - Corrupted JSON in cohive_hex_executions',
       'Hex ID Mismatch - Saving under different hex ID'
     ],
-    howToFix: '1. Run at least one assessment in Panelist hex\n2. Check cohive_hex_executions in localStorage (DevTools)\n3. Verify executions are saved under "Panelist" key\n4. Check ProcessWireframe.tsx handleExecuteAssessment function',
+    howToFix: '1. Run at least one assessment in Stories hex\n2. Check cohive_hex_executions in localStorage (DevTools)\n3. Verify executions are saved under "Stories" key\n4. Check ProcessWireframe.tsx handleExecuteAssessment function',
     codeExample: `// ProcessWireframe.tsx - Save execution
 const handleExecuteAssessment = (selectedFiles, assessmentType, assessment) => {
   const executionData = {
@@ -1302,8 +1302,8 @@ const handleExecuteAssessment = (selectedFiles, assessmentType, assessment) => {
     localStorage.getItem('cohive_hex_executions') || '{}'
   );
   
-  executions['Panelist'] = [
-    ...(executions['Panelist'] || []),
+  executions['Stories'] = [
+    ...(executions['Stories'] || []),
     executionData
   ];
   
@@ -1311,9 +1311,9 @@ const handleExecuteAssessment = (selectedFiles, assessmentType, assessment) => {
 };
 
 // Retrieve executions
-const panelistExecutions = JSON.parse(
+const storiesExecutions = JSON.parse(
   localStorage.getItem('cohive_hex_executions') || '{}'
-)['Panelist'] || [];`,
+)['Stories'] || [];`,
     relatedFiles: ['/components/ProcessWireframe.tsx', '/components/CentralHexView.tsx']
   },
 
@@ -1407,7 +1407,7 @@ const isPersonaHex = [
   'Luminaries',
   'Colleagues', 
   'cultural',
-  'Panelist',
+  'Stories',
   'Competitors',  // ← Ensure this is included
   'Grade'
 ].includes(hexId);
@@ -1595,7 +1595,7 @@ const isPersonaHex = [
   'Luminaries',
   'Colleagues', 
   'cultural',
-  'Panelist',
+  'Stories',
   'Competitors',
   'social',  // ← Ensure this is included
   'Grade'
@@ -1784,7 +1784,7 @@ const isPersonaHex = [
   'Luminaries',
   'Colleagues', 
   'cultural',
-  'Panelist',
+  'Stories',
   'Competitors',
   'social',
   'Grade'
@@ -1954,7 +1954,7 @@ const isPersonaHex = [
   'Luminaries',
   'Colleagues', 
   'cultural',
-  'Panelist',
+  'Stories',
   'Competitors',
   'social',
   'Grade'  // ← Ensure this is included
@@ -2121,7 +2121,7 @@ const isValid =
     howToFix: '1. Navigate to Findings hex\n2. Verify Question 1 "Save Iteration or Summarize" appears\n3. Check if at least one workflow hex has been executed (required for Save Iteration)\n4. Verify radio buttons render for both modes\n5. Check ProcessWireframe.tsx for activeStepId === "Findings" conditional',
     codeExample: `// ProcessWireframe.tsx - Findings mode selection
 if (activeStepId === 'Findings') {
-  const workflowHexes = ['research', 'Luminaries', 'panelist', 'Consumers', 
+  const workflowHexes = ['research', 'Luminaries', 'stories', 'Consumers', 
                         'competitors', 'Colleagues', 'cultural', 'social', 'Grade'];
   const hasHexExecutions = workflowHexes.some(hexId => {
     const executions = hexExecutions[hexId];
@@ -3452,7 +3452,7 @@ const getCurrentStepInfo = () => {
       'Typo in Hex ID - Capitalization or spelling difference between step ID and hexInfo key',
       'Role-Based Content Missing - Knowledge Base missing researcher or non-researcher info'
     ],
-    howToFix: '1. Navigate through ALL 13 hexes one by one\n2. For each hex, click Info button\n3. Verify specific (not generic) content appears:\n   - Title should match hex name (not "Hexagon Information")\n   - Description should be hex-specific (not "No description available")\n   - Details should explain hex-specific workflow\n4. Check hexInfo object (ProcessFlow.tsx lines 163-432) has ALL hex IDs:\n   **Required 13 hexes:**\n   - Enter\n   - research (Knowledge Base)\n   - Luminaries\n   - panelist (Panelist)\n   - Consumers\n   - competitors (Competitors)\n   - Colleagues\n   - cultural (Cultural Voices)\n   - social (Social Listening)\n   - Wisdom\n   - Grade (Score Results)\n   - Findings\n   - review (My Files)\n5. Verify each entry has complete structure:\n   - title: string\n   - description: string\n   - details: string[] (array with at least 1 item)\n6. Check for exact ID matching (case-sensitive)\n7. Special check: Knowledge Base (research) must have both:\n   - researchInfoForResearchers (line 134)\n   - researchInfoForNonResearchers (line 150)\n8. If hex shows fallback content, add missing entry to hexInfo',
+    howToFix: '1. Navigate through ALL 13 hexes one by one\n2. For each hex, click Info button\n3. Verify specific (not generic) content appears:\n   - Title should match hex name (not "Hexagon Information")\n   - Description should be hex-specific (not "No description available")\n   - Details should explain hex-specific workflow\n4. Check hexInfo object (ProcessFlow.tsx lines 163-432) has ALL hex IDs:\n   **Required 13 hexes:**\n   - Enter\n   - research (Knowledge Base)\n   - Luminaries\n   - stories (Stories)\n   - Consumers\n   - competitors (Competitors)\n   - Colleagues\n   - cultural (Cultural Voices)\n   - social (Social Listening)\n   - Wisdom\n   - Grade (Score Results)\n   - Findings\n   - review (My Files)\n5. Verify each entry has complete structure:\n   - title: string\n   - description: string\n   - details: string[] (array with at least 1 item)\n6. Check for exact ID matching (case-sensitive)\n7. Special check: Knowledge Base (research) must have both:\n   - researchInfoForResearchers (line 134)\n   - researchInfoForNonResearchers (line 150)\n8. If hex shows fallback content, add missing entry to hexInfo',
     codeExample: `// ProcessFlow.tsx - Complete hex coverage
 // ALL 13 hexes must be defined in hexInfo object
 const hexInfo: {
@@ -3483,9 +3483,9 @@ const hexInfo: {
     details: [/* ... */]
   },
   
-  // 4. Panelist
-  panelist: {
-    title: 'Panelist',
+  // 4. Stories
+  stories: {
+    title: 'Stories',
     description: 'Leverage data from consumer panel households...',
     details: [/* ... */]
   },

@@ -235,7 +235,7 @@ The goal is a prioritised research agenda — not everything that could be done,
 
       new DynamicPart('completed_hexes', (ctx) => {
         const completed = ctx.allHexResponses ? Object.keys(ctx.allHexResponses) : [];
-        const allHexes = ['Launch', 'Luminaries', 'panelist', 'Consumers', 'competitors', 'Colleagues', 'cultural', 'test', 'Grade'];
+        const allHexes = ['Launch', 'Luminaries', 'stories', 'Consumers', 'competitors', 'Colleagues', 'cultural', 'test', 'Grade'];
         const notCompleted = allHexes.filter(h => !completed.includes(h));
         return `Workflow Status:
 Completed: ${completed.join(', ') || 'Launch only'}

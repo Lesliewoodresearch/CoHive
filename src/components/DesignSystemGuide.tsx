@@ -118,7 +118,7 @@ export function DesignSystemGuide() {
           <HexagonBreadcrumb label="Enter" color={stepColors.Enter} status="completed" size="small" />
           <HexagonBreadcrumb label="Research" color={stepColors.research} status="completed" size="small" />
           <HexagonBreadcrumb label="Luminaries" color={stepColors.Luminaries} status="completed" size="small" />
-          <HexagonBreadcrumb label="Panelist" color={stepColors.panelist} status="completed" size="small" />
+          <HexagonBreadcrumb label="Stories" color={stepColors.stories} status="completed" size="small" />
           <HexagonBreadcrumb label="Consumers" color={stepColors.Consumers} status="completed" size="small" />
           <HexagonBreadcrumb label="colleagues" color={stepColors.colleagues} status="completed" size="small" />
           <HexagonBreadcrumb label="Competitors" color={stepColors.competitors} status="completed" size="small" />

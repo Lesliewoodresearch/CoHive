@@ -20,7 +20,7 @@ export const hexagons = [
   'Enter',
   'research',
   'Luminaries',
-  'panelist',
+  'stories',
   'Consumers',
   'competitors',
   'Colleagues',

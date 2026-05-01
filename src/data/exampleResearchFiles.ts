@@ -20,7 +20,7 @@ export interface ResearchFile {
 /**
  * Example research files for Nike and Adidas brands
  * Covers multiple project types: Creative Messaging, Product Launch, War Games, Packaging
- * Also includes files for workflow hexagons: Luminaries, Panelist, Consumers, Competitors, etc.
+ * Also includes files for workflow hexagons: Luminaries, Stories, Consumers, Competitors, etc.
  */
 export const exampleResearchFiles: ResearchFile[] = [
   // Creative Messaging files for Nike
@@ -174,15 +174,15 @@ export const exampleResearchFiles: ResearchFile[] = [
     fileType: 'Luminaries'
   },
   
-  // Workflow Hexagon Files - Panelist
+  // Workflow Hexagon Files - Stories
   {
     id: '8',
     brand: 'Nike',
-    projectType: 'panelist',
+    projectType: 'stories',
     fileName: 'Consumer_Panel_Demographics.xlsx',
     isApproved: true,
     uploadDate: Date.now() - 86400000 * 14,
-    fileType: 'panelist'
+    fileType: 'stories'
   },
   
   // Workflow Hexagon Files - Consumers

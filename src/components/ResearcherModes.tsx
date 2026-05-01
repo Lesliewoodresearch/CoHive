@@ -57,7 +57,7 @@ interface ResearcherModesProps {
 
 const centralHexagons = [
   { id: 'Luminaries', label: 'Luminaries', color: 'bg-teal-100', borderColor: 'border-teal-300' },
-  { id: 'panelist', label: 'Panelist', color: 'bg-cyan-100', borderColor: 'border-cyan-300' },
+  { id: 'stories', label: 'Stories', color: 'bg-cyan-100', borderColor: 'border-cyan-300' },
   { id: 'Consumers', label: 'Consumers', color: 'bg-sky-100', borderColor: 'border-sky-300' },
   { id: 'competitors', label: 'Competitors', color: 'bg-indigo-100', borderColor: 'border-indigo-300' },
   { id: 'Colleagues', label: 'Colleagues', color: 'bg-violet-100', borderColor: 'border-violet-300' },

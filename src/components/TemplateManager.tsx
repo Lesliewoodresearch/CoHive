@@ -270,7 +270,7 @@ export function TemplateManager({
               <div className="mb-6">
                 <h4 className="text-gray-900 mb-2">Visible Workflow Steps</h4>
                 <div className="grid grid-cols-3 gap-2">
-                  {['Enter', 'research', 'Luminaries', 'panelist', 'Consumers', 'competitors', 'Colleagues', 'cultural', 'social', 'Wisdom', 'Grade', 'Findings', 'review'].map((step) => {
+                  {['Enter', 'research', 'Luminaries', 'stories', 'Consumers', 'competitors', 'Colleagues', 'cultural', 'social', 'Wisdom', 'Grade', 'Findings', 'review'].map((step) => {
                     // Knowledge Base (research) and Wisdom are always visible and cannot be disabled
                     const isAlwaysVisible = step === 'research' || step === 'Wisdom';
                     
@@ -525,7 +525,7 @@ export const defaultTemplates: UserTemplate[] = [
     name: 'Administrator',
     description: 'Full access to all features, template management, and research approval',
     role: 'administrator',
-    visibleSteps: ['Enter', 'research', 'Luminaries', 'panelist', 'Consumers', 'competitors', 'Colleagues', 'cultural', 'social', 'Wisdom', 'Grade', 'Findings', 'review'],
+    visibleSteps: ['Enter', 'research', 'Luminaries', 'stories', 'Consumers', 'competitors', 'Colleagues', 'cultural', 'social', 'Wisdom', 'Grade', 'Findings', 'review'],
     questionConfig: {
       Enter: {
         visibleQuestions: [0, 1],
@@ -542,7 +542,7 @@ export const defaultTemplates: UserTemplate[] = [
         defaultResponses: {},
         requiredQuestions: []
       },
-      panelist: {
+      stories: {
         visibleQuestions: [0, 1, 2],
         defaultResponses: {},
         requiredQuestions: []
@@ -597,7 +597,7 @@ export const defaultTemplates: UserTemplate[] = [
       Enter: 'Initialize project in Databricks workspace. Create project directory and metadata tables.',
       research: 'Process uploaded research files. Extract insights using NLP models. Store in Delta tables.',
       Luminaries: 'Process expert interview transcripts. Extract key themes and insights.',
-      panelist: 'Process panelist feedback and responses. Generate comprehensive analysis.',
+      stories: 'Process stories feedback and responses. Generate comprehensive analysis.',
       Consumers: 'Run buyer persona analysis. Generate segment profiles and insights.',
       competitors: 'Execute competitive intelligence queries. Update market share models.',
       Colleagues: 'Process internal stakeholder feedback. Generate team collaboration insights.',
@@ -657,7 +657,7 @@ export const defaultTemplates: UserTemplate[] = [
     name: 'Research Leader',
     description: 'Senior research role with full read/edit/approve capabilities for all research assets',
     role: 'research-leader',
-    visibleSteps: ['Enter', 'research', 'Luminaries', 'panelist', 'Consumers', 'competitors', 'Colleagues', 'Wisdom', 'Grade', 'Findings'],
+    visibleSteps: ['Enter', 'research', 'Luminaries', 'stories', 'Consumers', 'competitors', 'Colleagues', 'Wisdom', 'Grade', 'Findings'],
     questionConfig: {
       Enter: {
         visibleQuestions: [0, 1],
@@ -688,7 +688,7 @@ export const defaultTemplates: UserTemplate[] = [
     name: 'Data Scientist',
     description: 'Data-focused template with advanced analytics and model training capabilities',
     role: 'data-scientist',
-    visibleSteps: ['Enter', 'research', 'Luminaries', 'panelist', 'Consumers', 'competitors', 'Colleagues', 'cultural', 'social', 'Wisdom', 'Grade', 'Findings'],
+    visibleSteps: ['Enter', 'research', 'Luminaries', 'stories', 'Consumers', 'competitors', 'Colleagues', 'cultural', 'social', 'Wisdom', 'Grade', 'Findings'],
     questionConfig: {
       Enter: {
         visibleQuestions: [0, 1],
@@ -719,7 +719,7 @@ export const defaultTemplates: UserTemplate[] = [
     name: 'Marketing Manager',
     description: 'Marketing-focused template with consumer insights and competitive analysis',
     role: 'marketing-manager',
-    visibleSteps: ['Enter', 'research', 'Grade', 'cultural', 'Colleagues', 'panelist', 'Luminaries', 'Consumers', 'competitors', 'social', 'Wisdom', 'Findings'],
+    visibleSteps: ['Enter', 'research', 'Grade', 'cultural', 'Colleagues', 'stories', 'Luminaries', 'Consumers', 'competitors', 'social', 'Wisdom', 'Findings'],
     questionConfig: {
       Enter: {
         visibleQuestions: [0, 1],
@@ -757,7 +757,7 @@ export const defaultTemplates: UserTemplate[] = [
     name: 'Product Manager',
     description: 'Product development template with testing and user insights focus',
     role: 'product-manager',
-    visibleSteps: ['Enter', 'research', 'panelist', 'Consumers', 'Wisdom', 'Grade', 'Findings'],
+    visibleSteps: ['Enter', 'research', 'stories', 'Consumers', 'Wisdom', 'Grade', 'Findings'],
     questionConfig: {
       Enter: {
         visibleQuestions: [0, 1],
@@ -775,7 +775,7 @@ export const defaultTemplates: UserTemplate[] = [
     databricksInstructions: {
       Enter: 'Create product development project. Setup experiment tracking.',
       research: 'Load product research files. Access customer feedback data.',
-      panelist: 'Analyze panel home usage data. Generate product adoption metrics.',
+      stories: 'Analyze panel home usage data. Generate product adoption metrics.',
       Consumers: 'Process user research interviews. Extract feature requests.',
       Grade: 'Run A/B test analysis. Generate statistical significance reports.',
       Findings: 'Create product roadmap recommendations. Export feature priorities.'
