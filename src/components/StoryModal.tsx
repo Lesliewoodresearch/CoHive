@@ -115,6 +115,12 @@ function buildStoryPrompt(params: {
 
 Your role is to write compelling, structured narrative stories that reveal brand truths through archetypal storytelling frameworks. The stories should be vivid, specific to the brand, and professionally useful as strategic tools.
 
+CRITICAL STORYTELLING PRINCIPLE — apply this to every story without exception:
+The CONSUMER (customer, user, audience member) is ALWAYS the protagonist and hero of the story. The brand plays a supporting role as one of two things:
+- THE HELPER / GUIDE / MAGIC (the fairy godmother, the mentor, the enabling force): The brand gives the consumer what they need to succeed, enables their transformation, or awakens their potential. The consumer's journey and growth is the story — the brand is the reason it became possible.
+- THE VILLAIN / ANTAGONIST / INCUMBENT (the oppressive force, the trap, the thing to overcome): The brand (or a named competitor) is what the consumer must confront, escape from, or outsmart. The consumer's victory is the story.
+Never make the brand the protagonist. The brand's power is revealed entirely through what it does FOR or AGAINST the consumer.
+
 ${kbInstruction}
 
 ${scopeInstruction}
