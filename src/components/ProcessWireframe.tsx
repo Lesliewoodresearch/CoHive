@@ -1031,7 +1031,7 @@ export default function ProcessWireframe() {
       else scope = 'brand';
       const result = await uploadToKnowledgeBase({ file, scope, category: projectType, brand: scope === 'brand' ? (brand || undefined) : undefined, projectType: projectType || undefined, fileType: 'Wisdom', tags: [insightType, inputMethod], insightType: insightType as 'Brand' | 'Category' | 'General', inputMethod: inputMethod as 'Text' | 'Voice' | 'Photo' | 'Video' | 'File', userEmail: userEmail, userRole });
       if (result.success) {
-        setWisdomSuccessMessage(`✅ "${fileName}" saved to Knowledge Base`);
+        setWisdomSuccessMessage(`✅ "${fileName}" saved to Knowledge Base.\n\nThis file will be made available after it has been processed, read and approved by a research manager.`);
         return true;
       } else {
         setWisdomErrorMessage(`Failed to save: ${result.error || 'Unknown error'}`);
@@ -1837,7 +1837,7 @@ export default function ProcessWireframe() {
                               setWisdomErrorMessage(null);
                               try {
                                 const result = await uploadToKnowledgeBase({ file: renamed, scope: photoScope, brand: photoScope === 'brand' ? (brand || undefined) : undefined, projectType: projectType || undefined, fileType: 'Wisdom', tags: [insightType, 'Photo'], insightType: insightType as 'Brand' | 'Category' | 'General', inputMethod: 'Photo', userEmail, userRole });
-                                if (result.success) { handleResponseChange(idx, label); setWisdomSuccessMessage(`✅ "${renamed.name}" saved to Knowledge Base`); }
+                                if (result.success) { handleResponseChange(idx, label); setWisdomSuccessMessage(`✅ "${renamed.name}" saved to Knowledge Base.\n\nThis file will be made available after it has been processed, read and approved by a research manager.`); }
                                 else { setWisdomErrorMessage(`Failed to save photo: ${result.error || 'Unknown error'}`); }
                               } catch (err) { setWisdomErrorMessage(`Failed to save photo: ${err instanceof Error ? err.message : 'Unknown error'}`); }
                               finally { setIsWisdomSaving(false); setIsDatabricksLoading(false); e.target.value = ''; }
@@ -1899,7 +1899,7 @@ export default function ProcessWireframe() {
                                               setWisdomErrorMessage(null);
                                               try {
                                                 const result = await uploadToKnowledgeBase({ file: captured, scope: photoScope, brand: photoScope === 'brand' ? (brand || undefined) : undefined, projectType: projectType || undefined, fileType: 'Wisdom', tags: [insightType, 'Photo'], insightType: insightType as 'Brand' | 'Category' | 'General', inputMethod: 'Photo', userEmail, userRole });
-                                                if (result.success) { handleResponseChange(idx, 'Camera photo saved'); setWisdomSuccessMessage(`✅ "${captured.name}" saved to Knowledge Base`); }
+                                                if (result.success) { handleResponseChange(idx, 'Camera photo saved'); setWisdomSuccessMessage(`✅ "${captured.name}" saved to Knowledge Base.\n\nThis file will be made available after it has been processed, read and approved by a research manager.`); }
                                                 else { setWisdomErrorMessage(`Failed to save photo: ${result.error || 'Unknown error'}`); }
                                               } catch (err) { setWisdomErrorMessage(`Failed to save photo: ${err instanceof Error ? err.message : 'Unknown error'}`); }
                                               finally { setIsWisdomSaving(false); setIsDatabricksLoading(false); }
@@ -1933,7 +1933,7 @@ export default function ProcessWireframe() {
                               setWisdomErrorMessage(null);
                               try {
                                 const result = await uploadToKnowledgeBase({ file: renamed, scope: videoScope, brand: videoScope === 'brand' ? (brand || undefined) : undefined, projectType: projectType || undefined, fileType: 'Wisdom', tags: [insightType, 'Video'], insightType: insightType as 'Brand' | 'Category' | 'General', inputMethod: 'Video', userEmail, userRole });
-                                if (result.success) { handleResponseChange(idx, label); setWisdomSuccessMessage(`✅ "${renamed.name}" saved to Knowledge Base`); }
+                                if (result.success) { handleResponseChange(idx, label); setWisdomSuccessMessage(`✅ "${renamed.name}" saved to Knowledge Base.\n\nThis file will be made available after it has been processed, read and approved by a research manager.`); }
                                 else { setWisdomErrorMessage(`Failed to save video: ${result.error || 'Unknown error'}`); }
                               } catch (err) { setWisdomErrorMessage(`Failed to save video: ${err instanceof Error ? err.message : 'Unknown error'}`); }
                               finally { setIsWisdomSaving(false); setIsDatabricksLoading(false); e.target.value = ''; }
@@ -1988,7 +1988,7 @@ export default function ProcessWireframe() {
                                           setWisdomErrorMessage(null);
                                           try {
                                             const result = await uploadToKnowledgeBase({ file: recorded, scope: videoScope, brand: videoScope === 'brand' ? (brand || undefined) : undefined, projectType: projectType || undefined, fileType: 'Wisdom', tags: [insightType, 'Video'], insightType: insightType as 'Brand' | 'Category' | 'General', inputMethod: 'Video', userEmail, userRole });
-                                            if (result.success) { handleResponseChange(idx, 'Camera video saved'); setWisdomSuccessMessage(`✅ "${recorded.name}" saved to Knowledge Base`); }
+                                            if (result.success) { handleResponseChange(idx, 'Camera video saved'); setWisdomSuccessMessage(`✅ "${recorded.name}" saved to Knowledge Base.\n\nThis file will be made available after it has been processed, read and approved by a research manager.`); }
                                             else { setWisdomErrorMessage(`Failed to save video: ${result.error || 'Unknown error'}`); }
                                           } catch (err) { setWisdomErrorMessage(`Failed to save video: ${err instanceof Error ? err.message : 'Unknown error'}`); }
                                           finally { setIsWisdomSaving(false); setIsDatabricksLoading(false); }

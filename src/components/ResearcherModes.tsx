@@ -5,7 +5,7 @@ import { DatabricksFileBrowser } from './DatabricksFileBrowser';
 import { uploadToKnowledgeBase, approveKnowledgeBaseFile, deleteKnowledgeBaseFile, updateKnowledgeBaseMetadata, listKnowledgeBaseFiles, readKnowledgeBaseFile, processKnowledgeBaseFile, type KnowledgeBaseFile } from '../utils/databricksAPI';
 import { executeAIPrompt, runAIAgent } from '../utils/databricksAI';
 import { isAuthenticated, getCurrentUserEmail, getValidSession } from '../utils/databricksAuth';
-import { Upload, CircleCheck, Trash2, Edit, Bot, Sparkles, X, Loader, FileText, Download, Save, RefreshCw, ChevronDown, ChevronRight } from 'lucide-react';
+import { Upload, CircleCheck, Trash2, Edit, Bot, Sparkles, X, Loader, FileText, Download, Save, RefreshCw, ChevronDown, ChevronRight, Eye } from 'lucide-react';
 import gemIcon from 'figma:asset/53dc6cf554f69e479cfbd60a46741f158d11dd21.png';
 import { SpinHex } from './LoadingGem';
 
@@ -115,18 +115,6 @@ interface AIResponseModalProps {
   meta?: string;
 }
 
-interface MetadataAssignmentEntry {
-  fileId: string;
-  txtFileId: string;
-  fileName: string;
-  suggestedBrand: string;
-  suggestedProjectTypes: string[];
-  confirmedBrand: string;
-  confirmedProjectType: string;
-  confirmedFileType: string;
-  confirmedMonth: string;
-  confirmedYear: string;
-}
 
 function renderMarkdown(text: string): React.ReactNode {
   const lines = text.split('\n');
@@ -287,9 +275,6 @@ export function ResearcherModes({
   const [editedKBYear, setEditedKBYear] = useState<string>('');
   const [isSavingKBChanges, setIsSavingKBChanges] = useState(false);
 
-  const [metadataQueue, setMetadataQueue] = useState<MetadataAssignmentEntry[]>([]);
-  const [showMetadataModal, setShowMetadataModal] = useState(false);
-  const [isSavingMetadata, setIsSavingMetadata] = useState(false);
 
   interface SavedCustomPrompt { id: string; name: string; prompt: string; createdAt: number; updatedAt: number; }
   const loadSavedPrompts = (): SavedCustomPrompt[] => { try { const raw = localStorage.getItem(`cohive_custom_prompts_${userEmail}`); return raw ? JSON.parse(raw) : []; } catch { return []; } };
@@ -506,7 +491,8 @@ export function ResearcherModes({
     setProcessingStatus(init);
     onLoadingChange?.(true, `Processing 1 of ${selectedArray.length}…`);
 
-    const metadataEntries: MetadataAssignmentEntry[] = [];
+    type ProcessedEntry = { fileId: string; txtFileId: string; fileName: string; brand: string; projectType: string; month: string; year: string; };
+    const metadataEntries: ProcessedEntry[] = [];
     let doneCount = 0;
 
     try {
@@ -521,13 +507,10 @@ export function ResearcherModes({
             fileId,
             txtFileId: result.txtFileId || (fileId + '_txt'),
             fileName: result.fileName || fileId,
-            suggestedBrand: result.suggestedBrand || '',
-            suggestedProjectTypes: result.suggestedProjectTypes || [],
-            confirmedBrand: result.suggestedBrand || '',
-            confirmedProjectType: (result.suggestedProjectTypes || [])[0] || '',
-            confirmedFileType: 'Synthesis',
-            confirmedMonth: result.suggestedMonth ? String(result.suggestedMonth) : '',
-            confirmedYear: result.suggestedYear ? String(result.suggestedYear) : '',
+            brand: result.suggestedBrand || '',
+            projectType: (result.suggestedProjectTypes || [])[0] || '',
+            month: result.suggestedMonth ? String(result.suggestedMonth) : '',
+            year: result.suggestedYear ? String(result.suggestedYear) : '',
           });
         } else {
           setProcessingStatus(prev => ({ ...prev, [fileId]: 'error' }));
@@ -541,32 +524,29 @@ export function ResearcherModes({
         for (const id of selectedArray) await processFile(id);
       }
 
+      // Auto-save AI-suggested metadata so reviewers see pre-filled fields
+      for (const entry of metadataEntries) {
+        try {
+          const metaUpdate: Parameters<typeof updateKnowledgeBaseMetadata>[1] = { fileType: 'Synthesis' };
+          if (entry.brand) metaUpdate.brand = entry.brand;
+          if (entry.projectType) metaUpdate.projectType = entry.projectType;
+          if (entry.month) metaUpdate.contentMonth = parseInt(entry.month);
+          if (entry.year) metaUpdate.contentYear = parseInt(entry.year);
+          await updateKnowledgeBaseMetadata(entry.fileId, metaUpdate, userEmail, userRole);
+          await updateKnowledgeBaseMetadata(entry.txtFileId, metaUpdate, userEmail, userRole);
+        } catch (e) { console.warn(`Could not auto-save metadata for ${entry.fileName}:`, e); }
+      }
+
       await refreshPendingQueues();
       setSelectedKBFiles(new Set());
 
-      if (metadataEntries.length > 0) { setMetadataQueue(metadataEntries); setShowMetadataModal(true); }
-      else alert('Processing complete, but no files succeeded.');
+      if (metadataEntries.length > 0) {
+        alert(`✅ ${metadataEntries.length} file(s) processed successfully. AI-suggested metadata has been pre-filled and is ready to review in Read/Edit/Approve.`);
+      } else {
+        alert('Processing complete, but no files succeeded.');
+      }
     } catch (e) { alert(`❌ Processing failed: ${e instanceof Error ? e.message : 'Unknown'}`); }
     finally { setIsProcessing(false); setProcessingStatus({}); onLoadingChange?.(false); }
-  };
-
-  const handleSaveMetadataAssignments = async () => {
-    setIsSavingMetadata(true);
-    try {
-      for (const entry of metadataQueue) {
-        const metaUpdate: Parameters<typeof updateKnowledgeBaseMetadata>[1] = { fileType: entry.confirmedFileType || 'Synthesis' };
-        if (entry.confirmedBrand) metaUpdate.brand = entry.confirmedBrand;
-        if (entry.confirmedProjectType) metaUpdate.projectType = entry.confirmedProjectType;
-        if (entry.confirmedMonth) metaUpdate.contentMonth = parseInt(entry.confirmedMonth);
-        if (entry.confirmedYear) metaUpdate.contentYear = parseInt(entry.confirmedYear);
-        await updateKnowledgeBaseMetadata(entry.fileId, metaUpdate, userEmail, userRole);
-        await updateKnowledgeBaseMetadata(entry.txtFileId, metaUpdate, userEmail, userRole);
-      }
-      alert(`✅ Metadata saved for ${metadataQueue.length} file(s).`);
-      setShowMetadataModal(false); setMetadataQueue([]);
-      onRefreshFiles?.(); await refreshPendingQueues();
-    } catch (e) { alert(`❌ Failed: ${e instanceof Error ? e.message : 'Unknown'}`); }
-    finally { setIsSavingMetadata(false); }
   };
 
   const handlePreviewKBFile = async (file: KnowledgeBaseFile) => {
@@ -778,67 +758,6 @@ export function ResearcherModes({
     </div>
   );
 
-  const MetadataAssignmentModal = () => {
-    if (!showMetadataModal || metadataQueue.length === 0) return null;
-    return (
-      <div className="fixed inset-y-0 left-0 right-[350px] bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-          <div className="border-b-2 border-gray-200 px-6 py-4">
-            <h2 className="text-gray-900 font-bold text-lg">Assign Brand & Project Type</h2>
-            <p className="text-gray-500 text-sm mt-0.5">AI suggested metadata for {metadataQueue.length} file(s). Review and confirm.</p>
-          </div>
-          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">
-            {metadataQueue.map((entry, idx) => (
-              <div key={entry.fileId} className="border-2 border-gray-200 rounded-lg p-4 space-y-3">
-                <h3 className="text-gray-900 font-semibold text-sm truncate">{entry.fileName}</h3>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Brand</label>
-                  <select value={entry.confirmedBrand} onChange={e => { const u = [...metadataQueue]; u[idx] = { ...u[idx], confirmedBrand: e.target.value }; setMetadataQueue(u); }} className="w-full border-2 border-gray-300 bg-white rounded p-2 text-sm text-gray-700 focus:outline-none focus:border-blue-500">
-                    <option value="">— No brand —</option>
-                    {availableBrands.map(b => <option key={b} value={b}>{b}{b === entry.suggestedBrand ? ' ← AI suggested' : ''}</option>)}
-                    {entry.suggestedBrand && !availableBrands.includes(entry.suggestedBrand) && <option value={entry.suggestedBrand}>{entry.suggestedBrand} ← AI suggested</option>}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Project Type {entry.suggestedProjectTypes.length > 0 && <span className="ml-2 text-blue-600 font-normal">AI: {entry.suggestedProjectTypes.slice(0,3).join(', ')}</span>}</label>
-                  <select value={entry.confirmedProjectType} onChange={e => { const u = [...metadataQueue]; u[idx] = { ...u[idx], confirmedProjectType: e.target.value }; setMetadataQueue(u); }} className="w-full border-2 border-gray-300 bg-white rounded p-2 text-sm text-gray-700 focus:outline-none focus:border-blue-500">
-                    <option value="">— No project type —</option>
-                    {entry.suggestedProjectTypes.length > 0 && <optgroup label="AI Suggested">{entry.suggestedProjectTypes.map(pt => <option key={pt} value={pt}>{pt}</option>)}</optgroup>}
-                    <optgroup label="All">{availableProjectTypes.filter(pt => !entry.suggestedProjectTypes.includes(pt)).map(pt => <option key={pt} value={pt}>{pt}</option>)}</optgroup>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">File Type</label>
-                  <select value={entry.confirmedFileType} onChange={e => { const u = [...metadataQueue]; u[idx] = { ...u[idx], confirmedFileType: e.target.value }; setMetadataQueue(u); }} className="w-full border-2 border-gray-300 bg-white rounded p-2 text-sm text-gray-700 focus:outline-none focus:border-blue-500">
-                    {FILE_TYPES.map(ft => <option key={ft} value={ft}>{ft}</option>)}
-                  </select>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Month <span className="font-normal text-gray-400">(optional)</span></label>
-                    <select value={entry.confirmedMonth} onChange={e => { const u = [...metadataQueue]; u[idx] = { ...u[idx], confirmedMonth: e.target.value }; setMetadataQueue(u); }} className="w-full border-2 border-gray-300 bg-white rounded p-2 text-sm text-gray-700 focus:outline-none focus:border-blue-500">
-                      <option value="">— Unknown —</option>
-                      {['January','February','March','April','May','June','July','August','September','October','November','December'].map((m, i) => <option key={i+1} value={String(i+1)}>{m}{entry.confirmedMonth === String(i+1) && entry.confirmedMonth ? ' ← AI suggested' : ''}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Year <span className="font-normal text-gray-400">(optional)</span></label>
-                    <input type="number" min="1900" max="2100" placeholder="e.g. 2024" value={entry.confirmedYear} onChange={e => { const u = [...metadataQueue]; u[idx] = { ...u[idx], confirmedYear: e.target.value }; setMetadataQueue(u); }} className="w-full border-2 border-gray-300 bg-white rounded p-2 text-sm text-gray-700 focus:outline-none focus:border-blue-500" />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="border-t-2 border-gray-200 px-6 py-4 flex items-center justify-between">
-            <button onClick={() => { setShowMetadataModal(false); setMetadataQueue([]); }} className="px-4 py-2 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm">Skip — assign later</button>
-            <button onClick={handleSaveMetadataAssignments} disabled={isSavingMetadata} className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 flex items-center gap-2 text-sm font-semibold">
-              {isSavingMetadata ? <><SpinHex className="w-4 h-4" />Saving...</> : <><Save className="w-4 h-4" />Save Metadata</>}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   // ── Preview Modal ──────────────────────────────────────────────────────────
   const PreviewModal = () => {
@@ -893,7 +812,7 @@ export function ResearcherModes({
               <div>
                 <label className="block text-gray-700 font-semibold text-sm mb-1">Year <span className="font-normal text-gray-400 text-xs">(optional)</span></label>
                 {canApproveResearch ? (
-                  <input type="number" min="1900" max="2100" placeholder="e.g. 2024" value={editedKBYear} onChange={e => setEditedKBYear(e.target.value)} className="w-full border-2 border-gray-300 bg-white rounded p-2 text-sm text-gray-700 focus:outline-none focus:border-green-500" />
+                  <input type="text" inputMode="numeric" pattern="[0-9]{4}" maxLength={4} placeholder="e.g. 2024" value={editedKBYear} onChange={e => { const v = e.target.value.replace(/\D/g, ''); setEditedKBYear(v); }} className="w-full border-2 border-gray-300 bg-white rounded p-2 text-sm text-gray-700 focus:outline-none focus:border-green-500" />
                 ) : <p className="text-gray-700 text-sm py-2">{previewFile.contentYear || '—'}</p>}
               </div>
             </div>
@@ -950,7 +869,6 @@ export function ResearcherModes({
     return (
       <div className="space-y-4">
         <AIResponseModal {...aiModal} onClose={closeAiModal} />
-        <MetadataAssignmentModal />
         <PreviewModal />
         <ModeSwitcher current="read-edit-approve" />
 
@@ -1024,7 +942,10 @@ export function ResearcherModes({
                             {status === 'error' && <X className="w-6 h-6 text-red-600" />}
                           </div>}
                         </div>
-                        {canApproveResearch && <button onClick={() => handleRejectKBFile(file.fileId)} disabled={isProcessing} className="mt-2 px-3 py-1 bg-red-100 text-red-700 text-xs rounded hover:bg-red-200 flex items-center gap-1"><Trash2 className="w-3 h-3" />Delete</button>}
+                        <div className="flex items-center gap-2 mt-2">
+                          <button onClick={() => handlePreviewKBFile(file)} disabled={isProcessing} className="px-3 py-1 bg-gray-100 text-gray-700 text-xs rounded hover:bg-gray-200 flex items-center gap-1"><Eye className="w-3 h-3" />Read</button>
+                          {canApproveResearch && <button onClick={() => handleRejectKBFile(file.fileId)} disabled={isProcessing} className="px-3 py-1 bg-red-100 text-red-700 text-xs rounded hover:bg-red-200 flex items-center gap-1"><Trash2 className="w-3 h-3" />Delete</button>}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1229,7 +1150,6 @@ export function ResearcherModes({
     return (
       <div className="space-y-4">
         <AIResponseModal {...aiModal} onClose={closeAiModal} />
-        <MetadataAssignmentModal />
         <ModeSwitcher current="synthesis" />
         <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-4">
           <h3 className="text-purple-900 leading-tight">Synthesis Mode</h3>
@@ -1406,7 +1326,6 @@ export function ResearcherModes({
     return (
       <div className="space-y-4">
         <AIResponseModal {...aiModal} onClose={closeAiModal} />
-        <MetadataAssignmentModal />
         <ModeSwitcher current="personas" />
         <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4"><h3 className="text-blue-900 leading-tight">Personas Mode</h3><p className="text-blue-700 text-sm">Create persona files for each Hexagon</p></div>
         <div className="bg-white border-2 border-gray-300 rounded-lg p-4">
@@ -1455,7 +1374,6 @@ export function ResearcherModes({
     return (
       <div className="space-y-4">
         <AIResponseModal {...aiModal} onClose={closeAiModal} />
-        <MetadataAssignmentModal />
         <ModeSwitcher current="workspace" />
         <div className="bg-orange-50 border-2 border-orange-200 rounded-lg p-4"><h3 className="text-orange-900 leading-tight">Workspace Mode</h3><p className="text-orange-700 text-sm">Advanced operations — Administrators only</p></div>
         <div className="bg-white border-2 border-gray-300 rounded-lg p-4">
@@ -1472,7 +1390,6 @@ export function ResearcherModes({
       return (
         <div className="space-y-4">
           <AIResponseModal {...aiModal} onClose={closeAiModal} />
-          <MetadataAssignmentModal />
           <ModeSwitcher current="custom-prompt" />
           <div className="bg-teal-50 border-2 border-teal-200 rounded-lg p-4 flex items-center justify-between"><h3 className="text-teal-900 font-semibold">{cpView === 'create' ? 'Create Prompt' : 'Edit Prompt'}</h3><button onClick={() => { setCpView('list'); setCpActivePrompt(null); setCpPromptName(''); setCpPromptText(''); }} className="text-teal-600 text-sm underline">← Back</button></div>
           <div className="bg-white border-2 border-gray-300 rounded-lg p-5 space-y-4">
@@ -1487,7 +1404,6 @@ export function ResearcherModes({
       return (
         <div className="space-y-4">
           <AIResponseModal {...aiModal} onClose={closeAiModal} />
-          <MetadataAssignmentModal />
           <ModeSwitcher current="custom-prompt" />
           <div className="bg-teal-50 border-2 border-teal-200 rounded-lg p-4 flex items-center justify-between"><h3 className="text-teal-900 font-semibold">Run: {cpActivePrompt.name}</h3><button onClick={() => { setCpView('list'); setCpActivePrompt(null); setCpResult(null); setCpError(null); setCpSelectedFiles([]); setCpRunInput(''); }} className="text-teal-600 text-sm underline">← Back</button></div>
           <div className="bg-white border-2 border-gray-300 rounded-lg p-4">
@@ -1511,7 +1427,6 @@ export function ResearcherModes({
     return (
       <div className="space-y-4">
         <AIResponseModal {...aiModal} onClose={closeAiModal} />
-        <MetadataAssignmentModal />
         <ModeSwitcher current="custom-prompt" />
         <div className="bg-teal-50 border-2 border-teal-200 rounded-lg p-4 flex items-center justify-between"><div><h3 className="text-teal-900 font-semibold">Custom Prompt</h3><p className="text-teal-700 text-sm mt-1">Save and run AI prompts against KB files.</p></div><button onClick={() => { setCpView('create'); setCpActivePrompt(null); setCpPromptName(''); setCpPromptText(''); }} className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 text-sm font-semibold ml-4"><Sparkles className="w-4 h-4" />New Prompt</button></div>
         {savedPrompts.length === 0 ? <div className="bg-white border-2 border-dashed border-gray-300 rounded-lg p-10 text-center"><Bot className="w-10 h-10 text-gray-300 mx-auto mb-3" /><p className="text-gray-500 font-medium">No prompts saved yet</p><button onClick={() => { setCpView('create'); setCpActivePrompt(null); setCpPromptName(''); setCpPromptText(''); }} className="inline-flex items-center gap-2 px-5 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 text-sm font-semibold mt-4"><Sparkles className="w-4 h-4" />Create First</button></div> : (
