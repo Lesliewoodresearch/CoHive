@@ -75,7 +75,7 @@ export default async function handler(req, res) {
         warehouse_id: warehouseId,
         statement:
           'SELECT file_id, file_name, file_path, file_type, file_size_bytes, ' +
-          'scope, brand, project_type, category, uploaded_by, tags, insight_type, input_method ' +
+          'scope, brand, project_type, category, uploaded_by, tags, insight_type, input_method, upload_date ' +
           'FROM knowledge_base.' + schema + '.file_metadata ' +
           "WHERE file_id = '" + fileId.replace(/'/g, "''") + "' LIMIT 1",
         wait_timeout: '30s',
@@ -93,7 +93,8 @@ export default async function handler(req, res) {
 
     const [, fileName, filePath, fileType, fileSizeBytes,
       scope, brand, projectType, category, uploadedBy, tagsRaw,
-      insightType, inputMethod] = rows[0];
+      insightType, inputMethod, uploadDate] = rows[0];
+    const isWisdomFile = fileType === 'Wisdom';
 
     console.log('[KB Process] File: ' + fileName);
     console.log('[KB Process] filePath: ' + filePath);
@@ -160,7 +161,8 @@ export default async function handler(req, res) {
     // ── Step 4: Generate summary, tags, metadata suggestions ─────────────────
     const { summary, tags, suggestedBrand, suggestedProjectTypes, suggestedMonth, suggestedYear } = await generateSummaryTagsAndMetadata(
       extractedText, fileName, workspaceHost, accessToken, processingModelEndpoint,
-      availableBrands, availableProjectTypes, brand, projectType
+      availableBrands, availableProjectTypes, brand, projectType,
+      uploadDate, isWisdomFile
     );
 
     // ── Step 5: Derive _txt path ──────────────────────────────────────────────
@@ -504,7 +506,8 @@ async function extractTextFromPptxViaVision(zip, fileName, workspaceHost, access
 
 async function generateSummaryTagsAndMetadata(
   text, fileName, workspaceHost, accessToken, modelEndpoint,
-  availableBrands, availableProjectTypes, existingBrand, existingProjectType
+  availableBrands, availableProjectTypes, existingBrand, existingProjectType,
+  uploadDate, isWisdomFile
 ) {
   const meaningfulText = text
     .replace(/\[.*?\]/g, '')
@@ -538,6 +541,27 @@ async function generateSummaryTagsAndMetadata(
       ? 'This file already has brand="' + (existingBrand || '') + '" and project_type="' + (existingProjectType || '') + '" — confirm or suggest better matches.'
       : 'This file has no brand or project type assigned yet — infer from content.';
 
+    // For wisdom files, provide the upload date as a fallback reference
+    const uploadDateObj = uploadDate ? new Date(uploadDate) : null;
+    const uploadYear = uploadDateObj && !isNaN(uploadDateObj.getTime()) ? uploadDateObj.getFullYear() : null;
+    const uploadMonth = uploadDateObj && !isNaN(uploadDateObj.getTime()) ? uploadDateObj.getMonth() + 1 : null;
+
+    const dateHint = isWisdomFile
+      ? 'This is a Wisdom/Interview file uploaded on ' + (uploadDate || 'unknown date') + '. ' +
+        'Check the content for an explicit "Date:" field or date references. ' +
+        'If the content contains a date that is DIFFERENT from the upload date, use the date from the content. ' +
+        'If no explicit date appears in the content or it matches the upload date, use the upload date: ' +
+        'YEAR=' + (uploadYear || 'Unknown') + ', MONTH=' + (uploadMonth || 'Unknown') + '.'
+      : 'Determine the date from the document content and filename. ' +
+        'Compare any date found in the filename against any date found in the document body. ' +
+        'If the filename suggests one year and the document body suggests a DIFFERENT year, set YEAR to "Unknown". ' +
+        'If only one source has a year, use that year. If both agree, use that year. ' +
+        'Leave MONTH blank (use "Unknown") if it cannot be determined with confidence.';
+
+    const brandHint = isWisdomFile
+      ? 'Determine the brand from the document CONTENT only (ignore the filename). Look for brand names, company names, or topics discussed. Set to "Unknown" if no brand is clearly mentioned.'
+      : 'Determine the brand from the document CONTENT first. Only use the filename as a secondary hint if the content does not clearly indicate a brand. Set to "Unknown" if neither is conclusive.';
+
     const prompt =
       'Analyse this document and provide the following based ONLY on the document content:\n' +
       '1. A concise 2-3 sentence summary of the key content and insights\n' +
@@ -545,8 +569,8 @@ async function generateSummaryTagsAndMetadata(
       '3. The most likely brand this document is about (one name only, or "Unknown")\n' +
       '4. The top 3 most likely project types this document belongs to, in order of likelihood\n' +
       '5. The month this content was created or published (1-12, or "Unknown" if not determinable)\n' +
-      '6. The year this content was created or published (4-digit year, or "Unknown" if not determinable)\n\n' +
-      brandsHint + '\n' + projectTypesHint + '\n' + existingHint + '\n\n' +
+      '6. The year this content was created or published (4-digit year, or "Unknown" if title and content disagree or if not determinable)\n\n' +
+      brandsHint + '\n' + projectTypesHint + '\n' + existingHint + '\n' + dateHint + '\n' + brandHint + '\n\n' +
       'Document filename: ' + fileName + '\n\n' +
       'Document content:\n' + preview +
       (text.length > 5000 ? '\n\n[Content continues...]' : '') +

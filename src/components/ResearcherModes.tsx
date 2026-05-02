@@ -246,8 +246,10 @@ export function ResearcherModes({
   const [expandedPairIds, setExpandedPairIds] = useState<Set<string>>(new Set());
 
   const [selectedKBFiles, setSelectedKBFiles] = useState<Set<string>>(new Set());
+  const [selectedApprovalFiles, setSelectedApprovalFiles] = useState<Set<string>>(new Set());
   const [isProcessing, setIsProcessing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isApprovalDeleting, setIsApprovalDeleting] = useState(false);
   const [isBulkActioning, setIsBulkActioning] = useState(false);
   const [selectedProcessedFiles, setSelectedProcessedFiles] = useState<Set<string>>(new Set());
 
@@ -394,6 +396,7 @@ export function ResearcherModes({
 
   const getPersonaFiles = (hexId: string) => researchFiles.filter(f => f.fileType === hexId);
   const toggleKBFileSelection = (fileId: string) => setSelectedKBFiles(prev => { const s = new Set(prev); if (s.has(fileId)) s.delete(fileId); else s.add(fileId); return s; });
+  const toggleApprovalFileSelection = (fileId: string) => setSelectedApprovalFiles(prev => { const s = new Set(prev); if (s.has(fileId)) s.delete(fileId); else s.add(fileId); return s; });
   const togglePairExpand = (fileId: string) => setExpandedPairIds(prev => { const s = new Set(prev); if (s.has(fileId)) s.delete(fileId); else s.add(fileId); return s; });
 
   const handleDeleteSelectedFiles = async () => {
@@ -416,6 +419,40 @@ export function ResearcherModes({
       await refreshPendingQueues();
     } finally {
       setIsDeleting(false);
+    }
+    alert(ok > 0
+      ? `✅ ${ok} file${ok !== 1 ? 's' : ''} deleted${fail > 0 ? `\n❌ ${fail} failed` : ''}`
+      : `❌ Failed to delete files`
+    );
+  };
+
+  const handleDeleteSelectedApprovalFiles = async () => {
+    if (selectedApprovalFiles.size === 0) return;
+    const count = selectedApprovalFiles.size;
+    const confirmed = confirm(`Delete ${count} selected file${count !== 1 ? 's' : ''} and their processed versions? This cannot be undone.`);
+    if (!confirmed) return;
+    const selectedArray = Array.from(selectedApprovalFiles);
+    let ok = 0; let fail = 0;
+    setIsApprovalDeleting(true);
+    try {
+      for (const fileId of selectedArray) {
+        try {
+          // Delete the original file
+          const r = await deleteKnowledgeBaseFile(fileId, userEmail, 'research-leader');
+          if (r.success) {
+            ok++;
+            // Also delete the _txt companion if it exists
+            const txtFile = allPendingFiles.find(f => f.fileId === fileId + '_txt');
+            if (txtFile) {
+              await deleteKnowledgeBaseFile(txtFile.fileId, userEmail, 'research-leader').catch(() => {});
+            }
+          } else fail++;
+        } catch { fail++; }
+      }
+      setSelectedApprovalFiles(new Set());
+      await refreshPendingQueues();
+    } finally {
+      setIsApprovalDeleting(false);
     }
     alert(ok > 0
       ? `✅ ${ok} file${ok !== 1 ? 's' : ''} deleted${fail > 0 ? `\n❌ ${fail} failed` : ''}`
@@ -869,7 +906,7 @@ export function ResearcherModes({
     return (
       <div className="space-y-4">
         <AIResponseModal {...aiModal} onClose={closeAiModal} />
-        <PreviewModal />
+        {PreviewModal()}
         <ModeSwitcher current="read-edit-approve" />
 
         <div className="bg-white border-2 border-gray-300 rounded-lg p-4">
@@ -908,6 +945,7 @@ export function ResearcherModes({
               </div>
               {selectedKBFiles.size > 0 && (
                 <div className="flex items-center gap-2">
+                  {selectedKBFiles.size === 1 && (() => { const f = pendingKBFiles.find(f => selectedKBFiles.has(f.fileId)); return f ? <button onClick={() => handlePreviewKBFile(f)} disabled={isProcessing} className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 disabled:bg-gray-400 flex items-center gap-2"><Eye className="w-4 h-4" />Read</button> : null; })()}
                   <button onClick={handleProcessSelectedFiles} disabled={isProcessing} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 flex items-center gap-2">
                     {isProcessing ? <><SpinHex className="w-5 h-5" />Processing {selectedKBFiles.size}...</> : <><Sparkles className="w-5 h-5" />Process Selected ({selectedKBFiles.size})</>}
                   </button>
@@ -943,8 +981,8 @@ export function ResearcherModes({
                           </div>}
                         </div>
                         <div className="flex items-center gap-2 mt-2">
-                          <button onClick={() => handlePreviewKBFile(file)} disabled={isProcessing} className="px-3 py-1 bg-gray-100 text-gray-700 text-xs rounded hover:bg-gray-200 flex items-center gap-1"><Eye className="w-3 h-3" />Read</button>
-                          {canApproveResearch && <button onClick={() => handleRejectKBFile(file.fileId)} disabled={isProcessing} className="px-3 py-1 bg-red-100 text-red-700 text-xs rounded hover:bg-red-200 flex items-center gap-1"><Trash2 className="w-3 h-3" />Delete</button>}
+                          <button onClick={() => handlePreviewKBFile(file)} disabled={status === 'processing'} className="px-3 py-1 bg-gray-100 text-gray-700 text-xs rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"><Eye className="w-3 h-3" />Read</button>
+                          {canApproveResearch && <button onClick={() => handleRejectKBFile(file.fileId)} disabled={status === 'processing'} className="px-3 py-1 bg-red-100 text-red-700 text-xs rounded hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"><Trash2 className="w-3 h-3" />Delete</button>}
                         </div>
                       </div>
                     </div>
@@ -958,19 +996,28 @@ export function ResearcherModes({
         {/* Pending Approval — grouped pairs */}
         {pendingApprovalFiles.length > 0 && (
           <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4">
-            <div className="mb-4">
-              <h3 className="text-blue-900 leading-tight">Pending Approval ({pendingApprovalFiles.length})</h3>
-              <p className="text-blue-700 text-sm">Processed files ready for review. Approve the <strong>_txt</strong> version — the original stays as archive.</p>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-blue-900 leading-tight">Pending Approval ({pendingApprovalFiles.length})</h3>
+                <p className="text-blue-700 text-sm">Processed files ready for review. Approve the <strong>_txt</strong> version — the original stays as archive.</p>
+              </div>
+              {selectedApprovalFiles.size > 0 && canApproveResearch && (
+                <button onClick={handleDeleteSelectedApprovalFiles} disabled={isApprovalDeleting} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:bg-gray-400 flex items-center gap-2 flex-shrink-0">
+                  {isApprovalDeleting ? <><SpinHex className="w-4 h-4" />Deleting {selectedApprovalFiles.size}...</> : <><Trash2 className="w-4 h-4" />Delete Selected ({selectedApprovalFiles.size})</>}
+                </button>
+              )}
             </div>
             <div className="space-y-2 max-h-[500px] overflow-y-auto">
               {pendingApprovalFiles.map(file => {
                 const txtCompanion = findTxtCompanion(file, allPendingFiles);
                 const isPairExpanded = expandedPairIds.has(file.fileId);
                 return (
-                  <div key={file.fileId} className="border-2 border-blue-200 rounded-lg overflow-hidden">
+                  <div key={file.fileId} className={`border-2 rounded-lg overflow-hidden ${selectedApprovalFiles.has(file.fileId) ? 'border-red-300' : 'border-blue-200'}`}>
                     {/* Original file row */}
-                    <div className="bg-white p-3">
+                    <div className={`p-3 ${selectedApprovalFiles.has(file.fileId) ? 'bg-red-50' : 'bg-white'}`}>
                       <div className="flex items-start justify-between">
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          {canApproveResearch && <input type="checkbox" checked={selectedApprovalFiles.has(file.fileId)} onChange={() => toggleApprovalFileSelection(file.fileId)} disabled={isApprovalDeleting} className="w-5 h-5 mt-1 cursor-pointer flex-shrink-0" />}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-xs font-mono">orig</span>
@@ -983,6 +1030,7 @@ export function ResearcherModes({
                             <span className="text-xs text-gray-600">{new Date(file.uploadDate).toLocaleDateString()}</span>
                           </div>
                           {file.contentSummary && <p className="text-xs text-gray-500 mt-1 line-clamp-1">{file.contentSummary}</p>}
+                        </div>
                         </div>
                         <div className="flex items-center gap-2 ml-3 flex-shrink-0">
                           {canApproveResearch && (
