@@ -8,6 +8,8 @@
 import { useState } from 'react';
 import { CheckCircle, XCircle, AlertCircle, Play, Download, RotateCcw, ChevronDown, ChevronRight, Filter, Settings } from 'lucide-react';
 import { TroubleshootingGuideModal } from './TroubleshootingGuideModal.tsx';
+import { isDocumentCapableModel, canRoleManageExamples } from './DiagnosticPanelEnhanced';
+import { AI_HELP_CLAIM_TESTS } from './DiagnosticAIHelpTests';
 
 // Custom Troubleshooting Icon - Magnifying glass
 const TroubleshootingIcon = ({ className }: { className?: string }) => (
@@ -70,7 +72,9 @@ const TEST_CATEGORIES = {
   shareYourWisdom: 'Share Your Wisdom',
   myFiles: 'My Files',
   info: 'Info',
-  askHelp: 'Ask Help'
+  askHelp: 'Ask Help',
+  exampleFiles: 'Example Files',
+  aiHelpWidget: 'AIHelp Widget Claims',
 };
 
 // ── Diagnostic Panel Component ────────────────────────────────────────────────
@@ -3593,9 +3597,344 @@ export function DiagnosticPanel({ onClose }: DiagnosticPanelProps) {
     }
   };
 
-  // ═════════════════════════════════════════════════���═════════════════════════
+  // ═══════════════════════════════════════════════════════════════════════════
+  // EXAMPLE FILES TESTS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const runExampleFilesTests = async () => {
+    const startTime = Date.now();
+
+    // Test 1: Example files exist in KB
+    try {
+      const raw = localStorage.getItem('cohive_research_files');
+      const allFiles = raw ? JSON.parse(raw) : [];
+      const exampleFiles = allFiles.filter((f: any) => f.fileType === 'Example' && f.isApproved);
+
+      addResult({
+        id: 'example-files-count',
+        category: 'exampleFiles',
+        name: 'Approved Example files in Knowledge Base',
+        status: exampleFiles.length > 0 ? 'pass' : 'warning',
+        message: exampleFiles.length > 0
+          ? `✓ ${exampleFiles.length} approved Example file(s): ${exampleFiles.map((f: any) => f.fileName).join(', ')}`
+          : '⚠ No approved Example files found. Example files provide format/quality references for AI assessments. Upload one via "Upload as Example" in the Knowledge Base (researcher role required).',
+        duration: Date.now() - startTime,
+        expected: 'cohive_research_files entries with fileType="Example" and isApproved=true',
+        received: exampleFiles.length > 0
+          ? `${exampleFiles.length} Example file(s)`
+          : `${allFiles.length} total files, 0 approved Examples`,
+        element: 'localStorage.cohive_research_files (fileType === "Example")',
+      });
+    } catch (error) {
+      addResult({
+        id: 'example-files-count',
+        category: 'exampleFiles',
+        name: 'Approved Example files in Knowledge Base',
+        status: 'fail',
+        message: `Error reading research files: ${error}`,
+        duration: Date.now() - startTime,
+      });
+    }
+
+    // Test 2: Example files are fully processed
+    try {
+      const raw = localStorage.getItem('cohive_research_files');
+      const allFiles = raw ? JSON.parse(raw) : [];
+      const exampleFiles = allFiles.filter((f: any) => f.fileType === 'Example' && f.isApproved);
+      const unprocessed = exampleFiles
+        .filter((f: any) => f.cleaningStatus !== 'processed')
+        .map((f: any) => f.fileName);
+
+      if (exampleFiles.length === 0) {
+        addResult({
+          id: 'example-files-processed',
+          category: 'exampleFiles',
+          name: 'Example files are fully processed',
+          status: 'warning',
+          message: '⚠ No Example files to check. Upload an Example file first.',
+          duration: Date.now() - startTime,
+          expected: 'Example files with cleaningStatus = "processed"',
+          received: 'No Example files',
+        });
+      } else if (unprocessed.length > 0) {
+        addResult({
+          id: 'example-files-processed',
+          category: 'exampleFiles',
+          name: 'Example files are fully processed',
+          status: 'fail',
+          message: `✗ BROKEN: ${unprocessed.length} Example file(s) not processed. AI cannot use unprocessed files as format references.`,
+          duration: Date.now() - startTime,
+          expected: 'All Example files: cleaningStatus = "processed"',
+          received: `Unprocessed: ${unprocessed.join(', ')}`,
+          element: 'cohive_research_files[].cleaningStatus',
+        });
+      } else {
+        addResult({
+          id: 'example-files-processed',
+          category: 'exampleFiles',
+          name: 'Example files are fully processed',
+          status: 'pass',
+          message: `✓ All ${exampleFiles.length} Example file(s) have cleaningStatus = "processed"`,
+          duration: Date.now() - startTime,
+          expected: 'cleaningStatus = "processed"',
+          received: `All ${exampleFiles.length} processed`,
+        });
+      }
+    } catch (error) {
+      addResult({
+        id: 'example-files-processed',
+        category: 'exampleFiles',
+        name: 'Example files are fully processed',
+        status: 'fail',
+        message: `Error: ${error}`,
+        duration: Date.now() - startTime,
+      });
+    }
+
+    // Test 3: canManageExamples role check
+    try {
+      const templates = localStorage.getItem('cohive_templates');
+      const currentTemplateId = localStorage.getItem('cohive_current_template_id');
+      let role = 'unknown';
+
+      if (templates && currentTemplateId) {
+        const parsed = JSON.parse(templates);
+        const current = parsed.find((t: any) => t.id === currentTemplateId);
+        role = current?.role || 'unknown';
+      }
+
+      const canManage = canRoleManageExamples(role);
+
+      addResult({
+        id: 'example-files-role',
+        category: 'exampleFiles',
+        name: 'Current role can manage Example files',
+        status: canManage ? 'pass' : 'warning',
+        message: canManage
+          ? `✓ Role "${role}" has canManageExamples=true — Upload as Example button is visible`
+          : `⚠ Role "${role}" cannot manage Example files. Switch to research-analyst, research-leader, data-scientist, or administrator.`,
+        duration: Date.now() - startTime,
+        expected: 'Role in: research-analyst, research-leader, data-scientist, administrator',
+        received: `Current role: ${role}`,
+        element: 'cohive_templates[currentId].role',
+      });
+    } catch (error) {
+      addResult({
+        id: 'example-files-role',
+        category: 'exampleFiles',
+        name: 'Current role can manage Example files',
+        status: 'fail',
+        message: `Error: ${error}`,
+        duration: Date.now() - startTime,
+      });
+    }
+
+    // Test 4: Document-capable model is configured
+    try {
+      const modelTemplates = localStorage.getItem('cohive_model_templates');
+      const currentModelId = localStorage.getItem('cohive_current_model_template_id');
+      let modelEndpoint = '';
+
+      if (modelTemplates && currentModelId) {
+        const parsed = JSON.parse(modelTemplates);
+        const current = parsed.find((t: any) => t.id === currentModelId);
+        modelEndpoint = current?.modelEndpoint || current?.defaultModel || '';
+      }
+
+      if (!modelEndpoint) {
+        addResult({
+          id: 'example-files-document-model',
+          category: 'exampleFiles',
+          name: 'Document-capable model configured',
+          status: 'warning',
+          message: '⚠ No model template configured. Cannot verify document support.',
+          duration: Date.now() - startTime,
+          expected: 'Model template with a document-capable model ID',
+          received: 'No model configured',
+        });
+      } else {
+        const capable = isDocumentCapableModel(modelEndpoint);
+        addResult({
+          id: 'example-files-document-model',
+          category: 'exampleFiles',
+          name: 'Document-capable model configured',
+          status: capable ? 'pass' : 'warning',
+          message: capable
+            ? `✓ "${modelEndpoint}" supports document/multimodal input — Example files sent as binary to AI`
+            : `⚠ "${modelEndpoint}" does NOT support documents. Example files will use text extraction only. Switch to Claude, GPT, or Gemini for best results.`,
+          duration: Date.now() - startTime,
+          expected: 'Claude/GPT/Gemini model with document support',
+          received: `Current model: ${modelEndpoint}`,
+          element: 'cohive_model_templates[currentId].modelEndpoint',
+        });
+      }
+    } catch (error) {
+      addResult({
+        id: 'example-files-document-model',
+        category: 'exampleFiles',
+        name: 'Document-capable model configured',
+        status: 'fail',
+        message: `Error: ${error}`,
+        duration: Date.now() - startTime,
+      });
+    }
+
+    // Test 5: Example files appear in Enter hex selector
+    try {
+      // Look for a section in the DOM that references example files in Enter hex
+      const exampleSections = Array.from(document.querySelectorAll('*')).filter(el => {
+        const text = el.textContent || '';
+        return (
+          (text.includes('Example') || text.includes('example')) &&
+          (text.includes('format') || text.includes('Format') || text.includes('reference'))
+        ) && el.children.length < 5; // narrow to leaf-ish elements
+      });
+
+      const raw = localStorage.getItem('cohive_research_files');
+      const allFiles = raw ? JSON.parse(raw) : [];
+      const exampleFiles = allFiles.filter((f: any) => f.fileType === 'Example' && f.isApproved);
+
+      addResult({
+        id: 'example-files-enter-hex',
+        category: 'exampleFiles',
+        name: 'Example Files section visible in Enter hex',
+        status: exampleSections.length > 0 ? 'pass' : (exampleFiles.length === 0 ? 'warning' : 'warning'),
+        message: exampleSections.length > 0
+          ? `✓ Example file reference UI detected in current view`
+          : exampleFiles.length === 0
+            ? '⚠ No approved Example files exist yet — Enter hex selector will be empty'
+            : '⚠ Example Files section not detected (navigate to Enter hex to verify)',
+        duration: Date.now() - startTime,
+        expected: 'Example file selector visible in Enter hex for eligible roles',
+        received: exampleSections.length > 0 ? 'Section found' : 'Section not found in current view',
+        element: 'Enter hex — Example format reference selector',
+      });
+    } catch (error) {
+      addResult({
+        id: 'example-files-enter-hex',
+        category: 'exampleFiles',
+        name: 'Example Files section visible in Enter hex',
+        status: 'fail',
+        message: `Error: ${error}`,
+        duration: Date.now() - startTime,
+      });
+    }
+
+    // Test 6: "Upload as Example" button is present (researcher roles)
+    try {
+      const uploadExampleBtn = Array.from(document.querySelectorAll('button')).find(btn =>
+        btn.textContent?.includes('Upload as Example'));
+
+      addResult({
+        id: 'upload-as-example-btn',
+        category: 'exampleFiles',
+        name: '"Upload as Example" button accessible',
+        status: uploadExampleBtn ? 'pass' : 'warning',
+        message: uploadExampleBtn
+          ? '✓ "Upload as Example" button found (researcher role active)'
+          : '⚠ "Upload as Example" button not visible. Navigate to Knowledge Base hex with a researcher role (research-analyst / research-leader / data-scientist / administrator).',
+        duration: Date.now() - startTime,
+        expected: '"Upload as Example" button in Knowledge Base for researcher roles',
+        received: uploadExampleBtn ? 'Button found' : 'Button not visible in current view',
+        element: 'button with text "Upload as Example" in ResearcherModes',
+      });
+    } catch (error) {
+      addResult({
+        id: 'upload-as-example-btn',
+        category: 'exampleFiles',
+        name: '"Upload as Example" button accessible',
+        status: 'fail',
+        message: `Error: ${error}`,
+        duration: Date.now() - startTime,
+      });
+    }
+
+    // Test 7: "Format as Example" button in assessment modal
+    try {
+      const formatBtn = Array.from(document.querySelectorAll('button')).find(btn =>
+        btn.textContent?.includes('Format as Example'));
+
+      addResult({
+        id: 'format-as-example-btn',
+        category: 'exampleFiles',
+        name: '"Format as Example" button in assessment results',
+        status: formatBtn ? 'pass' : 'warning',
+        message: formatBtn
+          ? '✓ "Format as Example" button found in assessment interface'
+          : '⚠ "Format as Example" button not visible. This button appears in the AssessmentModal footer after an assessment completes. Run an AI assessment to test.',
+        duration: Date.now() - startTime,
+        expected: '"Format as Example" button in AssessmentModal footer',
+        received: formatBtn ? 'Button found' : 'Not visible (normal if no assessment is open)',
+        element: 'button containing "Format as Example" in AssessmentModal',
+      });
+    } catch (error) {
+      addResult({
+        id: 'format-as-example-btn',
+        category: 'exampleFiles',
+        name: '"Format as Example" button in assessment results',
+        status: 'fail',
+        message: `Error: ${error}`,
+        duration: Date.now() - startTime,
+      });
+    }
+
+    // Test 8: _txt companion files exist for Example files
+    try {
+      const raw = localStorage.getItem('cohive_research_files');
+      const allFiles = raw ? JSON.parse(raw) : [];
+      const exampleFiles = allFiles.filter((f: any) => f.fileType === 'Example' && f.isApproved);
+      const exampleIds = new Set(exampleFiles.map((f: any) => f.fileId));
+      const companionIds = new Set(
+        allFiles
+          .filter((f: any) => f.fileId?.endsWith('_txt'))
+          .map((f: any) => f.fileId.replace(/_txt$/, ''))
+      );
+
+      const missingCompanions = exampleFiles.filter((f: any) => !companionIds.has(f.fileId));
+
+      if (exampleFiles.length === 0) {
+        addResult({
+          id: 'example-files-txt-companions',
+          category: 'exampleFiles',
+          name: 'Example files have _txt text companions',
+          status: 'warning',
+          message: '⚠ No Example files to check companions for.',
+          duration: Date.now() - startTime,
+          expected: '_txt companion files for text extraction fallback',
+          received: 'No Example files',
+        });
+      } else {
+        addResult({
+          id: 'example-files-txt-companions',
+          category: 'exampleFiles',
+          name: 'Example files have _txt text companions',
+          status: missingCompanions.length === 0 ? 'pass' : 'warning',
+          message: missingCompanions.length === 0
+            ? `✓ All ${exampleFiles.length} Example file(s) have _txt text companion for non-vision model fallback`
+            : `⚠ ${missingCompanions.length} Example file(s) missing _txt companion: ${missingCompanions.map((f: any) => f.fileName).join(', ')}. Non-document models won't have text content to use.`,
+          duration: Date.now() - startTime,
+          expected: `${exampleIds.size} _txt companion files (one per Example)`,
+          received: missingCompanions.length === 0
+            ? 'All companions present'
+            : `${missingCompanions.length} missing`,
+          element: 'cohive_research_files — fileId ending in "_txt"',
+        });
+      }
+    } catch (error) {
+      addResult({
+        id: 'example-files-txt-companions',
+        category: 'exampleFiles',
+        name: 'Example files have _txt text companions',
+        status: 'fail',
+        message: `Error: ${error}`,
+        duration: Date.now() - startTime,
+      });
+    }
+  };
+
+  // ═════════════════════════════════════════════════════════════════════════════
   // SHARE YOUR WISDOM TESTS
-  // ═��═════════════════════════════════════════════════════════════════════════
+  // ═════════════════════════════════════════════════════════════════════════════
 
   const runShareYourWisdomTests = async () => {
     const startTime = Date.now();
@@ -4193,7 +4532,42 @@ export function DiagnosticPanel({ onClose }: DiagnosticPanelProps) {
     }
   };
 
-  // ═════════════════════════════════════════════════════════��═════════════════
+  // ═══════════════════════════════════════════════════════════════════════════
+  // AIHELP WIDGET CLAIM VERIFICATION TESTS
+  // Defined in DiagnosticAIHelpTests.ts — add new feature tests there.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const runAIHelpWidgetTests = async () => {
+    const startTime = Date.now();
+    for (const test of AI_HELP_CLAIM_TESTS) {
+      try {
+        const result = test.run();
+        addResult({
+          id: test.id,
+          category: 'aiHelpWidget',
+          name: `[AIHelp: ${test.section}] ${test.name}`,
+          status: result.status,
+          message: result.message,
+          expected: result.expected ?? `HELP_MANUAL: "${test.claimText}"`,
+          received: result.received,
+          element: result.element,
+          duration: Date.now() - startTime,
+        });
+      } catch (e) {
+        addResult({
+          id: test.id,
+          category: 'aiHelpWidget',
+          name: `[AIHelp: ${test.section}] ${test.name}`,
+          status: 'fail',
+          message: `Error running test: ${e}`,
+          expected: `HELP_MANUAL: "${test.claimText}"`,
+          duration: Date.now() - startTime,
+        });
+      }
+    }
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // RUN ALL TESTS
   // ═══════════════════════════════════════════════════════════════════════════
 
@@ -4313,6 +4687,16 @@ export function DiagnosticPanel({ onClose }: DiagnosticPanelProps) {
     
     if (selectedCategory === 'all' || selectedCategory === 'askHelp') {
       await runAskHelpTests();
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+
+    if (selectedCategory === 'all' || selectedCategory === 'exampleFiles') {
+      await runExampleFilesTests();
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+
+    if (selectedCategory === 'all' || selectedCategory === 'aiHelpWidget') {
+      await runAIHelpWidgetTests();
     }
 
     addResult({
