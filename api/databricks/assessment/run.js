@@ -1088,7 +1088,27 @@ async function callModel({
   workspaceHost, accessToken, modelEndpoint,
   messages, maxTokens = 2000, temperature = 0.8, label = '',
   brand = '', projectType = '', hexId = '', userEmail = '',
+  exampleAttachments = [], // Array of { fileName, base64, ext } for multimodal Example files
 }) {
+  // If document-capable model and there are Example file attachments, upgrade the last
+  // user message to a multimodal content array (text + document image_url parts)
+  if (exampleAttachments.length > 0) {
+    const EXT_MIME = { pdf: 'application/pdf', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', doc: 'application/msword', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp' };
+    messages = messages.map((msg, i) => {
+      if (i === messages.length - 1 && msg.role === 'user' && typeof msg.content === 'string') {
+        const parts = [{ type: 'text', text: msg.content }];
+        for (const att of exampleAttachments) {
+          const mime = EXT_MIME[att.ext] || 'application/octet-stream';
+          parts.push({
+            type: 'image_url',
+            image_url: { url: `data:${mime};base64,${att.base64}` },
+          });
+        }
+        return { ...msg, content: parts };
+      }
+      return msg;
+    });
+  }
   // Log exact prompt to activity_log before sending
   logEvent({
     eventType: 'prompt_sent',
@@ -1144,7 +1164,21 @@ async function callModel({
 
 // ─── KB file fetcher ───────────────────────────────────────────────────────────
 
-async function fetchKbFileContent(kbFile, accessToken, workspaceHost, warehouseId) {
+// Model IDs that support native document reading (PDF/DOCX/image as multimodal input)
+const DOCUMENT_CAPABLE_MODELS = new Set([
+  'databricks-claude-sonnet-4-6',
+  'databricks-gpt-5-2',
+  'databricks-gpt-5-1',
+  'databricks-gpt-5',
+  'databricks-gemini-3-1-pro',
+  'databricks-gemini-2-5-pro',
+  'databricks-gpt-5-mini',
+  'databricks-gemini-3-flash',
+  'databricks-gemini-2-5-flash',
+  'databricks-claude-haiku-4-5',
+]);
+
+async function fetchKbFileContent(kbFile, accessToken, workspaceHost, warehouseId, fetchOriginalBinary = false) {
   const idClause = kbFile.fileId
     ? `file_id = '${kbFile.fileId.replace(/'/g, "''")}'`
     : `file_name = '${kbFile.fileName.replace(/'/g, "''")}'`;
@@ -1156,7 +1190,7 @@ async function fetchKbFileContent(kbFile, accessToken, workspaceHost, warehouseI
       headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         warehouse_id: warehouseId,
-        statement: `SELECT file_id, file_path, file_name, file_type, file_size_bytes
+        statement: `SELECT file_id, file_path, file_name, file_type, file_size_bytes, cleaning_status
                     FROM knowledge_base.cohive.file_metadata
                     WHERE ${idClause} LIMIT 1`,
         wait_timeout: '30s',
@@ -1181,8 +1215,32 @@ async function fetchKbFileContent(kbFile, accessToken, workspaceHost, warehouseI
   const rows = metaResult.result?.data_array || [];
   if (rows.length === 0) throw new Error(`File not found in KB: "${kbFile.fileName}"`);
 
-  const [resolvedFileId, filePath, fileName] = rows[0];
-  console.log(`[Assessment] ✅ Resolved KB file: ${fileName}`);
+  const [resolvedFileId, filePath, fileName, fileType] = rows[0];
+  console.log(`[Assessment] ✅ Resolved KB file: ${fileName} (type: ${fileType})`);
+
+  // For Example files when the model supports documents, also fetch original binary
+  let originalBase64 = null;
+  let originalExt = null;
+  if (fetchOriginalBinary && fileType === 'Example') {
+    const origExt = fileName.toLowerCase().split('.').pop();
+    const DOCUMENT_EXTS = new Set(['pdf', 'docx', 'doc', 'png', 'jpg', 'jpeg', 'gif', 'webp']);
+    if (DOCUMENT_EXTS.has(origExt)) {
+      try {
+        const origResp = await fetch(
+          `https://${workspaceHost}/api/2.0/fs/files${filePath}`,
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+        );
+        if (origResp.ok) {
+          const origBuffer = Buffer.from(await origResp.arrayBuffer());
+          originalBase64 = origBuffer.toString('base64');
+          originalExt = origExt;
+          console.log(`[Assessment] 📎 Original binary fetched for Example: ${fileName} (${origBuffer.length} bytes)`);
+        }
+      } catch (e) {
+        console.warn(`[Assessment] Could not fetch original binary for ${fileName}: ${e.message}`);
+      }
+    }
+  }
 
   // ── Check for _txt.txt version (processed file) ────────────────────────────
   // If a processed text version exists, use it for faster, better extraction
@@ -1208,21 +1266,21 @@ async function fetchKbFileContent(kbFile, accessToken, workspaceHost, warehouseI
     if (txtRows.length > 0) {
       const [txtId, txtPath, txtName] = txtRows[0];
       console.log(`[Assessment] 🎯 Using processed _txt version: ${txtName}`);
-      
+
       const txtFileResp = await fetch(
         `https://${workspaceHost}/api/2.0/fs/files${txtPath}`,
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
-      
+
       if (txtFileResp.ok) {
         const txtBuffer = Buffer.from(await txtFileResp.arrayBuffer());
         let textContent = txtBuffer.toString('utf-8');
-        
+
         if (textContent.length > MAX_KB_CHARS) {
           textContent = textContent.slice(0, MAX_KB_CHARS) + '\n\n[... content truncated ...]';
         }
-        
-        return { fileId: txtId, fileName: txtName, content: textContent };
+
+        return { fileId: txtId, fileName: txtName, content: textContent, fileType, originalBase64, originalExt };
       }
     }
   }
@@ -1273,7 +1331,7 @@ async function fetchKbFileContent(kbFile, accessToken, workspaceHost, warehouseI
     textContent = textContent.slice(0, MAX_KB_CHARS) + '\n\n[... content truncated ...]';
   }
 
-  return { fileId: resolvedFileId, fileName, content: textContent };
+  return { fileId: resolvedFileId, fileName, content: textContent, fileType, originalBase64, originalExt };
 }
 
 
@@ -1424,9 +1482,14 @@ ${priorSummaryContext}
     const callModelCtx = { workspaceHost: workspaceHost_resolved, accessToken: accessToken_resolved, modelEndpoint, brand, projectType, hexId, userEmail };
 
     // ── Step 1: Fetch KB file content ───────────────────────────────────────
-    console.log(`[Assessment] Fetching ${kbFiles.length} KB file(s)...`);
+    const modelSupportsDocuments = DOCUMENT_CAPABLE_MODELS.has(modelEndpoint);
+    console.log(`[Assessment] Fetching ${kbFiles.length} KB file(s)... model supportsDocuments: ${modelSupportsDocuments}`);
     const kbFilesWithContent = await Promise.all(
-      kbFiles.map(f => fetchKbFileContent(f, accessToken_resolved, workspaceHost_resolved, warehouseId_resolved))
+      kbFiles.map(f => fetchKbFileContent(
+        f, accessToken_resolved, workspaceHost_resolved, warehouseId_resolved,
+        // Only fetch original binary for Example files when model supports documents
+        modelSupportsDocuments && (f.fileType === 'Example')
+      ))
     );
 
     // ── Step 1b: Fetch prior gems for this brand + hex ───────────────────────
@@ -1493,12 +1556,25 @@ ${iterationDirections.map((d, i) => `${i + 1}. ${d}`).join('\n')}
     const kbFileNames = kbFilesWithContent.map(f => f.fileName);
     const kbModeInstructions = getKbModeInstructions(kbMode, kbFileNames, exampleFiles.map(f => f.fileName));
 
-    // Regular files get standard wrappers; example files get a cross-brand reference wrapper
+    // Regular files get standard wrappers; example files get a cross-brand reference wrapper.
+    // For Example files with originalBase64 (model supports documents), we store them separately
+    // to attach as multimodal content in callModel below.
+    const exampleFilesWithBinary = exampleFiles.filter(f => f.originalBase64);
+    const exampleFilesTextOnly = exampleFiles.filter(f => !f.originalBase64);
+
     const kbContext = [
       ...regularFiles.map(f =>
         `--- BEGIN FILE: ${f.fileName} ---\n${f.content}\n--- END FILE: ${f.fileName} ---`
       ),
-      ...exampleFiles.map(f =>
+      ...exampleFilesWithBinary.map(f =>
+        `--- BEGIN EXAMPLE: ${f.fileName} ---\n` +
+        `[NOTE: Cross-brand reference file — quality and format standard only.\n` +
+        `This is NOT about the current brand. Do NOT cite as evidence about ${brand}.\n` +
+        `The original document is attached for format reference. If you can replicate its format in your response, please do so.]\n\n` +
+        `${f.content}\n` +
+        `--- END EXAMPLE: ${f.fileName} ---`
+      ),
+      ...exampleFilesTextOnly.map(f =>
         `--- BEGIN EXAMPLE: ${f.fileName} ---\n` +
         `[NOTE: Cross-brand reference file — quality and format standard only.\n` +
         `This is NOT about the current brand. Do NOT cite as evidence about ${brand}.\n` +
@@ -1529,6 +1605,13 @@ ${iterationDirections.map((d, i) => `${i + 1}. ${d}`).join('\n')}
     const personaList = [...allPersonaNames, 'Fact-Checker'].join(', ');
 
     console.log(`[Assessment] Personas (shuffled): ${personaList}`);
+
+    // Multimodal attachments for document-capable models — Example files only
+    const exampleAttachments = exampleFilesWithBinary.map(f => ({
+      fileName: f.fileName,
+      base64: f.originalBase64,
+      ext: f.originalExt,
+    }));
 
     // Shared context passed to all prompt builders
     const promptCtx = {
@@ -1589,6 +1672,7 @@ ${iterationDirections.map((d, i) => `${i + 1}. ${d}`).join('\n')}
           }],
           maxTokens: 2000, temperature: 0.85,
           label: `R1:${persona.name || persona.id}`,
+          exampleAttachments,
         })
       )
     );
@@ -1646,6 +1730,7 @@ ${iterationDirections.map((d, i) => `${i + 1}. ${d}`).join('\n')}
             }],
             maxTokens: 2000, temperature: 0.85,
             label: `R${roundNumber}:${persona.name || persona.id}`,
+            exampleAttachments,
           })
         )
       );

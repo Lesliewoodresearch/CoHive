@@ -108,6 +108,7 @@ interface AssessmentModalPropsState {
   numDebateRounds?: number;
   /** All hex executions for this iteration — passed to AssessmentModal for context injection */
   hexExecutions: Record<string, HexExecution[]>;
+  canManageExamples?: boolean;
 }
 
 // iterationGems lives at ProcessWireframe level — see useState below
@@ -574,15 +575,18 @@ export default function ProcessWireframe() {
     });
   };
 
-  const getExampleFiles = (projectType: string): ResearchFile[] => {
-    // Example files are brand-agnostic, filtered by projectType if set
+  const getExampleFiles = (_projectType: string): ResearchFile[] => {
+    // Example files are brand-agnostic — shown for all project types.
+    // Hide _txt.txt companions; only show the original files.
     return researchFiles.filter(file =>
       file.isApproved &&
       file.fileType === 'Example' &&
-      // If projectType is set, only show examples that match OR have no project type
-      (!projectType || !file.projectType || file.projectType === projectType)
+      !file.fileName.endsWith('_txt.txt')
     );
   };
+
+  // Roles that can upload and manage Example files directly
+  const canManageExamples = ['research-analyst', 'research-leader', 'data-scientist', 'administrator'].includes(userRole);
 
   // Strip extension for display — users never see .txt
   const displayFileName = (fileName: string): string =>
@@ -930,6 +934,7 @@ export default function ProcessWireframe() {
       // kbMode and scope not pre-set — user selects in modal settings panel
       // Pass full hexExecutions so AssessmentModal can include prior results as context
       hexExecutions,
+      canManageExamples,
     });
     setAssessmentModalOpen(true);
   };
@@ -1437,7 +1442,7 @@ export default function ProcessWireframe() {
              <div className="space-y-4">
                 {activeStepId === 'research' ? (
                  (userRole === 'administrator' || userRole === 'research-analyst' || userRole === 'research-leader' || userRole === 'data-scientist') ? (
-                   <ResearcherModes brand={responses['Enter']?.[0]?.trim() || ''} projectType={responses['Enter']?.[1]?.trim() || ''} researchFiles={researchFiles} editSuggestions={editSuggestions} canApproveResearch={currentTemplate?.permissions?.canApproveResearch || false} onCreateResearchFile={handleCreateResearchFile} onToggleApproval={handleToggleApproval} onUpdateResearchFile={handleUpdateResearchFile} onUpdateSuggestionStatus={handleUpdateSuggestionStatus} availableBrands={availableBrands} availableProjectTypes={availableProjectTypes} projectTypeConfigs={projectTypeConfigs} onAddBrand={handleAddBrand} onAddProjectType={handleAddProjectType} onAddProjectTypeWithPrompt={handleAddProjectTypeWithPrompt} userRole={userRole} onModeChange={(mode) => setResearchMode(mode)} onFileOpen={(fileName) => setSelectedKBFile(fileName)} onPendingCountChange={(count) => setPendingApprovalCount(count)} processingModelEndpoint={currentModelTemplate ? (getModelForExecution(currentModelTemplate, 'research', 'synthesis') ?? undefined) : undefined} onRefreshFiles={loadKnowledgeBaseFiles} onLoadingChange={(loading, msg) => { setIsDatabricksLoading(loading); if (msg) setDatabricksLoadingMessage(msg); }} />
+                   <ResearcherModes brand={responses['Enter']?.[0]?.trim() || ''} projectType={responses['Enter']?.[1]?.trim() || ''} researchFiles={researchFiles} editSuggestions={editSuggestions} canApproveResearch={currentTemplate?.permissions?.canApproveResearch || false} canManageExamples={canManageExamples} onCreateResearchFile={handleCreateResearchFile} onToggleApproval={handleToggleApproval} onUpdateResearchFile={handleUpdateResearchFile} onUpdateSuggestionStatus={handleUpdateSuggestionStatus} availableBrands={availableBrands} availableProjectTypes={availableProjectTypes} projectTypeConfigs={projectTypeConfigs} onAddBrand={handleAddBrand} onAddProjectType={handleAddProjectType} onAddProjectTypeWithPrompt={handleAddProjectTypeWithPrompt} userRole={userRole} onModeChange={(mode) => setResearchMode(mode)} onFileOpen={(fileName) => setSelectedKBFile(fileName)} onPendingCountChange={(count) => setPendingApprovalCount(count)} processingModelEndpoint={currentModelTemplate ? (getModelForExecution(currentModelTemplate, 'research', 'synthesis') ?? undefined) : undefined} onRefreshFiles={loadKnowledgeBaseFiles} onLoadingChange={(loading, msg) => { setIsDatabricksLoading(loading); if (msg) setDatabricksLoadingMessage(msg); }} />
                         ) : (
                    <ResearchView role="non-researcher" brand={responses['Enter']?.[0]?.trim() || ''} projectType={responses['Enter']?.[1]?.trim() || ''} researchFiles={researchFiles} editSuggestions={editSuggestions} onAddSuggestion={handleAddSuggestion} onUpdateSuggestionStatus={handleUpdateSuggestionStatus} onToggleApproval={handleToggleApproval} canApproveResearch={currentTemplate?.permissions?.canApproveResearch || false} onCreateResearchFile={handleCreateResearchFile} />
                          )
@@ -1606,13 +1611,21 @@ export default function ProcessWireframe() {
                               {/* Example files — cross-brand, always shown */}
                               {exampleFiles.length > 0 && (
                                 <div className="border-2 border-amber-300 rounded-lg p-3 bg-amber-50">
-                                  <h6 className="text-xs font-semibold text-amber-800 uppercase tracking-wide mb-1 flex items-center gap-1">
+                                  <h6 className="text-xs font-semibold text-amber-800 uppercase tracking-wide mb-1">
                                     ✦ Example Files
-                                    {projectType && <span className="text-amber-600 normal-case font-normal">— filtered for {projectType}</span>}
                                   </h6>
-                                  <p className="text-xs text-amber-700 mb-2">
+                                  <p className="text-xs text-amber-700 mb-1">
                                     Cross-brand reference files. The AI will use these as quality and format standards only — not as facts about {brand}.
                                   </p>
+                                  {(() => {
+                                    const modelId = assessmentModalProps?.modelEndpoint || currentModelTemplate?.hexModels?.['Luminaries']?.modelId || 'databricks-claude-haiku-4-5';
+                                    const modelSupports = ['databricks-claude-sonnet-4-6','databricks-gpt-5-2','databricks-gpt-5-1','databricks-gpt-5','databricks-gemini-3-1-pro','databricks-gemini-2-5-pro','databricks-gpt-5-mini','databricks-gemini-3-flash','databricks-gemini-2-5-flash','databricks-claude-haiku-4-5'].includes(modelId);
+                                    return modelSupports ? (
+                                      <p className="text-xs text-amber-600 mb-2">✦ Your selected model can read PDF and DOCX examples directly — format replication is enabled.</p>
+                                    ) : (
+                                      <p className="text-xs text-amber-600 mb-2">Text version of examples will be used (model does not support document reading).</p>
+                                    );
+                                  })()}
                                   <div className="space-y-1">
                                     {exampleFiles.map((file, fileIdx) => (
                                       <label key={fileIdx} className="flex items-center gap-2 cursor-pointer">
@@ -2373,7 +2386,7 @@ export default function ProcessWireframe() {
           </div>
 
           <div className="w-80 flex-shrink-0">
-            <AIHelpWidget activeHexId={activeStepId} activeHexLabel={currentContent.title} userEmail={userEmail} userRole={userRole} brand={responses['Enter']?.[0]?.trim() || ''} projectType={responses['Enter']?.[1]?.trim() || ''} selectedResearchFiles={selectedResearchFiles} selectedFiles={isCentralHex ? hexWidgetContext.files : []} currentStep={isCentralHex ? hexWidgetContext.step : undefined} researchMode={activeStepId === 'research' ? researchMode : undefined} selectedKBFile={activeStepId === 'research' ? selectedKBFile : undefined} pendingApprovalCount={activeStepId === 'research' ? pendingApprovalCount : undefined} wisdomInputMethod={activeStepId === 'Wisdom' ? (responses['Wisdom']?.[0] || null) : undefined} projectFileCount={activeStepId === 'review' ? projectFiles.length : undefined} />
+            <AIHelpWidget activeHexId={activeStepId} activeHexLabel={currentContent.title} userEmail={userEmail} userRole={userRole} brand={responses['Enter']?.[0]?.trim() || ''} projectType={responses['Enter']?.[1]?.trim() || ''} selectedResearchFiles={selectedResearchFiles} selectedFiles={isCentralHex ? hexWidgetContext.files : []} currentStep={isCentralHex ? hexWidgetContext.step : undefined} researchMode={activeStepId === 'research' ? researchMode : undefined} selectedKBFile={activeStepId === 'research' ? selectedKBFile : undefined} pendingApprovalCount={activeStepId === 'research' ? pendingApprovalCount : undefined} wisdomInputMethod={activeStepId === 'Wisdom' ? (responses['Wisdom']?.[0] || null) : undefined} projectFileCount={activeStepId === 'review' ? projectFiles.length : undefined} canManageExamples={canManageExamples} />
 
             <div className="bg-white border-2 border-gray-300 rounded-lg p-4" style={{ height: '550px' }}>
               <div className="flex items-center gap-2 mb-3">
@@ -2459,6 +2472,7 @@ export default function ProcessWireframe() {
           iterationDirections={iterationDirections}
           onGemSaved={handleGemSaved}
           onReviewConfirmed={handleReviewConfirmed}
+          canManageExamples={assessmentModalProps.canManageExamples}
         />
       )}
 

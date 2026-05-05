@@ -195,6 +195,8 @@ interface AssessmentModalProps {
   onGemSaved?: (gem: IterationGem) => void;
   /** Called when review panel is confirmed — passes all confirmed items */
   onReviewConfirmed?: (items: ReviewItem[]) => void;
+  /** Whether the current user can manage Example files */
+  canManageExamples?: boolean;
 }
 
 // ─── KB Mode config ────────────────────────────────────────────────────────────
@@ -290,7 +292,14 @@ export function AssessmentModal({
   iterationDirections = [],
   onGemSaved,
   onReviewConfirmed,
+  canManageExamples = false,
 }: AssessmentModalProps) {
+
+  // ── Format as Example state ──────────────────────────────────────────────
+  const [showFormatModal, setShowFormatModal] = useState(false);
+  const [formatExampleFileId, setFormatExampleFileId] = useState('');
+  const [isFormatting, setIsFormatting] = useState(false);
+  const [formattedResult, setFormattedResult] = useState<string | null>(null);
 
   // ── v3 settings state ────────────────────────────────────────────────────
   // requestMode comes from the Enter hex and is never editable here.
@@ -1143,6 +1152,56 @@ export function AssessmentModal({
     );
   }
 
+  // ── Format as Example ────────────────────────────────────────────────────
+
+  const handleFormatAsExample = async () => {
+    const textToFormat = summary || rounds.map(r => r.content).join('\n\n---\n\n');
+    if (!textToFormat.trim()) return;
+    setIsFormatting(true);
+    setFormattedResult(null);
+    try {
+      const session = await getValidSession();
+      const resp = await fetch('/api/databricks/ai/format-as-example', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: textToFormat,
+          exampleFileId: formatExampleFileId || undefined,
+          modelEndpoint,
+          brand,
+          userEmail,
+          accessToken: session?.accessToken,
+          workspaceHost: session?.workspaceHost,
+        }),
+      });
+      if (!resp.ok) throw new Error('Format request failed');
+      const reader = resp.body?.getReader();
+      if (!reader) throw new Error('No response stream');
+      const decoder = new TextDecoder();
+      let buf = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const parts = buf.split('\n\n');
+        buf = parts.pop() ?? '';
+        for (const part of parts) {
+          const dataMatch = part.match(/^data: (.+)$/m);
+          if (!dataMatch) continue;
+          try {
+            const payload = JSON.parse(dataMatch[1]);
+            if (payload.formatted) setFormattedResult(payload.formatted);
+            if (payload.message) throw new Error(payload.message);
+          } catch (e) { if (e instanceof SyntaxError) continue; throw e; }
+        }
+      }
+    } catch (e) {
+      setFormattedResult(`Error: ${e instanceof Error ? e.message : 'Unknown error'}`);
+    } finally {
+      setIsFormatting(false);
+    }
+  };
+
   // ── Main modal ────────────────────────────────────────────────────────────
 
   const activeKbMode = sessionMeta.kbMode ?? kbMode;
@@ -1605,7 +1664,15 @@ export function AssessmentModal({
 
           {/* Footer */}
           {isComplete && (
-            <div className="bg-white border-t-2 border-gray-200 px-6 py-4 flex items-center justify-end flex-shrink-0">
+            <div className="bg-white border-t-2 border-gray-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
+              {canManageExamples ? (
+                <button
+                  onClick={() => { setShowFormatModal(true); setFormattedResult(null); }}
+                  className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm flex items-center gap-2"
+                >
+                  ✦ Format as Example
+                </button>
+              ) : <div />}
               <button
                 onClick={() => {
                   if (onAcceptResults) {
@@ -1657,6 +1724,84 @@ export function AssessmentModal({
           )}
         </div>
       </div>
+
+      {/* Format as Example Modal */}
+      {showFormatModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-8" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col" style={{ maxHeight: '85vh' }}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <h2 className="text-lg font-bold text-gray-900">✦ Format as Example</h2>
+              <button onClick={() => setShowFormatModal(false)} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+              <p className="text-sm text-gray-600">
+                Reformat this assessment output to match a specific Example file's structure and presentation.
+                The AI will preserve all insights but apply the format of the chosen example.
+              </p>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Example file to match <span className="text-gray-400 font-normal">(optional)</span></label>
+                <select
+                  value={formatExampleFileId}
+                  onChange={e => setFormatExampleFileId(e.target.value)}
+                  className="w-full border-2 border-gray-300 bg-white rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-amber-500"
+                >
+                  <option value="">— No example, just clean it up —</option>
+                  {researchFiles.filter(f => f.isApproved && f.fileType === 'Example' && !f.fileName.endsWith('_txt.txt')).map(f => (
+                    <option key={f.id} value={f.id}>{f.fileName}</option>
+                  ))}
+                </select>
+              </div>
+              {!formattedResult && !isFormatting && (
+                <button
+                  onClick={handleFormatAsExample}
+                  className="w-full px-4 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-medium"
+                >
+                  Format Now
+                </button>
+              )}
+              {isFormatting && (
+                <div className="flex items-center justify-center py-8 gap-3 text-amber-700">
+                  <div className="w-5 h-5 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />
+                  Formatting…
+                </div>
+              )}
+              {formattedResult && (
+                <div className="space-y-3">
+                  <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-4">
+                    <h4 className="text-amber-900 font-medium text-sm mb-2">Formatted Result</h4>
+                    <pre className="text-sm text-gray-800 whitespace-pre-wrap font-sans leading-relaxed max-h-[40vh] overflow-y-auto">{formattedResult}</pre>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => navigator.clipboard.writeText(formattedResult).then(() => alert('✅ Copied to clipboard'))}
+                      className="flex-1 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 text-sm"
+                    >
+                      Copy to Clipboard
+                    </button>
+                    <button
+                      onClick={() => {
+                        const blob = new Blob([formattedResult], { type: 'text/plain' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url; a.download = `${brand}_${projectType}_formatted.txt`;
+                        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+                      }}
+                      className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                    >
+                      Download
+                    </button>
+                    <button onClick={() => { setFormattedResult(null); }} className="px-4 py-2 border-2 border-amber-400 text-amber-700 rounded-lg hover:bg-amber-50 text-sm">
+                      Try Again
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Gem/Check/Coal Review Panel */}
       {showReviewPanel && (

@@ -37,6 +37,7 @@ interface ResearcherModesProps {
   researchFiles: ResearchFile[];
   editSuggestions?: EditSuggestion[];
   canApproveResearch: boolean;
+  canManageExamples?: boolean;
   onCreateResearchFile: (file: Omit<ResearchFile, 'id' | 'uploadDate'>) => void;
   onToggleApproval: (fileId: string) => void;
   onUpdateResearchFile?: (fileId: string, content: string) => void;
@@ -193,7 +194,7 @@ function AIResponseModal({ isOpen, onClose, title, content, meta }: AIResponseMo
 }
 
 export function ResearcherModes({
-  brand, projectType, researchFiles, editSuggestions = [], canApproveResearch,
+  brand, projectType, researchFiles, editSuggestions = [], canApproveResearch, canManageExamples = false,
   onCreateResearchFile, onToggleApproval, onUpdateResearchFile, onUpdateSuggestionStatus,
   availableBrands = [], availableProjectTypes = [], projectTypeConfigs = [],
   onAddBrand, onAddProjectType, onAddProjectTypeWithPrompt,
@@ -654,6 +655,9 @@ export function ResearcherModes({
   const handleSaveKBChanges = async () => {
     if (!previewFile) return;
     setIsSavingKBChanges(true);
+    const wasExample = previewFile.fileType === 'Example';
+    const nowExample = editedKBIsExample;
+    const becameExample = !wasExample && nowExample && canManageExamples;
     try {
       const resolvedFileType = editedKBIsExample ? 'Example' : editedKBFileType;
       const r = await updateKnowledgeBaseMetadata(previewFile.fileId, {
@@ -664,10 +668,24 @@ export function ResearcherModes({
         contentYear: editedKBYear ? parseInt(editedKBYear) : null,
       }, userEmail, userRole);
       if (!r.success) throw new Error(r.error || 'Failed');
-      alert('✅ Changes saved!');
+
+      // When a file is newly set to Example type, auto-process and auto-approve it
+      if (becameExample) {
+        if (processingModelEndpoint && previewFile.cleaningStatus !== 'processed') {
+          onLoadingChange?.(true, 'Processing new Example file…');
+          await processKnowledgeBaseFile(previewFile.fileId, processingModelEndpoint, availableBrands, availableProjectTypes);
+        }
+        if (!previewFile.isApproved) {
+          onLoadingChange?.(true, 'Approving Example file…');
+          await approveKnowledgeBaseFile(previewFile.fileId, userEmail, userRole || 'research-leader');
+        }
+        onLoadingChange?.(false);
+      }
+
+      alert(becameExample ? '✅ Saved and approved as Example file. Available to all brands immediately.' : '✅ Changes saved!');
       onRefreshFiles?.(); await refreshPendingQueues();
       setPreviewFile({ ...previewFile, fileName: editedKBFileName, contentSummary: editedKBSummary, brand: editedKBBrand, projectType: editedKBProjectType, tags: editedKBTags.split(',').map(t => t.trim()).filter(Boolean), fileType: resolvedFileType as any });
-    } catch (e) { alert(`❌ Failed: ${e instanceof Error ? e.message : 'Unknown'}`); }
+    } catch (e) { alert(`❌ Failed: ${e instanceof Error ? e.message : 'Unknown'}`); onLoadingChange?.(false); }
     finally { setIsSavingKBChanges(false); }
   };
 
@@ -738,6 +756,42 @@ export function ResearcherModes({
       alert(fileArray.length === 1
         ? ok === 1 ? `✅ "${fileArray[0].name}" uploaded. Go to Read/Edit/Approve to process it.` : `❌ Failed to upload "${fileArray[0].name}".`
         : `✅ ${ok} uploaded${fail > 0 ? `, ❌ ${fail} failed:\n${failed.join('\n')}` : ''}\n\nProcess files in Read/Edit/Approve.`
+      );
+    } catch { alert('Failed to upload. Please try again.'); event.target.value = ''; }
+    finally { onLoadingChange?.(false); }
+  };
+
+  // Upload file directly as an Example — auto-processes and auto-approves
+  const handleUploadAsExample = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+    if (!isAuthenticated()) { alert('⚠️ Please sign in to Databricks first.'); event.target.value = ''; return; }
+    const fileArray = Array.from(files);
+    onLoadingChange?.(true, `Uploading example file${fileArray.length > 1 ? 's' : ''}…`);
+    let ok = 0; let fail = 0;
+    try {
+      for (let i = 0; i < fileArray.length; i++) {
+        const file = fileArray[i];
+        onLoadingChange?.(true, `Uploading example ${i + 1} of ${fileArray.length}: ${file.name}`);
+        try {
+          const r = await uploadToKnowledgeBase({ file, scope: 'general', fileType: 'Example', tags: ['example'], userEmail, userRole: 'research-leader' });
+          if (r.success && r.fileId) {
+            if (processingModelEndpoint) {
+              onLoadingChange?.(true, `Processing example: ${file.name}`);
+              await processKnowledgeBaseFile(r.fileId, processingModelEndpoint, availableBrands, availableProjectTypes);
+            }
+            onLoadingChange?.(true, `Approving example: ${file.name}`);
+            await approveKnowledgeBaseFile(r.fileId, userEmail, userRole || 'research-leader');
+            ok++;
+          } else { fail++; }
+        } catch { fail++; }
+      }
+      await refreshPendingQueues();
+      onRefreshFiles?.();
+      event.target.value = '';
+      alert(ok > 0
+        ? `✅ ${ok} Example file${ok !== 1 ? 's' : ''} uploaded and approved. ${fail > 0 ? `\n❌ ${fail} failed.` : 'Available to all brands immediately.'}`
+        : `❌ Failed to upload example file.`
       );
     } catch { alert('Failed to upload. Please try again.'); event.target.value = ''; }
     finally { onLoadingChange?.(false); }
@@ -914,10 +968,21 @@ export function ResearcherModes({
             <h4 className="text-gray-900 font-medium">Upload Files</h4>
             <span className="text-xs text-gray-500">Brand & project type assigned after processing</span>
           </div>
-          <label className="w-full px-4 py-3 bg-green-600 text-white rounded hover:bg-green-700 flex items-center justify-center gap-2 cursor-pointer">
-            <Upload className="w-5 h-5" />Upload Files to Knowledge Base
-            <input type="file" accept=".pdf,.doc,.docx,.xlsx,.xls,.csv,.txt,.ppt,.pptx" multiple className="hidden" onChange={handleUploadToDatabricks} />
-          </label>
+          <div className="flex gap-2">
+            <label className="flex-1 px-4 py-3 bg-green-600 text-white rounded hover:bg-green-700 flex items-center justify-center gap-2 cursor-pointer">
+              <Upload className="w-5 h-5" />Upload Files to Knowledge Base
+              <input type="file" accept=".pdf,.doc,.docx,.xlsx,.xls,.csv,.txt,.ppt,.pptx" multiple className="hidden" onChange={handleUploadToDatabricks} />
+            </label>
+            {canManageExamples && (
+              <label className="px-4 py-3 bg-amber-600 text-white rounded hover:bg-amber-700 flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap">
+                <Upload className="w-5 h-5" />Upload as Example
+                <input type="file" accept=".pdf,.doc,.docx,.xlsx,.xls,.csv,.txt,.ppt,.pptx,.png,.jpg,.jpeg" multiple className="hidden" onChange={handleUploadAsExample} />
+              </label>
+            )}
+          </div>
+          {canManageExamples && (
+            <p className="text-xs text-amber-700 mt-2">✦ Example files are auto-processed and auto-approved — no review needed. Available to all brands immediately.</p>
+          )}
         </div>
 
         <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
@@ -1090,6 +1155,54 @@ export function ResearcherModes({
             <p className="text-gray-400 text-xs mt-1">Files uploaded from the Wisdom hex or via Upload above will appear here.</p>
           </div>
         )}
+
+        {/* Example Files panel — visible to users who can manage examples */}
+        {canManageExamples && (() => {
+          const exFiles = researchFiles.filter(f => f.isApproved && f.fileType === 'Example' && !f.fileName.endsWith('_txt.txt'));
+          if (exFiles.length === 0) return null;
+          return (
+            <div className="bg-amber-50 border-2 border-amber-300 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="text-amber-900 leading-tight">✦ Example Files ({exFiles.length})</h3>
+                  <p className="text-amber-700 text-sm">Cross-brand quality and format references — available to all brands in the Enter hex.</p>
+                </div>
+              </div>
+              <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                {exFiles.map(file => (
+                  <div key={file.id} className="bg-white border-2 border-amber-200 rounded p-3 flex items-center justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <h5 className="text-gray-900 text-sm font-medium truncate">{file.fileName}</h5>
+                      <div className="text-xs text-gray-500 mt-0.5">{new Date(file.uploadDate).toLocaleDateString()}</div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <button
+                        onClick={async () => {
+                          const kbFile = { fileId: file.id, fileName: file.fileName, filePath: file.source || '', scope: 'general' as any, brand: file.brand, projectType: file.projectType, fileType: 'Example' as any, isApproved: file.isApproved, uploadDate: new Date(file.uploadDate).toISOString(), uploadedBy: '', tags: [], citationCount: 0, gemInclusionCount: 0, fileSizeBytes: 0, createdAt: new Date(file.uploadDate).toISOString(), updatedAt: new Date(file.uploadDate).toISOString(), cleaningStatus: 'processed' };
+                          await handlePreviewKBFile(kbFile);
+                        }}
+                        className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded hover:bg-gray-200 flex items-center gap-1"
+                      >
+                        <Eye className="w-3 h-3" />Read
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (!confirm(`Delete example file "${file.fileName}"? This cannot be undone.`)) return;
+                          const r = await deleteKnowledgeBaseFile(file.id, userEmail, 'research-leader');
+                          if (r.success) { onRefreshFiles?.(); alert('✅ Example file deleted.'); }
+                          else alert(`❌ Delete failed: ${r.error}`);
+                        }}
+                        className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded hover:bg-red-200 flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3 h-3" />Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Approved files list */}
         {selectedFile && (

@@ -18,6 +18,7 @@ export interface ModelMeta {
   description: string;
   contextWindow?: number;   // Max tokens, if known
   supportsTools?: boolean;  // Function calling / tool use
+  supportsDocuments?: boolean; // Can read PDF/DOCX/image files natively as multimodal input
   recommended?: boolean;    // Default recommendation flag
 }
 
@@ -32,6 +33,7 @@ export const MODEL_REGISTRY: readonly ModelMeta[] = [
     tier: 'premium',
     description: 'Advanced hybrid reasoning — best for persona voice work',
     supportsTools: true,
+    supportsDocuments: true,
     recommended: true,
   },
   {
@@ -41,6 +43,7 @@ export const MODEL_REGISTRY: readonly ModelMeta[] = [
     tier: 'premium',
     description: 'Highest accuracy, structured extraction, multi-step workflows',
     supportsTools: true,
+    supportsDocuments: true,
   },
   {
     id: 'databricks-gpt-5-1',
@@ -49,6 +52,7 @@ export const MODEL_REGISTRY: readonly ModelMeta[] = [
     tier: 'premium',
     description: 'General purpose, auto-adjusts reasoning depth, content creation',
     supportsTools: true,
+    supportsDocuments: true,
   },
   {
     id: 'databricks-gpt-5',
@@ -57,6 +61,7 @@ export const MODEL_REGISTRY: readonly ModelMeta[] = [
     tier: 'premium',
     description: 'Flagship reasoning, coding, and agentic tasks',
     supportsTools: true,
+    supportsDocuments: true,
   },
   {
     id: 'databricks-gemini-3-1-pro',
@@ -66,6 +71,7 @@ export const MODEL_REGISTRY: readonly ModelMeta[] = [
     description: 'Deep analysis, document intelligence, 1M token context',
     contextWindow: 1_000_000,
     supportsTools: true,
+    supportsDocuments: true,
   },
   {
     id: 'databricks-gemini-2-5-pro',
@@ -75,6 +81,7 @@ export const MODEL_REGISTRY: readonly ModelMeta[] = [
     description: 'Enterprise research, Deep Think Mode, 1M token context',
     contextWindow: 1_000_000,
     supportsTools: true,
+    supportsDocuments: true,
   },
 
   // ── Balanced ─────────────────────────────────────────────────────────────
@@ -86,6 +93,7 @@ export const MODEL_REGISTRY: readonly ModelMeta[] = [
     tier: 'balanced',
     description: 'Cost-optimized reasoning and chat, reliable output',
     supportsTools: true,
+    supportsDocuments: true,
   },
   {
     id: 'databricks-gemini-3-flash',
@@ -94,6 +102,7 @@ export const MODEL_REGISTRY: readonly ModelMeta[] = [
     tier: 'balanced',
     description: 'Fast multimodal, production-scale deployments',
     supportsTools: true,
+    supportsDocuments: true,
   },
   {
     id: 'databricks-gemini-2-5-flash',
@@ -103,6 +112,7 @@ export const MODEL_REGISTRY: readonly ModelMeta[] = [
     description: 'Real-time apps, hybrid reasoning, 1M token context',
     contextWindow: 1_000_000,
     supportsTools: true,
+    supportsDocuments: true,
   },
   {
     id: 'databricks-meta-llama-3-3-70b-instruct',
@@ -131,6 +141,7 @@ export const MODEL_REGISTRY: readonly ModelMeta[] = [
     tier: 'economy',
     description: 'Fastest and most cost-effective, real-time low-latency use',
     supportsTools: true,
+    supportsDocuments: true,
   },
   {
     id: 'databricks-gpt-5-nano',
@@ -172,6 +183,11 @@ export function getModelsByProvider(provider: string): ModelMeta[] {
 /** Returns only models that support tool/function calling */
 export function getToolCapableModels(): ModelMeta[] {
   return MODEL_REGISTRY.filter(m => m.supportsTools) as ModelMeta[];
+}
+
+/** Returns only models that can read PDF/DOCX/image files as multimodal input */
+export function getDocumentCapableModels(): ModelMeta[] {
+  return MODEL_REGISTRY.filter(m => m.supportsDocuments) as ModelMeta[];
 }
 
 /** Validates that a model ID exists in the registry */

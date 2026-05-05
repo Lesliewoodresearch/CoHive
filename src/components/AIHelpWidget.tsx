@@ -57,6 +57,7 @@ export interface AIHelpWidgetProps {
   brand?: string;
   projectType?: string;
   selectedResearchFiles?: string[];    // KB files chosen in Enter step
+  canManageExamples?: boolean;         // Researcher role — can upload/manage Example files
 }
 
 // ── Help Manual ───────────────────────────────────────────────────────────────
@@ -70,6 +71,7 @@ const HELP_MANUAL: Record<string, { guess: string; steps: string[] }> = {
       "Step 3: Your filename is auto-generated — you can edit it.",
       "Step 4 (non-War Games): Choose 'Get Inspired' (AI generates ideas) or 'Load Current Ideas' (upload your own for assessment).",
       "Step 5: Select Knowledge Base files to use across all hexes. Both regular research files and Example files can be selected.",
+      "Example Files (amber section): Cross-brand quality and format references. If the selected AI model supports documents (Claude, GPT, Gemini), it will read the original PDF or DOCX directly to replicate its format. Other models receive the extracted text version.",
       "Once all fields are complete, all other hexes unlock.",
     ],
   },
@@ -153,6 +155,8 @@ const HELP_MANUAL: Record<string, { guess: string; steps: string[] }> = {
       "Synthesis: Upload files from your computer or import from Databricks.",
       "Read/Edit/Approve: Select any file to preview it. Research Leaders can edit metadata, rename, approve, unapprove, or delete files. The list refreshes automatically after every action.",
       "Files must be processed (click 'Process') then approved before they appear in hex file selectors for non-researcher users.",
+      "Example Files: Researchers (research-analyst, research-leader, data-scientist, administrator) can upload Example files directly via 'Upload as Example' — these are auto-processed and auto-approved immediately. Example files are cross-brand quality and format references available to all brands.",
+      "Example Files panel: In Read/Edit/Approve mode, an Example Files section shows all approved examples. Researchers can delete them. You can also change any file's type to 'Example' in the preview modal — it will be auto-processed and auto-approved.",
       "Workspace and Custom Prompt modes are available to Data Scientists only.",
     ],
   },
@@ -250,6 +254,7 @@ function buildSystemPrompt(props: AIHelpWidgetProps): string {
 
   let pageContext = `- Active page: ${props.activeHexLabel} (id: ${props.activeHexId})\n`;
   pageContext += `- User role: ${props.userRole}\n`;
+  if (props.canManageExamples) pageContext += `- Can manage Example files: yes (Upload as Example button is visible)\n`;
   if (props.brand) pageContext += `- Brand: ${props.brand}\n`;
   if (props.projectType) pageContext += `- Project type: ${props.projectType}\n`;
   if (props.selectedResearchFiles?.length)
