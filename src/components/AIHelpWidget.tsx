@@ -97,7 +97,7 @@ const HELP_MANUAL: Record<string, { guess: string; steps: string[] }> = {
   Consumers: {
     guess: "run a Consumer persona analysis",
     steps: [
-      "Step 1: Select Consumer personas — expand B2C Buyers, B2B Buyers, Heavy Buyers, Brand Switchers, etc. to pick specific profiles.",
+      "Step 1: Select Consumer personas — expand Purchase (Heavy, Medium, Light Brand Buyers), Loyalty (Loyal, Triers, Non-Buyers), B2C Profiles (Impulse, Brand Loyalist, Research-Driven), and Needs categories to pick specific profiles.",
       "Step 2: Choose Assess, Recommend, or Unified.",
       "Click Execute. Each persona responds from their lived purchase experience.",
       "In debate rounds, personas compare purchase realities and challenge each other directly.",
@@ -125,7 +125,7 @@ const HELP_MANUAL: Record<string, { guess: string; steps: string[] }> = {
   cultural: {
     guess: "run a Cultural Voice analysis",
     steps: [
-      "Step 1: Select cultural personas — Gen Z Creator, Eco Advocate, Urban Artist, Suburban Family, Rural Community, etc.",
+      "Step 1: Select cultural personas — Content Creator, Environmental Advocate, Street Artist, Suburban Family Voice, Rural Community Leader, etc.",
       "Step 2: Choose Assess, Recommend, or Unified.",
       "Click Execute. Each cultural persona evaluates for resonance, potential misreadings, and cultural fit.",
       "Personas compare their community realities directly in debate rounds.",
@@ -157,7 +157,7 @@ const HELP_MANUAL: Record<string, { guess: string; steps: string[] }> = {
       "Files must be processed (click 'Process') then approved before they appear in hex file selectors for non-researcher users.",
       "Example Files: Researchers (research-analyst, research-leader, data-scientist, administrator) can upload Example files directly via 'Upload as Example' — these are auto-processed and auto-approved immediately. Example files are cross-brand quality and format references available to all brands.",
       "Example Files panel: In Read/Edit/Approve mode, an Example Files section shows all approved examples. Researchers can delete them. You can also change any file's type to 'Example' in the preview modal — it will be auto-processed and auto-approved.",
-      "Workspace and Custom Prompt modes are available to Data Scientists only.",
+      "Workspace and Custom Prompt modes are available to Administrators and Data Scientists only.",
     ],
   },
   review: {

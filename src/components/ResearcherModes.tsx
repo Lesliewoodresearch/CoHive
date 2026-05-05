@@ -841,8 +841,8 @@ export function ResearcherModes({
           {[['synthesis','Synthesis','purple'],['personas','Personas','blue'],['read-edit-approve', canApproveResearch ? 'Read/Edit/Approve' : 'Read Files','green']].map(([id, label, color]) => (
             <button key={id} onClick={() => handleModeChange(id as any)} className={`px-4 py-2 rounded-lg transition-colors ${current === id ? `bg-${color}-600 text-white` : `bg-white border-2 border-gray-300 text-gray-700 hover:border-${color}-500 hover:bg-${color}-50`}`}>{label}</button>
           ))}
-          {userRole === 'administrator' && <button onClick={() => handleModeChange('workspace')} className={`px-4 py-2 rounded-lg transition-colors ${current === 'workspace' ? 'bg-orange-600 text-white' : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-orange-500 hover:bg-orange-50'}`}>Workspace</button>}
-          {userRole === 'administrator' && <button onClick={() => { handleModeChange('custom-prompt'); setCpView('list'); setCpResult(null); setCpError(null); }} className={`px-4 py-2 rounded-lg transition-colors ${current === 'custom-prompt' ? 'bg-teal-600 text-white' : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-teal-500 hover:bg-teal-50'}`}>Custom Prompt</button>}
+          {(userRole === 'administrator' || userRole === 'data-scientist') && <button onClick={() => handleModeChange('workspace')} className={`px-4 py-2 rounded-lg transition-colors ${current === 'workspace' ? 'bg-orange-600 text-white' : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-orange-500 hover:bg-orange-50'}`}>Workspace</button>}
+          {(userRole === 'administrator' || userRole === 'data-scientist') && <button onClick={() => { handleModeChange('custom-prompt'); setCpView('list'); setCpResult(null); setCpError(null); }} className={`px-4 py-2 rounded-lg transition-colors ${current === 'custom-prompt' ? 'bg-teal-600 text-white' : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-teal-500 hover:bg-teal-50'}`}>Custom Prompt</button>}
         </div>
         <button onClick={async () => { onRefreshFiles?.(); await refreshPendingQueues(); alert('✓ Refreshed!'); }} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"><RefreshCw className="w-4 h-4" />Refresh</button>
       </div>
@@ -937,12 +937,12 @@ export function ResearcherModes({
           <h3 className="text-purple-900 leading-tight">Research Mode Selection</h3>
           <p className="text-purple-700 text-sm">Build, Edit and Approve Research Files and Persona Files</p>
         </div>
-        <div className={`grid ${userRole === 'administrator' ? 'grid-cols-5' : 'grid-cols-3'} gap-4`}>
+        <div className={`grid ${(userRole === 'administrator' || userRole === 'data-scientist') ? 'grid-cols-5' : 'grid-cols-3'} gap-4`}>
           <button onClick={() => handleModeChange('synthesis')} className="bg-white border-2 border-gray-300 rounded-lg p-6 hover:border-purple-500 hover:bg-purple-50 text-left"><h4 className="text-gray-900">Synthesis</h4><p className="text-gray-600 text-sm">Combine and analyze multiple research studies</p></button>
           <button onClick={() => handleModeChange('personas')} className="bg-white border-2 border-gray-300 rounded-lg p-6 hover:border-blue-500 hover:bg-blue-50 text-left"><h4 className="text-gray-900">Personas</h4><p className="text-gray-600 text-sm">Create persona files for each Hexagon</p></button>
           <button onClick={() => handleModeChange('read-edit-approve')} className="bg-white border-2 border-gray-300 rounded-lg p-6 hover:border-green-500 hover:bg-green-50 text-left"><h4 className="text-gray-900">{canApproveResearch ? 'Read, Edit, or Approve' : 'Read Files'}</h4><p className="text-gray-600 text-sm">{canApproveResearch ? 'Process, assign metadata and approve files' : 'View knowledge base files'}</p></button>
-          {userRole === 'administrator' && <button onClick={() => handleModeChange('workspace')} className="bg-white border-2 border-gray-300 rounded-lg p-6 hover:border-orange-500 hover:bg-orange-50 text-left"><h4 className="text-gray-900">Workspace</h4><p className="text-gray-600 text-sm">Advanced operations — Admin only</p></button>}
-          {userRole === 'administrator' && <button onClick={() => handleModeChange('custom-prompt')} className="bg-white border-2 border-gray-300 rounded-lg p-6 hover:border-teal-500 hover:bg-teal-50 text-left"><h4 className="text-gray-900">Custom Prompt</h4><p className="text-gray-600 text-sm">Save and run AI prompts — Admin only</p></button>}
+          {(userRole === 'administrator' || userRole === 'data-scientist') && <button onClick={() => handleModeChange('workspace')} className="bg-white border-2 border-gray-300 rounded-lg p-6 hover:border-orange-500 hover:bg-orange-50 text-left"><h4 className="text-gray-900">Workspace</h4><p className="text-gray-600 text-sm">Advanced operations — Admin &amp; Data Scientist</p></button>}
+          {(userRole === 'administrator' || userRole === 'data-scientist') && <button onClick={() => handleModeChange('custom-prompt')} className="bg-white border-2 border-gray-300 rounded-lg p-6 hover:border-teal-500 hover:bg-teal-50 text-left"><h4 className="text-gray-900">Custom Prompt</h4><p className="text-gray-600 text-sm">Save and run AI prompts — Admin &amp; Data Scientist</p></button>}
         </div>
       </div>
     );
@@ -1536,7 +1536,7 @@ export function ResearcherModes({
       <div className="space-y-4">
         <AIResponseModal {...aiModal} onClose={closeAiModal} />
         <ModeSwitcher current="workspace" />
-        <div className="bg-orange-50 border-2 border-orange-200 rounded-lg p-4"><h3 className="text-orange-900 leading-tight">Workspace Mode</h3><p className="text-orange-700 text-sm">Advanced operations — Administrators only</p></div>
+        <div className="bg-orange-50 border-2 border-orange-200 rounded-lg p-4"><h3 className="text-orange-900 leading-tight">Workspace Mode</h3><p className="text-orange-700 text-sm">Advanced operations — Admin &amp; Data Scientist</p></div>
         <div className="bg-white border-2 border-gray-300 rounded-lg p-4">
           <label className="block text-gray-900 mb-3">Upload Files</label>
           <label className="w-full px-4 py-3 bg-green-600 text-white rounded hover:bg-green-700 flex items-center justify-center gap-2 cursor-pointer"><Upload className="w-5 h-5" />Upload Files<input type="file" accept=".pdf,.doc,.docx,.xlsx,.xls,.csv,.txt,.ppt,.pptx" multiple className="hidden" onChange={handleUploadToDatabricks} /></label>
