@@ -58,10 +58,17 @@ export async function extractIdeasFromHexResults(
 
   const combinedText = sections.join('\n\n---\n\n');
 
-  const extractionPrompt = `Extract the most distinct ideas, strategies, Big Ideas, creative concepts, and recommendations from these discussions.
-Consolidate similar or overlapping ideas into a single entry — do not list the same concept twice in different words.
-Return a numbered list of up to 12 ideas — one per line, concise (one sentence max), no explanation.
-Do not include process steps, questions, or methodology notes — only the actual ideas and recommendations.
+  const extractionPrompt = `Extract the key ideas and concepts from these discussions to be scored and graded.
+
+Structure your output as follows:
+1. First line: the single core concept or Big Idea — the overarching premise or strategic direction.
+2. Lines 2–5: group all remaining distinct elements, themes, or strategies into 3–4 combined entries. Each entry should cluster related ideas together into one concise description.
+
+Rules:
+- Return exactly 4–5 numbered items total (1 core concept + 3–4 grouped elements).
+- Each item is one sentence max, no explanation.
+- Do not list methodology, process steps, or questions — only actual ideas and themes.
+- Consolidate overlapping ideas; do not repeat the same concept in different words.
 
 DISCUSSIONS:
 ${combinedText}`;

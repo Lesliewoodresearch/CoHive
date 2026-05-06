@@ -28,7 +28,7 @@ import {
   Building2,
 } from "lucide-react";
 import gemIcon from "figma:asset/53dc6cf554f69e479cfbd60a46741f158d11dd21.png";
-import { GemCheckCoalReviewPanel, type ReviewItem } from "./GemCheckCoalReviewPanel";
+import { GemCheckCoalReviewPanel, CoalIcon, type ReviewItem } from "./GemCheckCoalReviewPanel";
 import {
   saveGem,
   type AssessmentRound,
@@ -1292,7 +1292,7 @@ export function AssessmentModal({
                   )}
                   {savedCoalCount > 0 && (
                     <div className="flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 border border-gray-300 rounded-full">
-                      <span style={{ fontSize: "16px", lineHeight: 1 }}>🪨</span>
+                      <CoalIcon size={16} />
                       <span className="text-gray-700 text-xs font-semibold">{savedCoalCount}</span>
                     </div>
                   )}
@@ -1423,7 +1423,7 @@ export function AssessmentModal({
                 Check elements of interest
               </span>
               <span className="flex items-center gap-1.5 text-sm text-gray-800 font-medium">
-                <span style={{ fontSize: "18px", lineHeight: 1 }}>🪨</span>
+                <CoalIcon size={18} />
                 Flag elements you want to avoid
               </span>
             </div>
@@ -1568,7 +1568,7 @@ export function AssessmentModal({
                     )}
                     {savedCoalCount > 0 && (
                       <div className="bg-gray-100 border-2 border-gray-300 rounded-lg p-3 flex items-center gap-2">
-                        <span className="text-lg leading-none">🪨</span>
+                        <CoalIcon size={18} />
                         <span className="text-gray-800 font-medium text-sm">
                           {savedCoalCount} element{savedCoalCount !== 1 ? "s" : ""} flagged to avoid
                         </span>
@@ -1645,7 +1645,7 @@ export function AssessmentModal({
                     {savingCoal ? (
                       <SpinHex className="w-4 h-4" />
                     ) : (
-                      <span style={{ fontSize: "18px", lineHeight: 1 }}>🪨</span>
+                      <CoalIcon size={18} />
                     )}
                     Flag elements you want to avoid
                   </button>
@@ -1865,7 +1865,7 @@ export function AssessmentModal({
             key={toast.id}
             className="flex items-center gap-2 px-4 py-3 bg-gray-800 text-white rounded-lg shadow-lg text-sm max-w-xs"
           >
-            <span className="text-base leading-none flex-shrink-0">🪨</span>
+            <CoalIcon size={16} />
             <div className="min-w-0">
               <div className="font-medium">Flagged to avoid!</div>
               <div className="text-gray-300 text-xs truncate">{toast.text}</div>

@@ -10,6 +10,7 @@ import gemIcon from "figma:asset/53dc6cf554f69e479cfbd60a46741f158d11dd21.png";
 import { getPersonasForHex, type PersonaLevel1, type PersonaLevel2, type PersonaLevel3 } from "../data/personas";
 import { isBrandInCategory } from "../data/brandCategoryMapping";
 import { availableModels } from "./ModelTemplateManager";
+import { CoalIcon } from "./GemCheckCoalReviewPanel";
 
 interface ResearchFile {
   id: string;
@@ -124,6 +125,15 @@ export function CentralHexView({
   const [selectedPersonas, setSelectedPersonas] = useState<string[]>([]);
   const [selectedLevel1, setSelectedLevel1] = useState<string[]>([]);
   const [selectedLevel2, setSelectedLevel2] = useState<string[]>([]);
+
+  // Unified is meaningless when only one persona is selected — disable and auto-clear it
+  const personaHexIds = ['Consumers', 'Luminaries', 'Colleagues', 'cultural'];
+  const isUnifiedDisabled = personaHexIds.includes(hexId) && selectedFiles.length <= 1;
+  useEffect(() => {
+    if (isUnifiedDisabled && assessmentType.includes('unified')) {
+      setAssessmentType(prev => prev.filter(t => t !== 'unified'));
+    }
+  }, [isUnifiedDisabled]);
 
   // ── AI Help Widget: notify parent when step or files change (NEW) ───────────
   useEffect(() => {
@@ -1222,11 +1232,15 @@ export function CentralHexView({
                     <div className="text-sm text-gray-600">Generate recommendations and action items based on the knowledge base</div>
                   </div>
                 </label>
-                <label className="flex items-start gap-2 p-2 cursor-pointer transition-colors">
-                  <input type="checkbox" checked={assessmentType.includes("unified")} onChange={() => handleAssessmentTypeChange("unified")} className="w-4 h-4" />
+                <label className={`flex items-start gap-2 p-2 transition-colors ${isUnifiedDisabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}>
+                  <input type="checkbox" checked={assessmentType.includes("unified")} onChange={() => handleAssessmentTypeChange("unified")} className="w-4 h-4" disabled={isUnifiedDisabled} />
                   <div className="flex-1">
                     <div className="text-gray-900 font-semibold">Unified Response (Combine all experts responses into a single response)</div>
-                    <div className="text-sm text-gray-600">This button combines the assessments and recommendations of all personas to a single unified response</div>
+                    <div className="text-sm text-gray-600">
+                      {isUnifiedDisabled
+                        ? 'Only one persona selected — unified is not applicable'
+                        : 'This button combines the assessments and recommendations of all personas to a single unified response'}
+                    </div>
                   </div>
                 </label>
               </div>
@@ -1420,7 +1434,7 @@ export function CentralHexView({
 
         {/* Coal — display only */}
         <div className="mb-3 flex items-center gap-2">
-          <span className="text-2xl leading-none w-7 flex items-center justify-center">🪨</span>
+          <span className="w-7 flex items-center justify-center"><CoalIcon size={22} /></span>
           <span className="text-gray-900">Flag elements you want to avoid</span>
         </div>
 

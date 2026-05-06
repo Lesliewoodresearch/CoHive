@@ -1173,12 +1173,13 @@ export default function ProcessWireframe() {
       stories: [...(prev['stories'] || []), execData],
     }));
 
-    // Add each round as a story NoteEntry
+    // Add each round as a story NoteEntry (brief descriptor only, not full content)
+    const storyTypeLabel = [storyModalParams?.category?.label, storyModalParams?.subtype?.label].filter(Boolean).join(' · ');
     results.rounds.forEach(round => {
       const storyEntry: NoteEntry = {
         id: `story-${Date.now()}-${round.roundNumber}`,
         type: 'story',
-        text: round.content,
+        text: storyTypeLabel ? `Story written: ${storyTypeLabel} — ${round.label}` : `Story written: ${round.label}`,
         hexLabel: round.label,
       };
       setNoteEntries(prev => [
@@ -2324,7 +2325,7 @@ export default function ProcessWireframe() {
                                           if (!brand) scope = projectType ? 'category' : 'general';
                                           const result = await uploadToKnowledgeBase({ file, scope, category: projectType, brand: scope === 'brand' ? brand : undefined, projectType: projectType || undefined, fileType: 'Findings', tags: ['Iteration', brand, projectType].filter(Boolean) as string[], iterationType: 'iteration', includedHexes: Array.from(completedSteps), userEmail: userEmail, userRole });
                                           if (result.success) {
-                                            alert(`✅ Upload successful! Iteration "${userEnteredFileName}" saved to the Knowledge Base.`);
+                                            alert(`✅ Upload successful! Iteration "${userEnteredFileName}" saved to your files.`);
                                             const updatedFiles = [...projectFiles, newFile];
                                             setProjectFiles(updatedFiles);
                                             localStorage.setItem('cohive_projects', JSON.stringify(updatedFiles));
@@ -2669,6 +2670,7 @@ export default function ProcessWireframe() {
           onClose={() => setStoryModalOpen(false)}
           brand={responses['Enter']?.[0]?.trim() || ''}
           projectType={responses['Enter']?.[1]?.trim() || ''}
+          projectTypePrompt={projectTypeConfigs.find(pt => pt.projectType === (responses['Enter']?.[1]?.trim() || ''))?.prompt || ''}
           category={storyModalParams.category}
           subtype={storyModalParams.subtype}
           researchFiles={researchFiles}

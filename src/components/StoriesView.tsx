@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import { STORY_CATEGORIES, type StoryCategory, type StorySubtype } from '@/data/storyTypes';
 import gemIcon from 'figma:asset/53dc6cf554f69e479cfbd60a46741f158d11dd21.png';
+import { CoalIcon } from './GemCheckCoalReviewPanel';
 
 interface StoriesViewProps {
   brand: string;
@@ -152,7 +153,7 @@ export function StoriesView({
 
         {/* Coal */}
         <div className="flex items-center gap-2">
-          <span className="text-2xl leading-none w-7 flex items-center justify-center">🪨</span>
+          <span className="w-7 flex items-center justify-center"><CoalIcon size={22} /></span>
           <span className="text-gray-900">Flag elements you want to avoid</span>
         </div>
 

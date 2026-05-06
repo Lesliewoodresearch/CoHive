@@ -88,8 +88,21 @@ function CheckIcon({ size = 20 }: { size?: number }) {
   );
 }
 
-function CoalIcon({ size = 18 }: { size?: number }) {
-  return <span style={{ fontSize: size, lineHeight: 1, flexShrink: 0 }}>🪨</span>;
+export function CoalIcon({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
+      {/* Main coal lump */}
+      <path d="M4 15 L7 6 L14 5 L20 9 L19 17 L12 20 L5 18 Z" fill="#1F2937" />
+      {/* Dark facet top */}
+      <path d="M7 6 L14 5 L12 11 Z" fill="#111827" opacity="0.8" />
+      {/* Mid-gray facet right */}
+      <path d="M14 5 L20 9 L14 12 Z" fill="#374151" />
+      {/* Lighter gray facet left */}
+      <path d="M4 15 L7 6 L11 13 Z" fill="#4B5563" />
+      {/* Dark bottom facet */}
+      <path d="M12 20 L19 17 L14 12 Z" fill="#111827" opacity="0.6" />
+    </svg>
+  );
 }
 
 // ── Similarity check ──────────────────────────────────────────────────────────

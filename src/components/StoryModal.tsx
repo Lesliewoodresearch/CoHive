@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, CircleCheck, CircleAlert, BookOpen, Tag, Globe, Building2 } from 'lucide-react';
 import gemIcon from 'figma:asset/53dc6cf554f69e479cfbd60a46741f158d11dd21.png';
-import { GemCheckCoalReviewPanel, type ReviewItem } from './GemCheckCoalReviewPanel';
+import { GemCheckCoalReviewPanel, CoalIcon, type ReviewItem } from './GemCheckCoalReviewPanel';
 import { saveGem, readKnowledgeBaseFile } from '../utils/databricksAPI';
 import { getValidSession } from '../utils/databricksAuth';
 import { LoadingGem, SpinHex } from './LoadingGem';
@@ -32,6 +32,7 @@ interface StoryModalProps {
   onClose: () => void;
   brand: string;
   projectType: string;
+  projectTypePrompt?: string;
   category: StoryCategory;
   subtype: StorySubtype;
   researchFiles: ResearchFile[];
@@ -82,6 +83,7 @@ const SCOPE_OPTIONS: { value: Scope; label: string; description: string; icon: R
 function buildStoryPrompt(params: {
   brand: string;
   projectType: string;
+  projectTypePrompt?: string;
   category: StoryCategory;
   subtype: StorySubtype;
   kbMode: KbMode;
@@ -90,7 +92,7 @@ function buildStoryPrompt(params: {
   roundIndex: number;
   iterationDirections?: string[];
 }): { systemPrompt: string; prompt: string } {
-  const { brand, projectType, category, subtype, kbMode, scope, kbContent, roundIndex, iterationDirections } = params;
+  const { brand, projectType, projectTypePrompt, category, subtype, kbMode, scope, kbContent, roundIndex, iterationDirections } = params;
 
   const hasKbContent = kbContent.trim().length > 0;
 
@@ -115,6 +117,8 @@ function buildStoryPrompt(params: {
       : "Tell the story from the ANTAGONIST or CHALLENGER's perspective — the force of opposition, the incumbent, or the contrasting viewpoint."
     : '';
 
+  const ptContext = projectTypePrompt ? projectTypePrompt.split('\n\n')[0].trim() : '';
+
   const systemPrompt = `You are a master narrative storyteller creating brand strategy stories for ${brand}.
 
 Your role is to write compelling, structured narrative stories that reveal brand truths through archetypal storytelling frameworks. The stories should be vivid, specific to the brand, and professionally useful as strategic tools.
@@ -124,7 +128,7 @@ The CONSUMER (customer, user, audience member) is ALWAYS the protagonist and her
 - THE HELPER / GUIDE / MAGIC (the fairy godmother, the mentor, the enabling force): The brand gives the consumer what they need to succeed, enables their transformation, or awakens their potential. The consumer's journey and growth is the story — the brand is the reason it became possible.
 - THE VILLAIN / ANTAGONIST / INCUMBENT (the oppressive force, the trap, the thing to overcome): The brand (or a named competitor) is what the consumer must confront, escape from, or outsmart. The consumer's victory is the story.
 Never make the brand the protagonist. The brand's power is revealed entirely through what it does FOR or AGAINST the consumer.
-
+${ptContext ? `\nSTRATEGIC CONTEXT — This story is being created in service of the following type of work. Let this shape the story's strategic purpose and what it is designed to reveal:\n${ptContext}` : ''}
 KNOWLEDGE BASE GROUNDING — this is non-negotiable:
 ${kbInstruction}
 ${hasKbContent ? `You have been given Knowledge Base files below. Read them carefully before writing. Every specific brand detail in your story (product names, campaigns, slogans, consumer insights, competitive facts) must be drawn from those files. Do not substitute fictional or generic brand details when real ones are available in the KB.` : ''}
@@ -152,7 +156,7 @@ Writing style:
 
   const prompt = `Generate a ${subtype.label} story (${category.label} category) for ${brand}.
 
-${isDualPOV ? `**Perspective:** ${povLabel}\n\n` : ''}Project context: ${projectType || 'Brand strategy'}
+${isDualPOV ? `**Perspective:** ${povLabel}\n\n` : ''}Project type: ${projectType || 'Brand strategy'}
 
 Follow these story steps exactly:
 
@@ -171,6 +175,7 @@ export function StoryModal({
   onClose,
   brand,
   projectType,
+  projectTypePrompt,
   category,
   subtype,
   researchFiles,
@@ -257,7 +262,7 @@ export function StoryModal({
           : i === 0 ? `${subtype.label} — Protagonist` : `${subtype.label} — Challenger`;
 
         const { systemPrompt, prompt } = buildStoryPrompt({
-          brand, projectType, category, subtype, kbMode, scope, kbContent, roundIndex: i, iterationDirections,
+          brand, projectType, projectTypePrompt, category, subtype, kbMode, scope, kbContent, roundIndex: i, iterationDirections,
         });
 
         const result = await executeAIPrompt({
@@ -628,7 +633,7 @@ export function StoryModal({
                 <div className="w-px h-4 bg-gray-300" />
                 <button onClick={handleSaveCoal} disabled={savingCoal} title="Save as Coal"
                   className="flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100 text-xs font-medium text-gray-700 transition-colors">
-                  🪨 {savingCoal ? '…' : 'Coal'}
+                  <CoalIcon size={14} /> {savingCoal ? '…' : 'Coal'}
                 </button>
               </div>
             )}
@@ -649,7 +654,7 @@ export function StoryModal({
                   </span>
                 )}
                 {savedCoalItems.length > 0 && (
-                  <span>🪨 {savedCoalItems.length} coal{savedCoalItems.length !== 1 ? 's' : ''}</span>
+                  <span className="flex items-center gap-1"><CoalIcon size={13} /> {savedCoalItems.length} coal{savedCoalItems.length !== 1 ? 's' : ''}</span>
                 )}
               </div>
             )}
@@ -686,7 +691,7 @@ export function StoryModal({
           ))}
           {coalToasts.map(t => (
             <div key={t.id} className="flex items-center gap-2 bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 shadow-md text-xs text-gray-100">
-              <span>🪨</span>
+              <CoalIcon size={16} />
               <span className="max-w-[200px] truncate">{t.text}</span>
             </div>
           ))}
