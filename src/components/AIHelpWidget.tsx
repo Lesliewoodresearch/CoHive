@@ -140,12 +140,16 @@ const HELP_MANUAL: Record<string, { guess: string; steps: string[] }> = {
     ],
   },
   Grade: {
-    guess: "test ideas against target segments (Grade hex)",
+    guess: "score iteration ideas against consumer segments (Grade hex)",
     steps: [
-      "Step 1: Select the segments to test against — consumer types, cultural voices, etc.",
-      "Step 2: Choose assessment type (Assess, Recommend, or Unified).",
-      "Click Execute. Each segment evaluates the work from their specific reality and gives a score with rationale.",
-      "Use this to find where your strategy has cross-segment appeal and where adaptations are needed.",
+      "The Grade hex scores the ideas and strategies produced in this iteration against target consumer segments — it is not a persona dialogue.",
+      "Step 1 of 3 — Select Ideas: When you open the Grade hex, it automatically extracts idea candidates from all hex discussions in this iteration (including Stories). Check or uncheck ideas to include. You can also type and add ideas manually.",
+      "Step 2 of 3 — Select Segments: Choose which consumer segments will evaluate the ideas. Segments are grouped by Lifestyle (Activities, Consumption, Life Stage), Demographic (Age Groups, Income, Geography, Household), and Psychographic (Values, Personality, Attitudes). Where available, a US market population percentage is shown next to each segment.",
+      "Step 3 of 3 — Choose Scoring Scale: Pick from five options: Scale of 1–5 with written assessments, Scale of 1–5 scores only, Scale of 1–10 with written assessments, Scale of 1–10 scores only, or Written assessments only (no numeric score).",
+      "Click 'Run Scoring'. The AI evaluates each idea from each segment's perspective and returns a score grid (ideas as rows, segments as columns) with population percentages in column headers where available.",
+      "If written assessments are requested, one paragraph per idea × segment pair is shown below the score grid, explaining why that segment would or would not respond.",
+      "Score results are appended to the iteration file as two separate labeled blocks — [Grade: Score Grid] and [Grade: Written Assessments] — so each can be independently included in Findings reports.",
+      "Score results and extracted ideas are cleared when you save the iteration or return to the Enter hex.",
     ],
   },
   research: {

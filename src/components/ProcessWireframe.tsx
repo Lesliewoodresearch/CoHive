@@ -28,6 +28,8 @@ import { isAuthenticated, getCurrentUserEmail, getValidSession } from '../utils/
 import { generateIterationFileName, loadSessionVersions, saveSessionVersions, startNewVersionRun, type SessionVersion } from '../utils/sessionVersioning';
 import { systemProjectTypes, isSystemProjectType } from '../data/systemProjectTypes';
 import { stepContentData, type StepContent } from '../data/stepContentData';
+import { extractIdeasFromHexResults, buildGradeScoringPrompt, parseGradeResults, resolveGradeSegments, formatGradeForIteration, type GradeResults } from '../utils/gradeExtraction';
+import { executeAIPrompt } from '../utils/databricksAI';
 
 interface StepResponses {
   [stepId: string]: {
@@ -143,6 +145,12 @@ export default function ProcessWireframe() {
   const [iterationChecks, setIterationChecks] = useState<Array<{ text: string; hexId: string; hexLabel: string }>>([]);
   const [iterationCoal, setIterationCoal] = useState<Array<{ text: string; hexId: string; hexLabel: string }>>([]);
   const [iterationDirections, setIterationDirections] = useState<string[]>([]);
+
+  // Grade hex scoring state — cleared with iteration
+  const [gradeExtractedIdeas, setGradeExtractedIdeas] = useState<string[]>([]);
+  const [gradeIdeasLoading, setGradeIdeasLoading] = useState(false);
+  const [gradeScoreResults, setGradeScoreResults] = useState<GradeResults | null>(null);
+  const [gradeScoring, setGradeScoring] = useState(false);
   const [noteEntries, setNoteEntries] = useState<NoteEntry[]>([{ id: 'init-note', type: 'note', text: '' }]);
 
   // Assessment Modal state
@@ -515,6 +523,21 @@ export default function ProcessWireframe() {
     loadResearchFilesFromDatabricks();
   }, [isDatabricksAuthenticated, isCheckingAuth, currentTemplate]);
 
+  // When the user navigates to the Grade hex, extract ideas from all hex results
+  useEffect(() => {
+    if (activeStepId !== 'Grade') return;
+    const hasAnyResults = Object.values(hexExecutions).some(execs => execs?.length > 0);
+    if (!hasAnyResults) return;
+    setGradeIdeasLoading(true);
+    const modelEndpoint = currentModelTemplate?.hexModels?.['Grade']?.modelId || 'databricks-claude-haiku-4-5';
+    extractIdeasFromHexResults(hexExecutions, userEmail, userRole, modelEndpoint)
+      .then(ideas => {
+        setGradeExtractedIdeas(ideas);
+        setGradeIdeasLoading(false);
+      })
+      .catch(() => setGradeIdeasLoading(false));
+  }, [activeStepId]);
+
   const getExistingFiles = (brand: string, projectType: string): ProjectFile[] => {
     if (!brand || !projectType) return [];
     return projectFiles.filter(f => f.brand.toLowerCase() === brand.toLowerCase() && f.projectType.toLowerCase() === projectType.toLowerCase());
@@ -854,11 +877,52 @@ export default function ProcessWireframe() {
     localStorage.setItem('cohive_projects', JSON.stringify(updatedFiles));
   };
 
+  // ── Grade hex scoring ────────────────────────────────────────────────────────
+
+  const handleGradeExecute = async (selectedSegmentIds: string[], assessment: string) => {
+    const brand = responses['Enter']?.[0]?.trim() || '';
+    const projectType = responses['Enter']?.[1]?.trim() || '';
+
+    // Parse encoded scale and ideas from the assessment string
+    const scaleMatch = assessment.match(/\[GRADE_SCALE:([^\]]+)\]/);
+    const ideasMatch = assessment.match(/\[GRADE_IDEAS:([^\]]+)\]/);
+    const scale = scaleMatch?.[1] || 'scale-1-5-written';
+    const ideas = ideasMatch?.[1]?.split('||').filter(Boolean) || [];
+
+    if (ideas.length === 0) {
+      alert('No ideas to score. Please go back and select ideas.');
+      return;
+    }
+
+    const segments = resolveGradeSegments(selectedSegmentIds);
+    const modelEndpoint = currentModelTemplate?.hexModels?.['Grade']?.modelId || 'databricks-claude-haiku-4-5';
+    const prompt = buildGradeScoringPrompt(ideas, segments, scale, brand, projectType);
+
+    setGradeScoring(true);
+    try {
+      const result = await executeAIPrompt({ prompt, modelEndpoint, maxTokens: 4000, temperature: 0.2, userEmail, userRole });
+      if (result.success && result.response) {
+        const parsed = parseGradeResults(result.response);
+        setGradeScoreResults(parsed);
+      }
+    } catch (e) {
+      console.error('[Grade] Scoring failed:', e);
+    } finally {
+      setGradeScoring(false);
+    }
+  };
+
   // ── handleCentralHexExecute — v3: derives requestMode and ideaElements ──────
 
   const handleCentralHexExecute = (selectedFiles: string[], assessmentType: string[], assessment: string) => {
     const brand = responses['Enter']?.[0]?.trim() || '';
     const projectType = responses['Enter']?.[1]?.trim() || '';
+
+    // Grade hex: intercept and run scoring instead of opening AssessmentModal
+    if (activeStepId === 'Grade') {
+      handleGradeExecute(selectedFiles, assessment);
+      return;
+    }
 
     const executionData: HexExecution = {
       id: Date.now().toString(),
@@ -1312,6 +1376,8 @@ export default function ProcessWireframe() {
                 setIterationCoal([]);
                 setIterationDirections([]);
                 setNoteEntries([{ id: `note-enter-${Date.now()}`, type: 'note', text: '' }]);
+                setGradeScoreResults(null);
+                setGradeExtractedIdeas([]);
               }
               if (stepId === 'Enter' && !iterationSaved) {
                 setResponses(prev => ({ ...prev, 'Findings': { ...prev['Findings'], [0]: '' } }));
@@ -1457,7 +1523,49 @@ export default function ProcessWireframe() {
                     onSaveRecommendation={handleSaveRecommendation}
                   />
                          ) : isCentralHex ? (
-                  <CentralHexView key={activeStepId} hexId={activeStepId} hexLabel={currentContent.title} researchFiles={researchFiles} onExecute={handleCentralHexExecute} databricksInstructions={currentTemplate?.databricksInstructions?.[activeStepId] || ''} previousExecutions={hexExecutions[activeStepId] || []} crossHexExecutions={[...['Consumers', 'Luminaries', 'Colleagues', 'cultural', 'Grade'].filter(h => h !== activeStepId).flatMap(h => hexExecutions[h] || []), ...(hexExecutions['stories'] || [])]} anyPriorPersonaRun={['Consumers', 'Luminaries', 'Colleagues', 'cultural', 'Grade'].some(h => hexExecutions[h]?.length > 0) || (hexExecutions['stories']?.length ?? 0) > 0} onSaveRecommendation={handleSaveRecommendation} projectType={responses['Enter']?.[1] || ''} userBrand={responses['Enter']?.[0] || ''} lastResults={lastAssessmentResults} conversationMode={currentTemplate?.conversationSettings?.conversationMode || 'multi-round'} modelEndpoint={currentTemplate?.conversationSettings?.modelEndpoint || 'databricks-claude-haiku-4-5'} requestMode={deriveRequestMode()} userEmail={userEmail} userRole={userRole} onContextChange={(files, step) => setHexWidgetContext({ files, step })} onAddIterationDirection={handleAddIterationDirection} iterationDirections={iterationDirections} />
+                  <>
+                  <CentralHexView key={activeStepId} hexId={activeStepId} hexLabel={currentContent.title} researchFiles={researchFiles} onExecute={handleCentralHexExecute} databricksInstructions={currentTemplate?.databricksInstructions?.[activeStepId] || ''} previousExecutions={hexExecutions[activeStepId] || []} crossHexExecutions={[...['Consumers', 'Luminaries', 'Colleagues', 'cultural', 'Grade'].filter(h => h !== activeStepId).flatMap(h => hexExecutions[h] || []), ...(hexExecutions['stories'] || [])]} anyPriorPersonaRun={['Consumers', 'Luminaries', 'Colleagues', 'cultural', 'Grade'].some(h => hexExecutions[h]?.length > 0) || (hexExecutions['stories']?.length ?? 0) > 0} onSaveRecommendation={handleSaveRecommendation} projectType={responses['Enter']?.[1] || ''} userBrand={responses['Enter']?.[0] || ''} lastResults={lastAssessmentResults} conversationMode={currentTemplate?.conversationSettings?.conversationMode || 'multi-round'} modelEndpoint={currentTemplate?.conversationSettings?.modelEndpoint || 'databricks-claude-haiku-4-5'} requestMode={deriveRequestMode()} userEmail={userEmail} userRole={userRole} onContextChange={(files, step) => setHexWidgetContext({ files, step })} onAddIterationDirection={handleAddIterationDirection} iterationDirections={iterationDirections} extractedIdeas={gradeExtractedIdeas} ideasLoading={gradeIdeasLoading} />
+                  {/* Grade hex: scoring results displayed inline */}
+                  {activeStepId === 'Grade' && (
+                    <div className="mt-4">
+                      {gradeScoring && (
+                        <div className="flex items-center gap-2 py-4 text-gray-500 px-3">
+                          <SpinHex className="w-5 h-5" />
+                          <span className="text-sm">Scoring ideas against segments…</span>
+                        </div>
+                      )}
+                      {gradeScoreResults && !gradeScoring && (
+                        <div className="border-t-2 border-gray-300 pt-4 px-3 space-y-4">
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-gray-900 font-semibold">Score Results</h3>
+                            <button
+                              className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 text-gray-600"
+                              onClick={() => setGradeScoreResults(null)}
+                            >
+                              Clear
+                            </button>
+                          </div>
+                          {gradeScoreResults.scoreGrid && (
+                            <div className="overflow-x-auto">
+                              <div className="text-xs text-gray-500 mb-1 font-semibold uppercase tracking-wide">Score Grid</div>
+                              <pre className="text-xs text-gray-800 font-mono whitespace-pre leading-relaxed bg-gray-50 border border-gray-200 rounded p-2 overflow-x-auto">{gradeScoreResults.scoreGrid}</pre>
+                            </div>
+                          )}
+                          {gradeScoreResults.assessments && (
+                            <div>
+                              <div className="text-xs text-gray-500 mb-2 font-semibold uppercase tracking-wide">Written Assessments</div>
+                              <div className="space-y-3 text-sm text-gray-800 leading-relaxed">
+                                {gradeScoreResults.assessments.split(/\n\n+/).map((para, i) => (
+                                  <p key={i}>{para.trim()}</p>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  </>
                         ) : (
                     <>
                     {wisdomSuccessMessage && activeStepId === 'Wisdom' && (
@@ -2179,6 +2287,13 @@ export default function ProcessWireframe() {
                                             iterationCoal.forEach(c => txtLines.push(`[${c.hexLabel}] ${c.text}`));
                                             txtLines.push('');
                                           }
+                                          if (gradeScoreResults && (gradeScoreResults.scoreGrid || gradeScoreResults.assessments)) {
+                                            txtLines.push('='.repeat(60));
+                                            txtLines.push('GRADE: SEGMENT SCORING');
+                                            txtLines.push('='.repeat(60));
+                                            txtLines.push(formatGradeForIteration(gradeScoreResults));
+                                            txtLines.push('');
+                                          }
                                           const noteText = noteEntries
                                             .filter(e => e.text.trim() && e.type !== 'story')
                                             .map(e => {
@@ -2215,6 +2330,8 @@ export default function ProcessWireframe() {
                                             setIterationCoal([]);
                                             setIterationDirections([]);
                                             setNoteEntries([{ id: `note-save-${Date.now()}`, type: 'note', text: '' }]);
+                                            setGradeScoreResults(null);
+                                            setGradeExtractedIdeas([]);
                                           } else { alert(`Failed to save to Databricks: ${result.error || 'Unknown error'}`); }
                                         }
                                       }}

@@ -53,6 +53,9 @@ interface CentralHexViewProps {
   onContextChange?: (files: string[], step: 1 | 2 | 3) => void;
   onAddIterationDirection?: (direction: string) => void;
   iterationDirections?: string[];
+  // ── Grade hex idea extraction ───────────────────────────────────────────────
+  extractedIdeas?: string[];
+  ideasLoading?: boolean;
 }
 
 export function CentralHexView({
@@ -74,6 +77,8 @@ export function CentralHexView({
   onContextChange,
   onAddIterationDirection,
   iterationDirections = [],
+  extractedIdeas = [],
+  ideasLoading = false,
 }: CentralHexViewProps) {
   const isPersonaHex = ['Consumers', 'Luminaries', 'Colleagues', 'cultural', 'Grade'].includes(hexId);
   
@@ -103,6 +108,10 @@ export function CentralHexView({
   const [selectedCompetitor, setSelectedCompetitor] = useState<string>("");
   const [competitorAnalysisType, setCompetitorAnalysisType] = useState<string>("");
 
+  // Grade hex — idea selection state
+  const [selectedIdeas, setSelectedIdeas] = useState<string[]>([]);
+  const [manualIdea, setManualIdea] = useState<string>('');
+
   // Persona selection state for Consumers hex
   const [selectedPersonas, setSelectedPersonas] = useState<string[]>([]);
   const [selectedLevel1, setSelectedLevel1] = useState<string[]>([]);
@@ -112,6 +121,13 @@ export function CentralHexView({
   useEffect(() => {
     onContextChange?.(selectedFiles, currentStep);
   }, [selectedFiles, currentStep]);
+
+  // ── Grade: pre-select all extracted ideas when they load ───────────────────
+  useEffect(() => {
+    if (hexId === 'Grade' && extractedIdeas.length > 0) {
+      setSelectedIdeas(extractedIdeas);
+    }
+  }, [hexId, extractedIdeas]);
 
   // Get persona config for this hex
   const personaConfig = getPersonasForHex(hexId);
@@ -271,7 +287,30 @@ export function CentralHexView({
 
   const handleExecute = () => {
     const isWarGames = projectType === 'War Games';
-    
+
+    // Grade hex: validate ideas + segments + scale, then encode and fire
+    if (hexId === 'Grade') {
+      if (selectedIdeas.length === 0) {
+        alert("Please select at least one idea to score.");
+        return;
+      }
+      if (selectedFiles.length === 0) {
+        alert("Please select at least one segment.");
+        return;
+      }
+      if (!testingScale) {
+        alert("Please choose a scoring scale.");
+        return;
+      }
+      const gradeAssessment = `[GRADE_SCALE:${testingScale}]\n[GRADE_IDEAS:${selectedIdeas.join('||')}]`;
+      onExecute(selectedFiles, ['grade'], gradeAssessment);
+      setCurrentStep(1);
+      setSelectedFiles([]);
+      setSelectedIdeas([]);
+      setTestingScale('');
+      return;
+    }
+
     if (hexId === 'competitors') {
       if (isWarGames) {
         if (!selectedCompetitor) {
@@ -336,17 +375,22 @@ export function CentralHexView({
   };
 
   const isWarGamesProject = projectType === 'War Games';
-  const canProceedToStep2 = isWarGamesProject || selectedFiles.length > 0;
+  // Grade uses all 3 steps: step1=ideas, step2=segments, step3=scale
+  const canProceedToStep2 = hexId === 'Grade'
+    ? selectedIdeas.length > 0
+    : isWarGamesProject || selectedFiles.length > 0;
   const canProceedToStep3 =
     hexId === "Grade"
-      ? canProceedToStep2 && testingScale
+      ? canProceedToStep2 && selectedFiles.length > 0  // segments selected in step 2
       : canProceedToStep2 && assessmentType.length > 0;
   const canExecute =
-    hexId === 'competitors' 
-      ? (projectType === 'War Games' 
-          ? selectedCompetitor.length > 0 
+    hexId === 'Grade'
+      ? canProceedToStep3 && testingScale.length > 0
+      : hexId === 'competitors'
+      ? (projectType === 'War Games'
+          ? selectedCompetitor.length > 0
           : selectedCompetitor.length > 0 && competitorAnalysisType.length > 0)
-      : isWarGamesProject 
+      : isWarGamesProject
         ? assessment.trim().length > 0
         : canProceedToStep3 && assessment.trim().length > 0;
 
@@ -586,11 +630,101 @@ export function CentralHexView({
         </div>
       )}
 
-      {/* Step 1: File Selection */}
+      {/* Step 1: File Selection / Grade Idea Selection */}
       {currentStep === 1 && (
-        <div className="p-3"> 
-          {/* War Games - Skip file selection */}
-          {projectType === 'War Games' ? (
+        <div className="p-3">
+          {/* Grade hex — idea selection from iteration results */}
+          {hexId === 'Grade' ? (
+            <>
+              <h3 className="text-gray-900 leading-tight mb-1">
+                Step 1 of 3: Select Ideas to Score
+              </h3>
+              <p className="text-gray-600 text-sm mb-3">
+                Ideas extracted from this iteration's AI discussions. Select which to include in the scoring.
+              </p>
+
+              {ideasLoading ? (
+                <div className="flex items-center gap-2 py-4 text-gray-500">
+                  <svg className="animate-spin w-4 h-4 text-blue-500" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                  <span className="text-sm">Extracting ideas from your iteration discussions…</span>
+                </div>
+              ) : selectedIdeas.length === 0 && extractedIdeas.length === 0 ? (
+                <div className="p-3 border-2 border-amber-200 bg-amber-50 rounded mb-3">
+                  <p className="text-amber-800 text-sm">
+                    No iteration results found. Run some hexes first, then return to score the ideas.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-1 mb-3">
+                  {selectedIdeas.map((idea, i) => (
+                    <label key={i} className="flex items-start gap-2 p-2 cursor-pointer hover:bg-gray-50 rounded">
+                      <input
+                        type="checkbox"
+                        checked={true}
+                        onChange={() => setSelectedIdeas(prev => prev.filter((_, idx) => idx !== i))}
+                        className="w-4 h-4 mt-0.5 flex-shrink-0"
+                      />
+                      <span className="text-gray-800 text-sm leading-snug">{idea}</span>
+                    </label>
+                  ))}
+                  {extractedIdeas.filter(idea => !selectedIdeas.includes(idea)).map((idea, i) => (
+                    <label key={`unselected-${i}`} className="flex items-start gap-2 p-2 cursor-pointer hover:bg-gray-50 rounded opacity-50">
+                      <input
+                        type="checkbox"
+                        checked={false}
+                        onChange={() => setSelectedIdeas(prev => [...prev, idea])}
+                        className="w-4 h-4 mt-0.5 flex-shrink-0"
+                      />
+                      <span className="text-gray-600 text-sm leading-snug">{idea}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+
+              {/* Add manual idea */}
+              <div className="flex gap-2 mt-2">
+                <input
+                  type="text"
+                  className="flex-1 border-2 border-gray-300 bg-white rounded p-2 text-sm text-gray-700 focus:outline-none focus:border-blue-500"
+                  placeholder="Add an idea manually…"
+                  value={manualIdea}
+                  onChange={e => setManualIdea(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && manualIdea.trim()) {
+                      setSelectedIdeas(prev => [...prev, manualIdea.trim()]);
+                      setManualIdea('');
+                    }
+                  }}
+                />
+                <button
+                  className="px-3 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm"
+                  onClick={() => {
+                    if (manualIdea.trim()) {
+                      setSelectedIdeas(prev => [...prev, manualIdea.trim()]);
+                      setManualIdea('');
+                    }
+                  }}
+                >
+                  Add
+                </button>
+              </div>
+
+              <div className="flex justify-between mt-4">
+                <span className="text-sm text-gray-500">{selectedIdeas.length} idea{selectedIdeas.length !== 1 ? 's' : ''} selected</span>
+                <button
+                  className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => setCurrentStep(2)}
+                  disabled={!canProceedToStep2}
+                >
+                  Next: Select Segments →
+                </button>
+              </div>
+            </>
+          ) : /* War Games - Skip file selection */
+          projectType === 'War Games' ? (
             <>
               <h3 className="text-gray-900 leading-tight mb-3">
                 Step 1: War Games Mode
@@ -609,18 +743,18 @@ export function CentralHexView({
                 </button>
               </div>
             </>
-          ) : (hexId === 'Consumers' || hexId === 'Luminaries' || hexId === 'Colleagues' || hexId === 'cultural' || hexId === 'Grade') && personaConfig ? (
-            // Persona Selection for Consumers, Luminaries, Colleagues, Cultural Voices, and Grade hexes
+          ) : (hexId === 'Consumers' || hexId === 'Luminaries' || hexId === 'Colleagues' || hexId === 'cultural') && personaConfig ? (
+            // Persona Selection for Consumers, Luminaries, Colleagues, Cultural Voices
+            // (Grade has its own Step 1 above; its segment picker is shown in Step 2)
             <>
               <h3 className="text-gray-900 leading-tight mb-3">
-                {(['Consumers', 'Luminaries', 'Colleagues', 'cultural', 'Grade'].includes(hexId)) ? 'Step 1 of 2' : 'Step 1'}: Select {
-                  hexId === 'Consumers' ? 'Consumer' : 
-                  hexId === 'Luminaries' ? 'External Expert' : 
+                Step 1 of 2: Select {
+                  hexId === 'Consumers' ? 'Consumer' :
+                  hexId === 'Luminaries' ? 'External Expert' :
                   hexId === 'Colleagues' ? 'Internal Colleague' :
                   hexId === 'cultural' ? 'Cultural Voice' :
-                  hexId === 'Grade' ? 'Target Segment' :
                   ''
-                } {hexId === 'Grade' ? 'Segments' : 'Personas'} to use in this hex
+                } Personas to use in this hex
               </h3>
 
               <div className="space-y-3 mb-3">
@@ -870,7 +1004,7 @@ export function CentralHexView({
               onClick={() => setCurrentStep(2)}
               disabled={!canProceedToStep2}
             >
-              Next: Choose Assessment Type/Scale →
+              Next: Choose Assessment Type →
             </button>
           </div>
             </>
@@ -878,50 +1012,109 @@ export function CentralHexView({
         </div>
       )}
 
-      {/* Step 2: Assessment Type */}
+      {/* Step 2: Grade segment picker OR Assessment Type for other hexes */}
       {currentStep === 2 && (
         <div className="p-3">
-          {hexId === "Grade" ? (
+          {hexId === "Grade" && personaConfig ? (
+            // Grade Step 2: segment picker (moved from Step 1 for Grade)
             <>
-              <h3 className="text-gray-900 leading-tight">
-                {(['Consumers', 'Luminaries', 'Colleagues', 'cultural', 'Grade'].includes(hexId)) ? 'Step 2 of 2' : 'Step 2'}: What grading scale should be used?
+              <h3 className="text-gray-900 leading-tight mb-3">
+                Step 2 of 3: Select Target Segments
               </h3>
-              <p className="text-gray-600 mb-2">
-                Select the grading scale for segment evaluation.
-              </p>
-
-              <div className="space-y-1">
-                <label className="flex items-center gap-2 p-2 cursor-pointer transition-colors">
-                  <input type="radio" name="testingScale" value="scale-1-5-written" checked={testingScale === "scale-1-5-written"} onChange={(e) => setTestingScale(e.target.value)} className="w-4 h-4" />
-                  <div className="flex-1"><div className="text-gray-900 font-semibold">Scale of 1-5 with written assessments</div></div>
-                </label>
-                <label className="flex items-start gap-2 p-2 cursor-pointer transition-colors">
-                  <input type="radio" name="testingScale" value="scale-1-5-no-written" checked={testingScale === "scale-1-5-no-written"} onChange={(e) => setTestingScale(e.target.value)} className="w-4 h-4" />
-                  <div className="flex-1"><div className="text-gray-900 font-semibold">Scale of 1-5 with no written assessments</div></div>
-                </label>
-                <label className="flex items-start gap-2 p-2 cursor-pointer transition-colors">
-                  <input type="radio" name="testingScale" value="scale-1-10-written" checked={testingScale === "scale-1-10-written"} onChange={(e) => setTestingScale(e.target.value)} className="w-4 h-4" />
-                  <div className="flex-1"><div className="text-gray-900 font-semibold">Scale of 1-10 written assessments</div></div>
-                </label>
-                <label className="flex items-start gap-2 p-2 cursor-pointer transition-colors">
-                  <input type="radio" name="testingScale" value="scale-1-10-no-written" checked={testingScale === "scale-1-10-no-written"} onChange={(e) => setTestingScale(e.target.value)} className="w-4 h-4" />
-                  <div className="flex-1"><div className="text-gray-900 font-semibold">Scale of 1-10 no written assessments</div></div>
-                </label>
-                <label className="flex items-start gap-2 p-2 cursor-pointer transition-colors">
-                  <input type="radio" name="testingScale" value="no-scale-written" checked={testingScale === "no-scale-written"} onChange={(e) => setTestingScale(e.target.value)} className="w-4 h-4" />
-                  <div className="flex-1"><div className="text-gray-900 font-semibold">No scale, just written assessments</div></div>
-                </label>
+              <div className="space-y-3 mb-3">
+                <div className="space-y-0">
+                  {personaConfig.options.map((opt) => (
+                    <div key={opt.id}>
+                      <label className="flex items-start gap-2 p-0.5 cursor-pointer hover:bg-gray-50 rounded transition-colors">
+                        <input
+                          type="checkbox"
+                          value={opt.id}
+                          checked={selectedLevel1.includes(opt.id)}
+                          onChange={() => handleLevel1Toggle(opt.id)}
+                          className="w-4 h-4 mt-0.5"
+                        />
+                        <div className="flex-1 flex items-center justify-between">
+                          <div className="text-gray-900 font-semibold">
+                            {opt.category}
+                            {opt.description && (
+                              <span className="text-sm text-gray-600 font-normal ml-2">{opt.description}</span>
+                            )}
+                          </div>
+                        </div>
+                      </label>
+                      {selectedLevel1.includes(opt.id) && opt.subcategories && (
+                        <div className="ml-6 space-y-0">
+                          {opt.subcategories.map((sub) => (
+                            <div key={sub.id}>
+                              <label className="flex items-start gap-2 p-0.5 cursor-pointer hover:bg-gray-50 rounded transition-colors">
+                                <input
+                                  type="checkbox"
+                                  value={sub.id}
+                                  checked={selectedLevel2.includes(sub.id)}
+                                  onChange={() => handleLevel2Toggle(sub.id, opt.id)}
+                                  className="w-4 h-4 mt-0.5"
+                                />
+                                <div className="text-gray-700 font-medium">{sub.name}</div>
+                              </label>
+                              {selectedLevel2.includes(sub.id) && sub.roles && (
+                                <div className="ml-6 space-y-0">
+                                  {sub.roles.map((role) => (
+                                    <label key={role.id} className="flex items-center gap-2 p-0.5 cursor-pointer hover:bg-gray-50 rounded transition-colors">
+                                      <input
+                                        type="checkbox"
+                                        value={role.id}
+                                        checked={selectedFiles.includes(role.id)}
+                                        onChange={() => handlePersonaToggle(role.id, role.name)}
+                                        className="w-4 h-4"
+                                      />
+                                      <span className="text-gray-700 text-sm">
+                                        {role.name}
+                                        {(role as any).populationEstimate != null && (
+                                          <span className="text-gray-400 ml-1 text-xs">({(role as any).populationEstimate}%)</span>
+                                        )}
+                                      </span>
+                                    </label>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {selectedFiles.length > 0 && (
+                <div className="mt-2 p-2 border-2 border-green-500 rounded mb-2">
+                  <p className="text-green-800 text-sm">
+                    <strong>{selectedFiles.length}</strong> segment{selectedFiles.length !== 1 ? 's' : ''} selected
+                  </p>
+                </div>
+              )}
+              <div className="flex justify-between mt-3">
+                <button className="px-6 py-2 border-2 border-gray-400 text-gray-700 rounded hover:bg-gray-50" onClick={() => setCurrentStep(1)}>← Back</button>
+                <button
+                  className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => setCurrentStep(3)}
+                  disabled={!canProceedToStep3}
+                >
+                  Next: Choose Scale →
+                </button>
               </div>
             </>
+          ) : hexId === "Grade" ? (
+            // Grade with no personaConfig (fallback)
+            <p className="text-gray-500 text-sm">No segment configuration found.</p>
           ) : (
+            // All other hexes: Assessment Type (Step 2 of 2 for persona hexes, Step 2 of 3 for non-persona)
             <>
               <h3 className="text-gray-900 leading-tight">
-                {(['Consumers', 'Luminaries', 'Colleagues', 'cultural', 'Grade'].includes(hexId)) ? 'Step 2 of 2' : 'Step 2'}: Choose Assessment Type
+                {(['Consumers', 'Luminaries', 'Colleagues', 'cultural'].includes(hexId)) ? 'Step 2 of 2' : 'Step 2'}: Choose Assessment Type
               </h3>
               <p className="text-gray-600 mb-2">
                 Select how you want to process the selected files.
               </p>
-
               <div className="space-y-1">
                 <label className="flex items-start gap-2 p-2 cursor-pointer transition-colors">
                   <input type="checkbox" checked={assessmentType.includes("assess")} onChange={() => handleAssessmentTypeChange("assess")} className="w-4 h-4" disabled={isAssessDisabled} />
@@ -945,36 +1138,69 @@ export function CentralHexView({
                   </div>
                 </label>
               </div>
+              <div className="flex justify-between mt-6">
+                <button className="px-6 py-2 border-2 border-gray-400 text-gray-700 rounded hover:bg-gray-50" onClick={() => setCurrentStep(1)}>← Back</button>
+                <button
+                  className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  onClick={() => {
+                    const isPersonaHex = ['Consumers', 'Luminaries', 'Colleagues', 'cultural'].includes(hexId);
+                    if (isPersonaHex) { handleExecute(); } else { setCurrentStep(3); }
+                  }}
+                >
+                  {['Consumers', 'Luminaries', 'Colleagues', 'cultural'].includes(hexId) ? 'Execute →' : 'Next: Provide Assessment →'}
+                </button>
+              </div>
             </>
           )}
-
-          <div className="flex justify-between mt-6">
-            <button
-              className="px-6 py-2 border-2 border-gray-400 text-gray-700 rounded hover:bg-gray-50"
-              onClick={() => setCurrentStep(1)}
-            >
-              ← Back
-            </button>
-            <button
-              className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              onClick={() => {
-                const isPersonaHex = ['Consumers', 'Luminaries', 'Colleagues', 'cultural', 'Grade'].includes(hexId);
-                if (isPersonaHex) {
-                  handleExecute();
-                } else {
-                  setCurrentStep(3);
-                }
-              }}
-            >
-              {['Consumers', 'Luminaries', 'Colleagues', 'cultural', 'Grade'].includes(hexId) ? 'Execute →' : 'Next: Provide Assessment →'}
-            </button>
-          </div>
         </div>
       )}
 
-      {/* Step 3: Assessment Input */}
+      {/* Step 3: Grade scale selection OR Assessment Input for other hexes */}
       {currentStep === 3 && hexId !== 'competitors' && (
         <div className="p-3">
+          {hexId === 'Grade' ? (
+            <>
+              <h3 className="text-gray-900 leading-tight mb-1">
+                Step 3 of 3: Choose Scoring Scale
+              </h3>
+              <p className="text-gray-600 mb-3 text-sm">
+                Select how the AI should score each idea against each segment.
+              </p>
+              <div className="space-y-1 mb-4">
+                <label className="flex items-center gap-2 p-2 cursor-pointer transition-colors">
+                  <input type="radio" name="testingScale" value="scale-1-5-written" checked={testingScale === "scale-1-5-written"} onChange={(e) => setTestingScale(e.target.value)} className="w-4 h-4" />
+                  <div className="flex-1"><div className="text-gray-900 font-semibold">Scale of 1–5 with written assessments</div></div>
+                </label>
+                <label className="flex items-start gap-2 p-2 cursor-pointer transition-colors">
+                  <input type="radio" name="testingScale" value="scale-1-5-no-written" checked={testingScale === "scale-1-5-no-written"} onChange={(e) => setTestingScale(e.target.value)} className="w-4 h-4" />
+                  <div className="flex-1"><div className="text-gray-900 font-semibold">Scale of 1–5, scores only</div></div>
+                </label>
+                <label className="flex items-start gap-2 p-2 cursor-pointer transition-colors">
+                  <input type="radio" name="testingScale" value="scale-1-10-written" checked={testingScale === "scale-1-10-written"} onChange={(e) => setTestingScale(e.target.value)} className="w-4 h-4" />
+                  <div className="flex-1"><div className="text-gray-900 font-semibold">Scale of 1–10 with written assessments</div></div>
+                </label>
+                <label className="flex items-start gap-2 p-2 cursor-pointer transition-colors">
+                  <input type="radio" name="testingScale" value="scale-1-10-no-written" checked={testingScale === "scale-1-10-no-written"} onChange={(e) => setTestingScale(e.target.value)} className="w-4 h-4" />
+                  <div className="flex-1"><div className="text-gray-900 font-semibold">Scale of 1–10, scores only</div></div>
+                </label>
+                <label className="flex items-start gap-2 p-2 cursor-pointer transition-colors">
+                  <input type="radio" name="testingScale" value="no-scale-written" checked={testingScale === "no-scale-written"} onChange={(e) => setTestingScale(e.target.value)} className="w-4 h-4" />
+                  <div className="flex-1"><div className="text-gray-900 font-semibold">Written assessments only, no numeric score</div></div>
+                </label>
+              </div>
+              <div className="flex justify-between mt-2">
+                <button className="px-6 py-2 border-2 border-gray-400 text-gray-700 rounded hover:bg-gray-50" onClick={() => setCurrentStep(2)}>← Back</button>
+                <button
+                  className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  onClick={handleExecute}
+                  disabled={!canExecute}
+                >
+                  Run Scoring →
+                </button>
+              </div>
+            </>
+          ) : (
+          <>
           <h3 className="text-gray-900 leading-tight">
             Step 3: Provide Your Assessment
           </h3>
@@ -1044,6 +1270,8 @@ export function CentralHexView({
               Execute Process
             </button>
           </div>
+          </>
+          )}
         </div>
       )}
 

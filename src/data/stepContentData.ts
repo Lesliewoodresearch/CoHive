@@ -120,12 +120,12 @@ export const stepContentData: StepContent[] = [
   {
     id: 'Grade',
     title: 'Segment Testing',
-    description: 'Score hypotheses against target segments',
+    description: 'Score ideas from this iteration against target consumer segments',
     questions: [
-      'What segments have been identified?',
-      'What hypotheses need grading?',
-      'What grading methodology will be used?',
-      'What success metrics are defined?'
+      'Select Ideas to Score',
+      'Select Segments',
+      'Choose Scoring Scale',
+      'Score Results'
     ]
   },
   {

@@ -52,6 +52,7 @@ export interface PersonaContent {
 export interface PersonaLevel3 {
   id: string; // References content file: /data/persona-content/{id}.json
   name: string; // Display name
+  populationEstimate?: number; // % of US adult population (Grade segments only)
 }
 
 export interface PersonaLevel2 {
@@ -636,10 +637,10 @@ export const hexPersonas: HexPersonaConfig[] = [
             name: 'Activities & Interests',
             description: 'Based on hobbies and activities',
             roles: [
-              { id: 'grade-lifestyle-active', name: 'Active/Athletic' },
-              { id: 'grade-lifestyle-creative', name: 'Creative/Artistic' },
-              { id: 'grade-lifestyle-tech', name: 'Tech Enthusiast' },
-              { id: 'grade-lifestyle-outdoors', name: 'Outdoor Adventurer' }
+              { id: 'grade-lifestyle-active', name: 'Active/Athletic', populationEstimate: 22 },
+              { id: 'grade-lifestyle-creative', name: 'Creative/Artistic', populationEstimate: 15 },
+              { id: 'grade-lifestyle-tech', name: 'Tech Enthusiast', populationEstimate: 18 },
+              { id: 'grade-lifestyle-outdoors', name: 'Outdoor Adventurer', populationEstimate: 17 }
             ]
           },
           {
@@ -647,9 +648,9 @@ export const hexPersonas: HexPersonaConfig[] = [
             name: 'Consumption Patterns',
             description: 'Based on purchase and consumption behavior',
             roles: [
-              { id: 'grade-lifestyle-luxury', name: 'Luxury Consumer' },
-              { id: 'grade-lifestyle-value', name: 'Value Seeker' },
-              { id: 'grade-lifestyle-eco', name: 'Eco-Conscious Consumer' }
+              { id: 'grade-lifestyle-luxury', name: 'Luxury Consumer', populationEstimate: 12 },
+              { id: 'grade-lifestyle-value', name: 'Value Seeker', populationEstimate: 38 },
+              { id: 'grade-lifestyle-eco', name: 'Eco-Conscious Consumer', populationEstimate: 22 }
             ]
           },
           {
@@ -657,11 +658,11 @@ export const hexPersonas: HexPersonaConfig[] = [
             name: 'Life Stage',
             description: 'Based on current life circumstances',
             roles: [
-              { id: 'grade-lifestyle-student', name: 'Student' },
-              { id: 'grade-lifestyle-young-professional', name: 'Young Professional' },
-              { id: 'grade-lifestyle-family', name: 'Growing Family' },
-              { id: 'grade-lifestyle-empty-nester', name: 'Empty Nester' },
-              { id: 'grade-lifestyle-retiree', name: 'Retiree' }
+              { id: 'grade-lifestyle-student', name: 'Student', populationEstimate: 10 },
+              { id: 'grade-lifestyle-young-professional', name: 'Young Professional', populationEstimate: 16 },
+              { id: 'grade-lifestyle-family', name: 'Growing Family', populationEstimate: 19 },
+              { id: 'grade-lifestyle-empty-nester', name: 'Empty Nester', populationEstimate: 18 },
+              { id: 'grade-lifestyle-retiree', name: 'Retiree', populationEstimate: 21 }
             ]
           }
         ]
@@ -676,10 +677,10 @@ export const hexPersonas: HexPersonaConfig[] = [
             name: 'Age Groups',
             description: 'Based on age ranges',
             roles: [
-              { id: 'grade-demo-gen-z', name: 'Gen Z (18-26)' },
-              { id: 'grade-demo-millennial', name: 'Millennials (27-42)' },
-              { id: 'grade-demo-gen-x', name: 'Gen X (43-58)' },
-              { id: 'grade-demo-boomer', name: 'Baby Boomers (59-77)' }
+              { id: 'grade-demo-gen-z', name: 'Gen Z (18-26)', populationEstimate: 14 },
+              { id: 'grade-demo-millennial', name: 'Millennials (27-42)', populationEstimate: 22 },
+              { id: 'grade-demo-gen-x', name: 'Gen X (43-58)', populationEstimate: 20 },
+              { id: 'grade-demo-boomer', name: 'Baby Boomers (59-77)', populationEstimate: 21 }
             ]
           },
           {
@@ -687,10 +688,10 @@ export const hexPersonas: HexPersonaConfig[] = [
             name: 'Income Levels',
             description: 'Based on household income',
             roles: [
-              { id: 'grade-demo-low-income', name: 'Low Income (<$35K)' },
-              { id: 'grade-demo-middle-income', name: 'Middle Income ($35K-$100K)' },
-              { id: 'grade-demo-upper-middle', name: 'Upper Middle ($100K-$200K)' },
-              { id: 'grade-demo-high-income', name: 'High Income ($200K+)' }
+              { id: 'grade-demo-low-income', name: 'Low Income (<$35K)', populationEstimate: 30 },
+              { id: 'grade-demo-middle-income', name: 'Middle Income ($35K-$100K)', populationEstimate: 40 },
+              { id: 'grade-demo-upper-middle', name: 'Upper Middle ($100K-$200K)', populationEstimate: 20 },
+              { id: 'grade-demo-high-income', name: 'High Income ($200K+)', populationEstimate: 10 }
             ]
           },
           {
@@ -698,9 +699,9 @@ export const hexPersonas: HexPersonaConfig[] = [
             name: 'Geographic',
             description: 'Based on location',
             roles: [
-              { id: 'grade-demo-urban', name: 'Urban' },
-              { id: 'grade-demo-suburban', name: 'Suburban' },
-              { id: 'grade-demo-rural', name: 'Rural' }
+              { id: 'grade-demo-urban', name: 'Urban', populationEstimate: 31 },
+              { id: 'grade-demo-suburban', name: 'Suburban', populationEstimate: 51 },
+              { id: 'grade-demo-rural', name: 'Rural', populationEstimate: 18 }
             ]
           },
           {
@@ -708,12 +709,12 @@ export const hexPersonas: HexPersonaConfig[] = [
             name: 'Household Composition',
             description: 'Based on family structure',
             roles: [
-              { id: 'grade-demo-single', name: 'Single' },
-              { id: 'grade-demo-couple', name: 'Couple (No Kids)' },
-              { id: 'grade-demo-family-young', name: 'Family (Young Kids)' },
-              { id: 'grade-demo-family-teen', name: 'Family (Teens)' },
-              { id: 'grade-demo-multi-gen', name: 'Multi-Generational' },
-              { id: 'stories-millennial-parent', name: 'Millennial Parent' }
+              { id: 'grade-demo-single', name: 'Single', populationEstimate: 28 },
+              { id: 'grade-demo-couple', name: 'Couple (No Kids)', populationEstimate: 25 },
+              { id: 'grade-demo-family-young', name: 'Family (Young Kids)', populationEstimate: 15 },
+              { id: 'grade-demo-family-teen', name: 'Family (Teens)', populationEstimate: 12 },
+              { id: 'grade-demo-multi-gen', name: 'Multi-Generational', populationEstimate: 8 },
+              { id: 'stories-millennial-parent', name: 'Millennial Parent', populationEstimate: 11 }
             ]
           }
         ]
@@ -728,10 +729,10 @@ export const hexPersonas: HexPersonaConfig[] = [
             name: 'Values & Beliefs',
             description: 'Based on core values',
             roles: [
-              { id: 'grade-psycho-traditional', name: 'Traditional Values' },
-              { id: 'grade-psycho-progressive', name: 'Progressive Values' },
-              { id: 'grade-psycho-spiritual', name: 'Spiritual/Religious' },
-              { id: 'grade-psycho-pragmatic', name: 'Pragmatic/Practical' }
+              { id: 'grade-psycho-traditional', name: 'Traditional Values', populationEstimate: 32 },
+              { id: 'grade-psycho-progressive', name: 'Progressive Values', populationEstimate: 26 },
+              { id: 'grade-psycho-spiritual', name: 'Spiritual/Religious', populationEstimate: 29 },
+              { id: 'grade-psycho-pragmatic', name: 'Pragmatic/Practical', populationEstimate: 35 }
             ]
           },
           {
@@ -739,10 +740,10 @@ export const hexPersonas: HexPersonaConfig[] = [
             name: 'Personality Traits',
             description: 'Based on personality characteristics',
             roles: [
-              { id: 'grade-psycho-innovator', name: 'Innovator/Early Adopter' },
-              { id: 'grade-psycho-cautious', name: 'Cautious/Risk-Averse' },
-              { id: 'grade-psycho-social', name: 'Social Butterfly' },
-              { id: 'grade-psycho-independent', name: 'Independent Thinker' }
+              { id: 'grade-psycho-innovator', name: 'Innovator/Early Adopter', populationEstimate: 16 },
+              { id: 'grade-psycho-cautious', name: 'Cautious/Risk-Averse', populationEstimate: 28 },
+              { id: 'grade-psycho-social', name: 'Social Butterfly', populationEstimate: 22 },
+              { id: 'grade-psycho-independent', name: 'Independent Thinker', populationEstimate: 24 }
             ]
           },
           {
@@ -750,11 +751,11 @@ export const hexPersonas: HexPersonaConfig[] = [
             name: 'Attitudes & Opinions',
             description: 'Based on attitudes toward key topics',
             roles: [
-              { id: 'grade-psycho-health-conscious', name: 'Health-Conscious' },
-              { id: 'grade-psycho-status-seeking', name: 'Status-Seeking' },
-              { id: 'grade-psycho-convenience', name: 'Convenience-Oriented' },
-              { id: 'grade-psycho-quality', name: 'Quality-Focused' },
-              { id: 'grade-psycho-price', name: 'Price-Sensitive' }
+              { id: 'grade-psycho-health-conscious', name: 'Health-Conscious', populationEstimate: 27 },
+              { id: 'grade-psycho-status-seeking', name: 'Status-Seeking', populationEstimate: 14 },
+              { id: 'grade-psycho-convenience', name: 'Convenience-Oriented', populationEstimate: 33 },
+              { id: 'grade-psycho-quality', name: 'Quality-Focused', populationEstimate: 31 },
+              { id: 'grade-psycho-price', name: 'Price-Sensitive', populationEstimate: 36 }
             ]
           }
         ]
