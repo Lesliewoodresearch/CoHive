@@ -938,4 +938,81 @@ export const AI_HELP_CLAIM_TESTS: AIHelpClaimTest[] = [
     },
   },
 
+  // ── Iteration Filename Versioning ─────────────────────────────────────────────
+
+  {
+    id: 'aihelp-iter-filename-first',
+    section: 'Iteration Filename Versioning',
+    name: 'First iteration shows default filename; user can change it',
+    claimText: 'When starting the first iteration, the Enter hex shows a system-generated default filename. The user can edit this field to any name they choose. Saving uses whatever is in the field.',
+    run: () => {
+      return {
+        status: 'manual',
+        message: 'Manual check: navigate to Enter hex with no prior saved iterations. The filename field should be pre-filled with a default name (Brand_ProjectType_DDMMYY_V1). Edit the field to a custom name, go to Findings, and Save Iteration. Confirm the file uploads with the custom name.',
+        received: 'Requires live browser test',
+        element: 'ProcessWireframe.tsx — useEffect filename generation + Findings save handler',
+      };
+    },
+  },
+
+  {
+    id: 'aihelp-iter-filename-next-uses-last-saved',
+    section: 'Iteration Filename Versioning',
+    name: 'After save, returning to Enter seeds next filename from last saved name',
+    claimText: 'After saving an iteration and returning to the Enter hex, the filename field is pre-filled with the previously saved name with the version number incremented (e.g. MyStrategy_V1 → MyStrategy_V2). The system always uses the actual saved name, not the default formula.',
+    run: () => {
+      return {
+        status: 'manual',
+        message: 'Manual check: (1) Save iteration as "MyCustomName_V1". (2) Return to Enter hex. (3) Confirm filename field shows "MyCustomName_V2" (not the default format). (4) Change it to "DifferentName_V1" and save. (5) Return to Enter — confirm field shows "DifferentName_V2".',
+        received: 'Requires live browser test — depends on lastSavedFileName state + localStorage cohive_last_iteration_filename',
+        element: 'ProcessWireframe.tsx — lastSavedFileName state, Enter navigation handler, useEffect version-bump logic',
+      };
+    },
+  },
+
+  {
+    id: 'aihelp-iter-filename-user-can-override-next',
+    section: 'Iteration Filename Versioning',
+    name: 'User can override the suggested next filename before saving',
+    claimText: 'After returning to Enter, the suggested filename (last saved name + incremented version) is editable. If the user changes it, the save uses the new name, which then becomes the base for the following iteration.',
+    run: () => {
+      return {
+        status: 'manual',
+        message: 'Manual check: after returning to Enter with a suggested name, clear and type a new name. Save. Return to Enter again — confirm the field shows the newly typed name with v incremented.',
+        received: 'Requires live browser test',
+        element: 'ProcessWireframe.tsx — responses[Enter][2] input field + save handler writing lastSavedFileName',
+      };
+    },
+  },
+
+  {
+    id: 'aihelp-iter-filename-brand-change-resets',
+    section: 'Iteration Filename Versioning',
+    name: 'Changing brand or project type resets filename to new default',
+    claimText: 'If the user changes the brand or project type, the filename suggestion resets to the system default for the new combination. The prior lastSavedFileName is cleared so it does not pollute the new project.',
+    run: () => {
+      return {
+        status: 'manual',
+        message: 'Manual check: save an iteration as "MyName_V1". Change the brand in the Enter hex. Confirm the filename field updates to the default formula for the new brand (not "MyName_V2").',
+        received: 'Requires live browser test',
+        element: 'ProcessWireframe.tsx — brand/projectType change handler clears lastSavedFileName + localStorage',
+      };
+    },
+  },
+
+  {
+    id: 'aihelp-iter-filename-persists-reload',
+    section: 'Iteration Filename Versioning',
+    name: 'Last saved filename persists across page reloads',
+    claimText: 'The last saved iteration filename is stored in localStorage (cohive_last_iteration_filename) so that returning to the app after a page reload still suggests the correct next version.',
+    run: () => {
+      return {
+        status: 'manual',
+        message: 'Manual check: save an iteration, reload the page, navigate to Enter hex. Confirm the filename field shows the last saved name with version incremented, not the system default.',
+        received: 'Requires live browser test — localStorage key: cohive_last_iteration_filename',
+        element: 'ProcessWireframe.tsx — lastSavedFileName initialized from localStorage on mount',
+      };
+    },
+  },
+
 ];

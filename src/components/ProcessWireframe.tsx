@@ -173,6 +173,9 @@ export default function ProcessWireframe() {
   const [availableProjectTypes, setAvailableProjectTypes] = useState<string[]>([]);
   const [projectTypeConfigs, setProjectTypeConfigs] = useState<ProjectTypeConfig[]>([]);
   const [iterationSaved, setIterationSaved] = useState<boolean>(false);
+  const [lastSavedFileName, setLastSavedFileName] = useState<string>(
+    () => localStorage.getItem('cohive_last_iteration_filename') || ''
+  );
   const [isDatabricksAuthenticated, setIsDatabricksAuthenticated] = useState<boolean>(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState<boolean>(true);
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
@@ -706,6 +709,9 @@ export default function ProcessWireframe() {
       const newProjectType = questionIndex === 1 ? value : (currentResponses[1] || '');
       let newFileName = '';
       if (newBrand && newProjectType) newFileName = generateDefaultFileName(newBrand, newProjectType);
+      // Brand/project changed — reset the last-saved-name so it doesn't bleed into the new project
+      setLastSavedFileName('');
+      localStorage.removeItem('cohive_last_iteration_filename');
       setResponses(prev => ({
         ...prev,
         [activeStepId]: {
@@ -883,11 +889,18 @@ export default function ProcessWireframe() {
     const brand = responses['Enter']?.[0]?.trim() || '';
     const projectType = responses['Enter']?.[1]?.trim() || '';
 
-    // Parse encoded scale and ideas from the assessment string
+    // Parse encoded scale and ideas from the assessment string.
+    // Ideas are extracted by finding the marker and slicing to end-of-string so that
+    // idea text containing ']' doesn't break the parse.
     const scaleMatch = assessment.match(/\[GRADE_SCALE:([^\]]+)\]/);
-    const ideasMatch = assessment.match(/\[GRADE_IDEAS:([^\]]+)\]/);
     const scale = scaleMatch?.[1] || 'scale-1-5-written';
-    const ideas = ideasMatch?.[1]?.split('||').filter(Boolean) || [];
+    const ideasMarker = '[GRADE_IDEAS:';
+    const ideasStart = assessment.indexOf(ideasMarker);
+    let ideas: string[] = [];
+    if (ideasStart !== -1) {
+      const raw = assessment.slice(ideasStart + ideasMarker.length).replace(/\]$/, '').trim();
+      ideas = raw.split('||').map(s => s.trim()).filter(Boolean);
+    }
 
     if (ideas.length === 0) {
       alert('No ideas to score. Please go back and select ideas.');
@@ -1364,8 +1377,10 @@ export default function ProcessWireframe() {
             activeStep={activeStepId}
             onStepChange={(stepId) => {
               if (stepId === 'Enter' && iterationSaved) {
-                // Clear the filename so the useEffect recomputes it with today's date + next version
-                setResponses(prev => ({ ...prev, 'Enter': { ...prev['Enter'], [2]: '' }, 'Findings': { ...prev['Findings'], [0]: '' } }));
+                // Seed the filename field with the last saved name so the version-bump
+                // useEffect can strip the suffix and suggest the next version correctly.
+                const seedName = lastSavedFileName || '';
+                setResponses(prev => ({ ...prev, 'Enter': { ...prev['Enter'], [2]: seedName }, 'Findings': { ...prev['Findings'], [0]: '' } }));
                 setIterationSaved(false);
                 localStorage.setItem('cohive_iteration_saved', 'false');
               }
@@ -2324,6 +2339,10 @@ export default function ProcessWireframe() {
                                             localStorage.setItem('cohive_projects', JSON.stringify(updatedFiles));
                                             setIterationSaved(true);
                                             localStorage.setItem('cohive_iteration_saved', 'true');
+                                            // Track the exact name the user saved so we can seed the next iteration's filename
+                                            const baseSaved = userEnteredFileName.replace(/\.txt$/i, '');
+                                            setLastSavedFileName(baseSaved);
+                                            localStorage.setItem('cohive_last_iteration_filename', baseSaved);
                                             setLastAssessmentResults(null);
                                             setIterationGems([]);
                                             setIterationChecks([]);

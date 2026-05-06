@@ -80,8 +80,14 @@ ${combinedText}`;
     // Parse numbered list: "1. Idea text" or "- Idea text"
     return result.response
       .split('\n')
-      .map(line => line.replace(/^[\d]+\.\s*/, '').replace(/^[-•*]\s*/, '').trim())
-      .filter(line => line.length > 10);
+      .map(line => line.replace(/^[\d]+\.\s*/, '').replace(/^[-•*]\s*/, '').replace(/\*\*/g, '').trim())
+      .filter(line => {
+        if (line.length <= 10) return false;
+        if (line.endsWith(':')) return false;        // heading/label line
+        if (line.startsWith('#')) return false;      // markdown header
+        if (line === line.toUpperCase() && /[A-Z]{3}/.test(line)) return false; // ALL-CAPS label
+        return true;
+      });
   } catch {
     return [];
   }

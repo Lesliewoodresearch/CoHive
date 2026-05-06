@@ -108,9 +108,16 @@ export function CentralHexView({
   const [selectedCompetitor, setSelectedCompetitor] = useState<string>("");
   const [competitorAnalysisType, setCompetitorAnalysisType] = useState<string>("");
 
-  // Grade hex — idea selection state
-  const [selectedIdeas, setSelectedIdeas] = useState<string[]>([]);
+  // Grade hex — idea selection state.
+  // All extractedIdeas are selected by default; user can uncheck to exclude.
+  // manualIdeas are always included. This derived pattern avoids async timing issues.
+  const [excludedIdeas, setExcludedIdeas] = useState<Set<string>>(new Set());
+  const [manualIdeas, setManualIdeas] = useState<string[]>([]);
   const [manualIdea, setManualIdea] = useState<string>('');
+  const effectiveSelectedIdeas = [
+    ...extractedIdeas.filter(idea => !excludedIdeas.has(idea)),
+    ...manualIdeas,
+  ];
 
   // Persona selection state for Consumers hex
   const [selectedPersonas, setSelectedPersonas] = useState<string[]>([]);
@@ -121,13 +128,6 @@ export function CentralHexView({
   useEffect(() => {
     onContextChange?.(selectedFiles, currentStep);
   }, [selectedFiles, currentStep]);
-
-  // ── Grade: pre-select all extracted ideas when they load ───────────────────
-  useEffect(() => {
-    if (hexId === 'Grade' && extractedIdeas.length > 0) {
-      setSelectedIdeas(extractedIdeas);
-    }
-  }, [hexId, extractedIdeas]);
 
   // Get persona config for this hex
   const personaConfig = getPersonasForHex(hexId);
@@ -290,7 +290,7 @@ export function CentralHexView({
 
     // Grade hex: validate ideas + segments + scale, then encode and fire
     if (hexId === 'Grade') {
-      if (selectedIdeas.length === 0) {
+      if (effectiveSelectedIdeas.length === 0) {
         alert("Please select at least one idea to score.");
         return;
       }
@@ -302,11 +302,12 @@ export function CentralHexView({
         alert("Please choose a scoring scale.");
         return;
       }
-      const gradeAssessment = `[GRADE_SCALE:${testingScale}]\n[GRADE_IDEAS:${selectedIdeas.join('||')}]`;
+      const gradeAssessment = `[GRADE_SCALE:${testingScale}]\n[GRADE_IDEAS:${effectiveSelectedIdeas.join('||')}]`;
       onExecute(selectedFiles, ['grade'], gradeAssessment);
       setCurrentStep(1);
       setSelectedFiles([]);
-      setSelectedIdeas([]);
+      setExcludedIdeas(new Set());
+      setManualIdeas([]);
       setTestingScale('');
       return;
     }
@@ -377,7 +378,7 @@ export function CentralHexView({
   const isWarGamesProject = projectType === 'War Games';
   // Grade uses all 3 steps: step1=ideas, step2=segments, step3=scale
   const canProceedToStep2 = hexId === 'Grade'
-    ? selectedIdeas.length > 0
+    ? effectiveSelectedIdeas.length > 0
     : isWarGamesProject || selectedFiles.length > 0;
   const canProceedToStep3 =
     hexId === "Grade"
@@ -651,7 +652,7 @@ export function CentralHexView({
                   </svg>
                   <span className="text-sm">Extracting ideas from your iteration discussions…</span>
                 </div>
-              ) : selectedIdeas.length === 0 && extractedIdeas.length === 0 ? (
+              ) : extractedIdeas.length === 0 && manualIdeas.length === 0 ? (
                 <div className="p-3 border-2 border-amber-200 bg-amber-50 rounded mb-3">
                   <p className="text-amber-800 text-sm">
                     No iteration results found. Run some hexes first, then return to score the ideas.
@@ -659,26 +660,33 @@ export function CentralHexView({
                 </div>
               ) : (
                 <div className="space-y-1 mb-3">
-                  {selectedIdeas.map((idea, i) => (
-                    <label key={i} className="flex items-start gap-2 p-2 cursor-pointer hover:bg-gray-50 rounded">
+                  {extractedIdeas.map((idea, i) => {
+                    const isExcluded = excludedIdeas.has(idea);
+                    return (
+                      <label key={i} className={`flex items-start gap-2 p-2 cursor-pointer hover:bg-gray-50 rounded ${isExcluded ? 'opacity-40' : ''}`}>
+                        <input
+                          type="checkbox"
+                          checked={!isExcluded}
+                          onChange={() => setExcludedIdeas(prev => {
+                            const next = new Set(prev);
+                            if (next.has(idea)) next.delete(idea); else next.add(idea);
+                            return next;
+                          })}
+                          className="w-4 h-4 mt-0.5 flex-shrink-0"
+                        />
+                        <span className="text-gray-800 text-sm leading-snug">{idea}</span>
+                      </label>
+                    );
+                  })}
+                  {manualIdeas.map((idea, i) => (
+                    <label key={`manual-${i}`} className="flex items-start gap-2 p-2 cursor-pointer hover:bg-gray-50 rounded">
                       <input
                         type="checkbox"
                         checked={true}
-                        onChange={() => setSelectedIdeas(prev => prev.filter((_, idx) => idx !== i))}
+                        onChange={() => setManualIdeas(prev => prev.filter((_, idx) => idx !== i))}
                         className="w-4 h-4 mt-0.5 flex-shrink-0"
                       />
-                      <span className="text-gray-800 text-sm leading-snug">{idea}</span>
-                    </label>
-                  ))}
-                  {extractedIdeas.filter(idea => !selectedIdeas.includes(idea)).map((idea, i) => (
-                    <label key={`unselected-${i}`} className="flex items-start gap-2 p-2 cursor-pointer hover:bg-gray-50 rounded opacity-50">
-                      <input
-                        type="checkbox"
-                        checked={false}
-                        onChange={() => setSelectedIdeas(prev => [...prev, idea])}
-                        className="w-4 h-4 mt-0.5 flex-shrink-0"
-                      />
-                      <span className="text-gray-600 text-sm leading-snug">{idea}</span>
+                      <span className="text-gray-800 text-sm leading-snug">{idea} <span className="text-xs text-gray-400">(added)</span></span>
                     </label>
                   ))}
                 </div>
@@ -694,7 +702,7 @@ export function CentralHexView({
                   onChange={e => setManualIdea(e.target.value)}
                   onKeyDown={e => {
                     if (e.key === 'Enter' && manualIdea.trim()) {
-                      setSelectedIdeas(prev => [...prev, manualIdea.trim()]);
+                      setManualIdeas(prev => [...prev, manualIdea.trim()]);
                       setManualIdea('');
                     }
                   }}
@@ -703,7 +711,7 @@ export function CentralHexView({
                   className="px-3 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm"
                   onClick={() => {
                     if (manualIdea.trim()) {
-                      setSelectedIdeas(prev => [...prev, manualIdea.trim()]);
+                      setManualIdeas(prev => [...prev, manualIdea.trim()]);
                       setManualIdea('');
                     }
                   }}
@@ -713,7 +721,7 @@ export function CentralHexView({
               </div>
 
               <div className="flex justify-between mt-4">
-                <span className="text-sm text-gray-500">{selectedIdeas.length} idea{selectedIdeas.length !== 1 ? 's' : ''} selected</span>
+                <span className="text-sm text-gray-500">{effectiveSelectedIdeas.length} idea{effectiveSelectedIdeas.length !== 1 ? 's' : ''} selected</span>
                 <button
                   className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={() => setCurrentStep(2)}
