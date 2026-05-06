@@ -1592,40 +1592,23 @@ export function AssessmentModal({
                   pointerEvents: "auto",
                 }}
               >
-                <div className="flex flex-col gap-1 items-center">
-                  {/* Gem — white pill, coloured icon */}
-                  <button
-                    onClick={handleSaveGem}
-                    disabled={savingGem}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-amber-50 text-gray-900 text-sm font-medium rounded-full shadow-lg border border-amber-400 disabled:opacity-60 transition-all whitespace-nowrap"
-                  >
-                    {savingGem ? (
-                      <SpinHex className="w-4 h-4" />
-                    ) : (
-                      <img src={gemIcon} alt="CoHive gem icon" style={{ width: "18px", height: "18px", objectFit: "contain" }} />
-                    )}
-                    Highlight elements you like
+                <div className="flex items-center gap-1 bg-white border border-gray-300 rounded-lg shadow-lg px-2 py-1.5">
+                  <button onClick={handleSaveGem} disabled={savingGem} title="Highlight elements you like"
+                    className="flex items-center gap-1 px-2 py-1 rounded hover:bg-amber-50 text-xs font-medium text-amber-800 transition-colors disabled:opacity-60">
+                    {savingGem ? <SpinHex className="w-3.5 h-3.5" /> : <img src={gemIcon} alt="Gem" style={{ width: "14px", height: "14px", objectFit: "contain" }} />}
+                    Gem
                   </button>
-
-                  {/* Check — white pill, hex check icon */}
-                  <button
-                    onClick={handleSaveCheck}
-                    disabled={savingCheck}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-purple-50 text-gray-900 text-sm font-medium rounded-full shadow-lg border border-purple-400 disabled:opacity-60 transition-all whitespace-nowrap"
-                  >
-                    {savingCheck ? (
-                      <SpinHex className="w-4 h-4" />
-                    ) : (
-                      <svg viewBox="0 0 32 32" style={{ width: "18px", height: "18px", flexShrink: 0 }} xmlns="http://www.w3.org/2000/svg">
+                  <div className="w-px h-4 bg-gray-300" />
+                  <button onClick={handleSaveCheck} disabled={savingCheck} title="Check elements of interest"
+                    className="flex items-center gap-1 px-2 py-1 rounded hover:bg-purple-50 text-xs font-medium text-purple-800 transition-colors disabled:opacity-60">
+                    {savingCheck ? <SpinHex className="w-3.5 h-3.5" /> : (
+                      <svg viewBox="0 0 32 32" style={{ width: "14px", height: "14px", flexShrink: 0 }} xmlns="http://www.w3.org/2000/svg">
                         <defs>
                           <linearGradient id="floatCheckBg" x1="0%" y1="50%" x2="100%" y2="50%">
-                            <stop offset="0%" stopColor="#0F766E" />
-                            <stop offset="50%" stopColor="#7C3AED" />
-                            <stop offset="100%" stopColor="#DC2626" />
+                            <stop offset="0%" stopColor="#0F766E" /><stop offset="50%" stopColor="#7C3AED" /><stop offset="100%" stopColor="#DC2626" />
                           </linearGradient>
                           <radialGradient id="floatCheckGold" cx="50%" cy="50%" r="30%">
-                            <stop offset="0%" stopColor="#FBBF24" stopOpacity="0.9" />
-                            <stop offset="100%" stopColor="#FBBF24" stopOpacity="0" />
+                            <stop offset="0%" stopColor="#FBBF24" stopOpacity="0.9" /><stop offset="100%" stopColor="#FBBF24" stopOpacity="0" />
                           </radialGradient>
                         </defs>
                         <polygon points="16,2 29,9 29,23 16,30 3,23 3,9" fill="url(#floatCheckBg)" />
@@ -1633,29 +1616,21 @@ export function AssessmentModal({
                         <path d="M9 16.5l5 5 9.5-10" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
                       </svg>
                     )}
-                    Check elements of interest
+                    Check
                   </button>
-
-                  {/* Coal — white pill, rock emoji */}
-                  <button
-                    onClick={handleSaveCoal}
-                    disabled={savingCoal}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-gray-100 text-gray-900 text-sm font-medium rounded-full shadow-lg border border-gray-400 disabled:opacity-60 transition-all whitespace-nowrap"
-                  >
-                    {savingCoal ? (
-                      <SpinHex className="w-4 h-4" />
-                    ) : (
-                      <CoalIcon size={18} />
-                    )}
-                    Flag elements you want to avoid
+                  <div className="w-px h-4 bg-gray-300" />
+                  <button onClick={handleSaveCoal} disabled={savingCoal} title="Flag elements you want to avoid"
+                    className="flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100 text-xs font-medium text-gray-700 transition-colors disabled:opacity-60">
+                    {savingCoal ? <SpinHex className="w-3.5 h-3.5" /> : <CoalIcon size={14} />}
+                    Coal
                   </button>
-
                   {floatingBtn.fileName && (
-                    <span className="text-gray-400 text-xs mt-0.5">
-                      · {floatingBtn.fileName.length > 25
-                        ? floatingBtn.fileName.substring(0, 25) + "…"
-                        : floatingBtn.fileName}
-                    </span>
+                    <>
+                      <div className="w-px h-4 bg-gray-200" />
+                      <span className="text-gray-400 text-xs px-1 truncate max-w-[120px]">
+                        {floatingBtn.fileName.length > 20 ? floatingBtn.fileName.substring(0, 20) + "…" : floatingBtn.fileName}
+                      </span>
+                    </>
                   )}
                 </div>
               </div>
