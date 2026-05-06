@@ -36,3 +36,9 @@ yarn-error.log*
 
 # Test coverage
 coverage/
+
+# Office/temp files in project root
+*.docx
+*.doc
+*.xlsx
+~$*
