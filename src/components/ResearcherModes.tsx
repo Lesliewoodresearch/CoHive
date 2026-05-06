@@ -379,7 +379,8 @@ export function ResearcherModes({
     try {
       const r = await updateKnowledgeBaseMetadata(fileId, { fileName: newName.trim() }, userEmail, userRole);
       if (!r.success) throw new Error(r.error || 'Rename failed');
-      setRenamingFileId(null); setRenameValue(''); alert(`✅ Renamed to "${newName.trim()}"`);
+      setRenamingFileId(null); setRenameValue('');
+      onRefreshFiles?.();
     } catch (e) { alert(`❌ Rename failed: ${e instanceof Error ? e.message : 'Unknown'}`); }
     finally { setIsSavingRename(false); }
   };
@@ -1279,10 +1280,10 @@ export function ResearcherModes({
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
                     <button onClick={e => { e.stopPropagation(); setExpandedFileId(expandedFileId === file.id ? null : file.id); }} className={`p-1.5 rounded text-xs ${expandedFileId === file.id ? 'bg-gray-200 text-gray-700' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'}`}>{expandedFileId === file.id ? '▲' : '▼'}</button>
-                    {canApproveResearch && renamingFileId !== file.id && (
+                    {renamingFileId !== file.id && (
                       <>
                         <button onClick={e => { e.stopPropagation(); setRenamingFileId(file.id); setRenameValue(file.fileName); }} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded" title="Rename"><Edit className="w-3.5 h-3.5" /></button>
-                        <button onClick={e => { e.stopPropagation(); handleEditApprovedFile(file); }} className="p-1.5 text-gray-400 hover:text-indigo-700 hover:bg-indigo-50 rounded" title="Edit metadata"><FileText className="w-3.5 h-3.5" /></button>
+                        {canApproveResearch && <button onClick={e => { e.stopPropagation(); handleEditApprovedFile(file); }} className="p-1.5 text-gray-400 hover:text-indigo-700 hover:bg-indigo-50 rounded" title="Edit metadata"><FileText className="w-3.5 h-3.5" /></button>}
                       </>
                     )}
                   </div>
