@@ -1592,15 +1592,14 @@ export function AssessmentModal({
                   pointerEvents: "auto",
                 }}
               >
-                <div className="flex items-center gap-1 bg-white border border-gray-300 rounded-lg shadow-lg px-2 py-1.5">
+                <div className="flex items-center gap-1.5">
                   <button onClick={handleSaveGem} disabled={savingGem} title="Highlight elements you like"
-                    className="flex items-center gap-1 px-2 py-1 rounded hover:bg-amber-50 text-xs font-medium text-amber-800 transition-colors disabled:opacity-60">
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-amber-50 text-amber-800 text-xs font-medium rounded-full shadow border border-amber-400 disabled:opacity-60 transition-all whitespace-nowrap">
                     {savingGem ? <SpinHex className="w-3.5 h-3.5" /> : <img src={gemIcon} alt="Gem" style={{ width: "14px", height: "14px", objectFit: "contain" }} />}
                     Gem
                   </button>
-                  <div className="w-px h-4 bg-gray-300" />
                   <button onClick={handleSaveCheck} disabled={savingCheck} title="Check elements of interest"
-                    className="flex items-center gap-1 px-2 py-1 rounded hover:bg-purple-50 text-xs font-medium text-purple-800 transition-colors disabled:opacity-60">
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-purple-50 text-purple-800 text-xs font-medium rounded-full shadow border border-purple-400 disabled:opacity-60 transition-all whitespace-nowrap">
                     {savingCheck ? <SpinHex className="w-3.5 h-3.5" /> : (
                       <svg viewBox="0 0 32 32" style={{ width: "14px", height: "14px", flexShrink: 0 }} xmlns="http://www.w3.org/2000/svg">
                         <defs>
@@ -1618,19 +1617,15 @@ export function AssessmentModal({
                     )}
                     Check
                   </button>
-                  <div className="w-px h-4 bg-gray-300" />
                   <button onClick={handleSaveCoal} disabled={savingCoal} title="Flag elements you want to avoid"
-                    className="flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100 text-xs font-medium text-gray-700 transition-colors disabled:opacity-60">
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-gray-100 text-gray-700 text-xs font-medium rounded-full shadow border border-gray-400 disabled:opacity-60 transition-all whitespace-nowrap">
                     {savingCoal ? <SpinHex className="w-3.5 h-3.5" /> : <CoalIcon size={14} />}
                     Coal
                   </button>
                   {floatingBtn.fileName && (
-                    <>
-                      <div className="w-px h-4 bg-gray-200" />
-                      <span className="text-gray-400 text-xs px-1 truncate max-w-[120px]">
-                        {floatingBtn.fileName.length > 20 ? floatingBtn.fileName.substring(0, 20) + "…" : floatingBtn.fileName}
-                      </span>
-                    </>
+                    <span className="text-white text-xs bg-black/40 rounded-full px-2 py-1 truncate max-w-[120px]">
+                      {floatingBtn.fileName.length > 20 ? floatingBtn.fileName.substring(0, 20) + "…" : floatingBtn.fileName}
+                    </span>
                   )}
                 </div>
               </div>
