@@ -151,6 +151,7 @@ export default function ProcessWireframe() {
   const [gradeIdeasLoading, setGradeIdeasLoading] = useState(false);
   const [gradeScoreResults, setGradeScoreResults] = useState<GradeResults | null>(null);
   const [gradeScoring, setGradeScoring] = useState(false);
+  const [gradeModalOpen, setGradeModalOpen] = useState(false);
   const [noteEntries, setNoteEntries] = useState<NoteEntry[]>([{ id: 'init-note', type: 'note', text: '' }]);
 
   // Assessment Modal state
@@ -917,6 +918,7 @@ export default function ProcessWireframe() {
       if (result.success && result.response) {
         const parsed = parseGradeResults(result.response);
         setGradeScoreResults(parsed);
+        setGradeModalOpen(true);
       }
     } catch (e) {
       console.error('[Grade] Scoring failed:', e);
@@ -1392,6 +1394,7 @@ export default function ProcessWireframe() {
                 setIterationDirections([]);
                 setNoteEntries([{ id: `note-enter-${Date.now()}`, type: 'note', text: '' }]);
                 setGradeScoreResults(null);
+                setGradeModalOpen(false);
                 setGradeExtractedIdeas([]);
               }
               if (stepId === 'Enter' && !iterationSaved) {
@@ -1542,40 +1545,28 @@ export default function ProcessWireframe() {
                   <CentralHexView key={activeStepId} hexId={activeStepId} hexLabel={currentContent.title} researchFiles={researchFiles} onExecute={handleCentralHexExecute} databricksInstructions={currentTemplate?.databricksInstructions?.[activeStepId] || ''} previousExecutions={hexExecutions[activeStepId] || []} crossHexExecutions={[...['Consumers', 'Luminaries', 'Colleagues', 'cultural', 'Grade'].filter(h => h !== activeStepId).flatMap(h => hexExecutions[h] || []), ...(hexExecutions['stories'] || [])]} anyPriorPersonaRun={['Consumers', 'Luminaries', 'Colleagues', 'cultural', 'Grade'].some(h => hexExecutions[h]?.length > 0) || (hexExecutions['stories']?.length ?? 0) > 0} onSaveRecommendation={handleSaveRecommendation} projectType={responses['Enter']?.[1] || ''} userBrand={responses['Enter']?.[0] || ''} lastResults={lastAssessmentResults} conversationMode={currentTemplate?.conversationSettings?.conversationMode || 'multi-round'} modelEndpoint={currentTemplate?.conversationSettings?.modelEndpoint || 'databricks-claude-haiku-4-5'} requestMode={deriveRequestMode()} userEmail={userEmail} userRole={userRole} onContextChange={(files, step) => setHexWidgetContext({ files, step })} onAddIterationDirection={handleAddIterationDirection} iterationDirections={iterationDirections} extractedIdeas={gradeExtractedIdeas} ideasLoading={gradeIdeasLoading} />
                   {/* Grade hex: scoring results displayed inline */}
                   {activeStepId === 'Grade' && (
-                    <div className="mt-4">
+                    <div className="mt-4 px-3">
                       {gradeScoring && (
-                        <div className="flex items-center gap-2 py-4 text-gray-500 px-3">
+                        <div className="flex items-center gap-2 py-4 text-gray-500">
                           <SpinHex className="w-5 h-5" />
                           <span className="text-sm">Scoring ideas against segments…</span>
                         </div>
                       )}
                       {gradeScoreResults && !gradeScoring && (
-                        <div className="border-t-2 border-gray-300 pt-4 px-3 space-y-4">
-                          <div className="flex items-center justify-between">
-                            <h3 className="text-gray-900 font-semibold">Score Results</h3>
-                            <button
-                              className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 text-gray-600"
-                              onClick={() => setGradeScoreResults(null)}
-                            >
-                              Clear
-                            </button>
-                          </div>
-                          {gradeScoreResults.scoreGrid && (
-                            <div className="overflow-x-auto">
-                              <div className="text-xs text-gray-500 mb-1 font-semibold uppercase tracking-wide">Score Grid</div>
-                              <pre className="text-xs text-gray-800 font-mono whitespace-pre leading-relaxed bg-gray-50 border border-gray-200 rounded p-2 overflow-x-auto">{gradeScoreResults.scoreGrid}</pre>
-                            </div>
-                          )}
-                          {gradeScoreResults.assessments && (
-                            <div>
-                              <div className="text-xs text-gray-500 mb-2 font-semibold uppercase tracking-wide">Written Assessments</div>
-                              <div className="space-y-3 text-sm text-gray-800 leading-relaxed">
-                                {gradeScoreResults.assessments.split(/\n\n+/).map((para, i) => (
-                                  <p key={i}>{para.trim()}</p>
-                                ))}
-                              </div>
-                            </div>
-                          )}
+                        <div className="flex items-center gap-3 py-2">
+                          <button
+                            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium"
+                            onClick={() => setGradeModalOpen(true)}
+                          >
+                            View Score Results
+                          </button>
+                          <button
+                            className="px-3 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 text-gray-600"
+                            onClick={() => { setGradeScoreResults(null); setGradeModalOpen(false); }}
+                          >
+                            Clear
+                          </button>
+                          <span className="text-xs text-gray-400">Results saved with iteration</span>
                         </div>
                       )}
                     </div>
@@ -2554,6 +2545,65 @@ export default function ProcessWireframe() {
           } catch (err) { console.error('Failed to save interview transcript:', err); return false; }
         }}
       />
+
+      {/* ── Grade Score Results Modal ── */}
+      {gradeModalOpen && gradeScoreResults && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setGradeModalOpen(false)}>
+          <div
+            className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Grade: Score Results</h2>
+                <p className="text-xs text-gray-500 mt-0.5">Results are saved with the iteration</p>
+              </div>
+              <button
+                className="p-2 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700"
+                onClick={() => setGradeModalOpen(false)}
+                aria-label="Close"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="overflow-y-auto flex-1 px-6 py-5 space-y-6">
+              {gradeScoreResults.scoreGrid && (
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Score Grid</div>
+                  <div className="overflow-x-auto">
+                    <pre className="text-sm text-gray-800 font-mono whitespace-pre leading-relaxed bg-gray-50 border border-gray-200 rounded-lg p-4">{gradeScoreResults.scoreGrid}</pre>
+                  </div>
+                </div>
+              )}
+              {gradeScoreResults.assessments && (
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Written Assessments</div>
+                  <div className="space-y-4 text-sm text-gray-800 leading-relaxed">
+                    {gradeScoreResults.assessments.split(/\n\n+/).map((para, i) => (
+                      <p key={i}>{para.trim()}</p>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-gray-200 flex justify-end">
+              <button
+                className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+                onClick={() => setGradeModalOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Assessment Modal — v3 with requestMode derived from Enter hex ── */}
       {assessmentModalOpen && assessmentModalProps && (
