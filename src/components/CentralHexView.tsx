@@ -381,7 +381,7 @@ export function CentralHexView({
     : isWarGamesProject || selectedFiles.length > 0;
   const canProceedToStep3 =
     hexId === "Grade"
-      ? canProceedToStep2 && selectedFiles.length > 0  // segments selected in step 2
+      ? canProceedToStep2 && selectedPersonas.length > 0  // segments in selectedPersonas until Next copies to selectedFiles
       : canProceedToStep2 && assessmentType.length > 0;
   const canExecute =
     hexId === 'Grade'
@@ -1016,7 +1016,7 @@ export function CentralHexView({
       {currentStep === 2 && (
         <div className="p-3">
           {hexId === "Grade" && personaConfig ? (
-            // Grade Step 2: segment picker (moved from Step 1 for Grade)
+            // Grade Step 2: segment picker — mirrors other persona hexes exactly
             <>
               <h3 className="text-gray-900 leading-tight mb-3">
                 Step 2 of 3: Select Target Segments
@@ -1040,10 +1040,36 @@ export function CentralHexView({
                               <span className="text-sm text-gray-600 font-normal ml-2">{opt.description}</span>
                             )}
                           </div>
+                          {selectedLevel1.includes(opt.id) && opt.subcategories && (
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault(); e.stopPropagation();
+                                const level2Ids = opt.subcategories!.map(sub => sub.id);
+                                const allSelected = level2Ids.every(id => selectedLevel2.includes(id));
+                                if (allSelected) {
+                                  setSelectedLevel2(selectedLevel2.filter(id => !level2Ids.includes(id)));
+                                  const toRemove: string[] = [];
+                                  opt.subcategories!.forEach(sub => sub.roles?.forEach(r => toRemove.push(r.id)));
+                                  setSelectedPersonas(selectedPersonas.filter(id => !toRemove.includes(id)));
+                                } else {
+                                  const newL2 = [...selectedLevel2];
+                                  level2Ids.forEach(id => { if (!newL2.includes(id)) newL2.push(id); });
+                                  setSelectedLevel2(newL2);
+                                  const newP = [...selectedPersonas];
+                                  opt.subcategories!.forEach(sub => sub.roles?.forEach(r => { if (!newP.includes(r.id)) newP.push(r.id); }));
+                                  setSelectedPersonas(newP);
+                                }
+                              }}
+                              className="text-xs text-blue-600 hover:text-blue-800 underline ml-2"
+                            >
+                              {opt.subcategories.every(sub => selectedLevel2.includes(sub.id)) ? 'Deselect All' : 'Select All'}
+                            </button>
+                          )}
                         </div>
                       </label>
+
                       {selectedLevel1.includes(opt.id) && opt.subcategories && (
-                        <div className="ml-6 space-y-0">
+                        <div style={{ marginLeft: '24px', paddingLeft: '12px', borderLeft: '3px solid #93c5fd', marginTop: '4px' }}>
                           {opt.subcategories.map((sub) => (
                             <div key={sub.id}>
                               <label className="flex items-start gap-2 p-0.5 cursor-pointer hover:bg-gray-50 rounded transition-colors">
@@ -1054,27 +1080,53 @@ export function CentralHexView({
                                   onChange={() => handleLevel2Toggle(sub.id, opt.id)}
                                   className="w-4 h-4 mt-0.5"
                                 />
-                                <div className="text-gray-700 font-medium">{sub.name}</div>
+                                <div className="flex-1 flex items-center justify-between">
+                                  <div className="text-gray-700 font-medium">
+                                    {sub.name}
+                                    {sub.description && <span className="text-sm text-gray-500 font-normal ml-2">{sub.description}</span>}
+                                  </div>
+                                  {selectedLevel2.includes(sub.id) && sub.roles && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.preventDefault(); e.stopPropagation();
+                                        const ids = sub.roles!.map(r => r.id);
+                                        const allSelected = ids.every(id => selectedPersonas.includes(id));
+                                        if (allSelected) {
+                                          setSelectedPersonas(selectedPersonas.filter(id => !ids.includes(id)));
+                                        } else {
+                                          const newP = [...selectedPersonas];
+                                          ids.forEach(id => { if (!newP.includes(id)) newP.push(id); });
+                                          setSelectedPersonas(newP);
+                                        }
+                                      }}
+                                      className="text-xs text-green-600 hover:text-green-800 underline ml-2"
+                                    >
+                                      {sub.roles.every(r => selectedPersonas.includes(r.id)) ? 'Deselect All' : 'Select All'}
+                                    </button>
+                                  )}
+                                </div>
                               </label>
+
                               {selectedLevel2.includes(sub.id) && sub.roles && (
-                                <div className="ml-6 space-y-0">
-                                  {sub.roles.map((role) => (
-                                    <label key={role.id} className="flex items-center gap-2 p-0.5 cursor-pointer hover:bg-gray-50 rounded transition-colors">
-                                      <input
-                                        type="checkbox"
-                                        value={role.id}
-                                        checked={selectedFiles.includes(role.id)}
-                                        onChange={() => handlePersonaToggle(role.id, role.name)}
-                                        className="w-4 h-4"
-                                      />
-                                      <span className="text-gray-700 text-sm">
-                                        {role.name}
-                                        {(role as any).populationEstimate != null && (
-                                          <span className="text-gray-400 ml-1 text-xs">({(role as any).populationEstimate}%)</span>
-                                        )}
-                                      </span>
-                                    </label>
-                                  ))}
+                                <div style={{ marginLeft: '24px', paddingLeft: '12px', borderLeft: '3px solid #d1d5db', marginTop: '2px' }}>
+                                  <div className="space-y-0 max-h-64 overflow-y-auto">
+                                    {sub.roles.map((role) => (
+                                      <label key={role.id} className="flex items-center gap-2 p-0.5 cursor-pointer hover:bg-gray-50 rounded transition-all">
+                                        <input
+                                          type="checkbox"
+                                          checked={selectedPersonas.includes(role.id)}
+                                          onChange={() => handlePersonaToggle(role.id, role.name)}
+                                          className="w-4 h-4"
+                                        />
+                                        <div className="flex-1 text-gray-900 text-sm">
+                                          {role.name}
+                                          {(role as any).populationEstimate != null && (
+                                            <span className="text-gray-400 ml-1 text-xs">({(role as any).populationEstimate}%)</span>
+                                          )}
+                                        </div>
+                                      </label>
+                                    ))}
+                                  </div>
                                 </div>
                               )}
                             </div>
@@ -1085,27 +1137,28 @@ export function CentralHexView({
                   ))}
                 </div>
               </div>
-              {selectedFiles.length > 0 && (
+
+              {selectedPersonas.length > 0 && (
                 <div className="mt-2 p-2 border-2 border-green-500 rounded mb-2">
                   <p className="text-green-800 text-sm">
-                    <strong>{selectedFiles.length}</strong> segment{selectedFiles.length !== 1 ? 's' : ''} selected
+                    <strong>{selectedPersonas.length}</strong> segment{selectedPersonas.length !== 1 ? 's' : ''} selected
                   </p>
                 </div>
               )}
+
               <div className="flex justify-between mt-3">
                 <button className="px-6 py-2 border-2 border-gray-400 text-gray-700 rounded hover:bg-gray-50" onClick={() => setCurrentStep(1)}>← Back</button>
                 <button
                   className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={() => setCurrentStep(3)}
-                  disabled={!canProceedToStep3}
+                  onClick={() => { setSelectedFiles(selectedPersonas); setCurrentStep(3); }}
+                  disabled={selectedPersonas.length === 0}
                 >
                   Next: Choose Scale →
                 </button>
               </div>
             </>
           ) : hexId === "Grade" ? (
-            // Grade with no personaConfig (fallback)
-            <p className="text-gray-500 text-sm">No segment configuration found.</p>
+            <p className="text-gray-500 text-sm p-2">No segment configuration found.</p>
           ) : (
             // All other hexes: Assessment Type (Step 2 of 2 for persona hexes, Step 2 of 3 for non-persona)
             <>
