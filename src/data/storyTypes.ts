@@ -300,6 +300,55 @@ export const STORY_CATEGORIES: StoryCategory[] = [
       },
     ],
   },
+  {
+    id: 'dystopian',
+    label: 'Dystopian',
+    description: 'Worlds of control, collapse, and the cost of authentic choice',
+    subtypes: [
+      {
+        id: 'controlled-world',
+        label: 'The Controlled World',
+        arc: 'fall-rise',
+        arcDescription: 'Prescribed comfort → crack in the system → forbidden truth → act of defiance',
+        dualPOV: false,
+        steps: [
+          { label: 'The Perfect Order', instruction: 'The CONSUMER lives in a world managed by a dominant brand or category system — everything anticipated, provided, and prescribed. Show the comfort that is actually constraint: the consumer\'s needs are met before they are formed, their choices pre-selected, their dissatisfaction never quite legible to themselves. The brand being told has not yet appeared.' },
+          { label: 'The Crack in the Wall', instruction: 'Something doesn\'t add up. A small irregularity in the consumer\'s experience — a product that fails in a revealing way, a message that contradicts the category\'s promises, an encounter with someone who lives differently — introduces a flaw that cannot be unseen. The brand either is the crack, or is glimpsed through it.' },
+          { label: 'The Forbidden Room', instruction: 'The consumer discovers what the controlling system doesn\'t want them to know: an alternative, a capability, a freedom they have been denied or never told existed. This is where the brand enters as contraband — something the dominant system would suppress if it could. Show the specific truth the consumer has found.' },
+          { label: 'The Act of Thought', instruction: 'The consumer makes an internal choice — not yet visible, not yet acted upon, but irreversible. Show the weight of awareness and the cost of knowing: the world looks the same, but the consumer no longer inhabits it the same way. The brand is the thing they now carry silently.' },
+          { label: 'The World Remade or Lost', instruction: 'The consumer acts on their awareness — or tries to. Dystopia earns the right to not always resolve happily: show either a genuine escape enabled by the brand, or a cost that is real and meaningful. What the consumer found cannot be unknowed. What the brand represents — freedom, truth, an alternative — is worth what it cost.' },
+        ],
+      },
+      {
+        id: 'last-human',
+        label: 'The Last Human',
+        arc: 'fall-rise',
+        arcDescription: 'Comfortable numbness → the glitch → the relic → relearning to want → authentic self',
+        dualPOV: false,
+        steps: [
+          { label: 'The Comfort Machine', instruction: 'The CONSUMER exists in a world optimised for frictionless satisfaction — every need anticipated, every preference predicted, every experience curated by dominant brands. Show the specific hollowness beneath the comfort: nothing is chosen, earned, or felt. The consumer has been made easy to serve and difficult to surprise.' },
+          { label: 'The Glitch', instruction: 'The machine misreads the consumer — the algorithm surfaces the wrong version of them, the personalised product solves a problem they no longer have, the category delivers exactly what they asked for and it means nothing. Show the specific moment the consumer\'s optimised life fails to reach them.' },
+          { label: 'The Relic', instruction: 'The consumer encounters something from a less managed world — raw, unoptimised, difficult, real. The brand either is that relic or guides them to it: something that requires something from the consumer rather than simply delivering to them. Show the strangeness of encountering a thing that doesn\'t know what you want.' },
+          { label: 'The Relearning', instruction: 'The consumer has to learn how to want again — how to choose without an algorithm, how to fail without a recommendation engine catching them, how to feel something unscheduled. Show the unfamiliarity of genuine agency. The brand is patient with this process and does not optimise it away.' },
+          { label: 'The Human Remaining', instruction: 'The consumer arrives at something the comfort machine could never manufacture: a real preference, a real struggle, a real win. Show what they carry forward — the specific thing they now know how to feel — and what they can never unknow. The brand is the place where that became possible.' },
+        ],
+      },
+      {
+        id: 'after-the-collapse',
+        label: 'After the Collapse',
+        arc: 'fall-rise',
+        arcDescription: 'The taken-for-granted world ends → survival logic → what you carry → the new standard',
+        dualPOV: false,
+        steps: [
+          { label: 'Before It Fell', instruction: 'Establish what the CONSUMER had — the category norm they trusted, the brand habit they never questioned, the system that ran quietly in the background of their life. Show what they failed to notice was fragile: the dependency, the assumption, the comfort that turned out to have a price.' },
+          { label: 'The Day It Stops', instruction: 'The system breaks. A brand fails them catastrophically, a category norm collapses under its own weight, or the world changes faster than anyone planned for. Show the specific moment the consumer\'s certainty ends — not a gradual decline but a rupture. What did they lose access to, and how suddenly?' },
+          { label: 'What You Carry', instruction: 'The consumer moves through the changed world with only what they kept. Show what knowledge, habit, or object has value in the new order. The brand either is what they carried — the thing that survived the collapse because it was genuinely worth carrying — or is what they find in the new landscape, already adapted.' },
+          { label: 'The New Rules', instruction: 'The consumer learns that the changed world has its own logic — and they must adapt to it rather than waiting for the old order to return. Show the specific capabilities the collapse required them to develop and what the brand enables or represents in a world that no longer runs on the old assumptions.' },
+          { label: 'The Seed Vault', instruction: 'The consumer preserves something for what comes next — a standard, a capability, a way of living — that the collapse would otherwise erase. The brand either is what they protect or what helps them protect it. Show what they are building into the future and why it matters that it survive.' },
+        ],
+      },
+    ],
+  },
 ];
 
 export function getStoryCategory(id: string): StoryCategory | undefined {
