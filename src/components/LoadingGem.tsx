@@ -4,7 +4,7 @@ interface LoadingGemProps {
 
 export function LoadingGem({ message = 'Communicating with Databricks...' }: LoadingGemProps) {
   return (
-    <div className="fixed inset-y-0 left-0 right-[350px] z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+    <div className="fixed inset-y-0 left-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" style={{ right: 'var(--modal-r)' }}>
       <div className="flex flex-col items-center gap-6">
         <SpinHex className="w-32 h-32" />
         <p className="text-white text-xl font-semibold tracking-wide">{message}</p>

@@ -2512,7 +2512,7 @@ export default function ProcessWireframe() {
             </div>
           </div>
 
-          <div className="w-80 flex-shrink-0">
+          <div style={{ width: 'var(--panel-w)', flexShrink: 0 }}>
             <AIHelpWidget activeHexId={activeStepId} activeHexLabel={currentContent.title} userEmail={userEmail} userRole={userRole} brand={responses['Enter']?.[0]?.trim() || ''} projectType={responses['Enter']?.[1]?.trim() || ''} selectedResearchFiles={selectedResearchFiles} selectedFiles={isCentralHex ? hexWidgetContext.files : []} currentStep={isCentralHex ? hexWidgetContext.step : undefined} researchMode={activeStepId === 'research' ? researchMode : undefined} selectedKBFile={activeStepId === 'research' ? selectedKBFile : undefined} pendingApprovalCount={activeStepId === 'research' ? pendingApprovalCount : undefined} wisdomInputMethod={activeStepId === 'Wisdom' ? (responses['Wisdom']?.[0] || null) : undefined} projectFileCount={activeStepId === 'review' ? projectFiles.length : undefined} canManageExamples={canManageExamples} />
 
             <div className="bg-white border-2 border-gray-300 rounded-lg p-4" style={{ height: '550px' }}>
@@ -2548,7 +2548,7 @@ export default function ProcessWireframe() {
 
       {/* ── Grade Score Results Modal ── */}
       {gradeModalOpen && gradeScoreResults && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setGradeModalOpen(false)}>
+        <div className="fixed inset-y-0 left-0 z-50 flex items-center justify-center bg-black/60" style={{ right: 'var(--modal-r)', padding: 'clamp(4px, 2vw, 32px)' }} onClick={() => setGradeModalOpen(false)}>
           <div
             className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col"
             onClick={e => e.stopPropagation()}

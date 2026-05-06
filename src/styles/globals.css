@@ -5,6 +5,12 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  /* Right panel and modal layout — single source of truth.
+     Panel: never narrower than 200px, never wider than 320px, fluid at 20vw.
+     Modal right inset: panel width + 30px gap. */
+  --panel-w: clamp(200px, 20vw, 320px);
+  --modal-r: calc(var(--panel-w) + 30px);
+
   --font-size: 16px;
   --background: #ffffff;
   --foreground: oklch(0.145 0 0);
@@ -138,4 +144,10 @@
 
 html {
   font-size: var(--font-size);
+}
+
+/* Fluid modal heading — shrinks on narrow screens instead of wrapping */
+.modal-heading {
+  font-size: clamp(13px, 2.2vw, 18px);
+  line-height: 1.3;
 }

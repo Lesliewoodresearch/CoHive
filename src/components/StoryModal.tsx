@@ -439,14 +439,14 @@ export function StoryModal({
     const activeScopeOption = SCOPE_OPTIONS.find(o => o.value === scope) ?? SCOPE_OPTIONS[0];
 
     return (
-      <div className="fixed inset-y-0 left-0 right-[350px] z-50 flex items-center justify-center p-8"
-        style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+      <div className="fixed inset-y-0 left-0 z-50 flex items-center justify-center"
+        style={{ right: 'var(--modal-r)', padding: 'clamp(4px, 2vw, 32px)', backgroundColor: 'rgba(0,0,0,0.2)' }}>
         <div className="bg-white rounded-xl shadow-2xl flex flex-col" style={{ width: '560px', maxHeight: '85vh' }}>
 
           {/* Header */}
           <div className="bg-white border-b-2 border-gray-200 px-6 py-4 flex items-center justify-between flex-shrink-0 rounded-t-xl">
             <div>
-              <h2 className="text-gray-900 font-semibold text-lg leading-tight">Story Settings</h2>
+              <h2 className="text-gray-900 font-semibold modal-heading">Story Settings</h2>
               <p className="text-gray-500 text-sm mt-0.5">{brand} · {category.label} · {subtype.label}</p>
             </div>
             <button onClick={onClose} aria-label="Close" className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
@@ -544,14 +544,14 @@ export function StoryModal({
 
   // ── Story content ────────────────────────────────────────────────────────────
   return (
-    <div className="fixed inset-y-0 left-0 right-[350px] z-50 flex items-center justify-center p-8"
-      style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+    <div className="fixed inset-y-0 left-0 z-50 flex items-center justify-center"
+      style={{ right: 'var(--modal-r)', padding: 'clamp(4px, 2vw, 32px)', backgroundColor: 'rgba(0,0,0,0.2)' }}>
       <div className="bg-white rounded-xl shadow-2xl flex flex-col" style={{ width: '700px', maxHeight: '85vh' }}>
 
         {/* Header */}
         <div className="bg-white border-b-2 border-gray-200 px-6 py-4 flex items-center justify-between flex-shrink-0 rounded-t-xl">
           <div>
-            <h2 className="text-gray-900 font-semibold text-lg leading-tight">
+            <h2 className="text-gray-900 font-semibold modal-heading">
               {category.label} · {subtype.label}
             </h2>
             <p className="text-gray-500 text-sm mt-0.5">
@@ -671,7 +671,7 @@ export function StoryModal({
         )}
 
         {/* Toasts */}
-        <div className="fixed bottom-6 right-[370px] z-60 flex flex-col gap-2 pointer-events-none">
+        <div className="fixed bottom-6 z-60 flex flex-col gap-2 pointer-events-none" style={{ right: 'calc(var(--modal-r) + 20px)' }}>
           {gemToasts.map(t => (
             <div key={t.id} className="flex items-center gap-2 bg-yellow-50 border border-yellow-300 rounded-lg px-3 py-2 shadow-md text-xs text-yellow-800">
               <img src={gemIcon} alt="Gem" className="w-3.5 h-3.5 flex-shrink-0" />

@@ -973,8 +973,8 @@ export function AssessmentModal({
 
     return (
       <div
-        className="fixed inset-y-0 left-0 right-[350px] z-50 flex items-center justify-center p-8"
-        style={{ backgroundColor: "rgba(0, 0, 0, 0.2)" }}
+        className="fixed inset-y-0 left-0 z-50 flex items-center justify-center"
+        style={{ right: 'var(--modal-r)', padding: 'clamp(4px, 2vw, 32px)', backgroundColor: "rgba(0, 0, 0, 0.2)" }}
       >
         <div
           className="bg-white rounded-xl shadow-2xl flex flex-col"
@@ -983,7 +983,7 @@ export function AssessmentModal({
           {/* Settings header */}
           <div className="bg-white border-b-2 border-gray-200 px-6 py-4 flex items-center justify-between flex-shrink-0 rounded-t-xl">
             <div>
-              <h2 className="text-gray-900 font-semibold text-lg leading-tight">
+              <h2 className="text-gray-900 font-semibold modal-heading">
                 Assessment Settings
               </h2>
               <p className="text-gray-500 text-sm mt-0.5">
@@ -1214,8 +1214,8 @@ export function AssessmentModal({
       )}
 
       <div
-        className="fixed inset-y-0 left-0 right-[350px] z-50 flex items-center justify-center p-8"
-        style={{ backgroundColor: "rgba(0, 0, 0, 0.2)" }}
+        className="fixed inset-y-0 left-0 z-50 flex items-center justify-center"
+        style={{ right: 'var(--modal-r)', padding: 'clamp(4px, 2vw, 32px)', backgroundColor: "rgba(0, 0, 0, 0.2)" }}
       >
         <div
           className="bg-white rounded-xl shadow-2xl flex flex-col"
@@ -1225,7 +1225,7 @@ export function AssessmentModal({
           <div className="bg-white border-b-2 border-gray-200 px-6 py-4 flex items-center justify-between flex-shrink-0 rounded-t-xl">
             <div className="flex items-center gap-4">
               <div>
-                <h2 className="text-gray-900 font-semibold text-lg leading-tight">
+                <h2 className="text-gray-900 font-semibold modal-heading">
                   {hexLabel} Assessment
                 </h2>
                 <p className="text-gray-500 text-sm">

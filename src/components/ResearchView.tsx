@@ -217,7 +217,7 @@ export function ResearchView({
           const file = displayFiles.find(f => f.id === selectedFile);
           if (!file) return null;
           return (
-            <div className="fixed inset-y-0 left-0 right-[350px] bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedFile(null)}>
+            <div className="fixed inset-y-0 left-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style={{ right: 'var(--modal-r)', padding: 'clamp(4px, 2vw, 16px)' }} onClick={() => setSelectedFile(null)}>
               <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
                 <div className="border-b-2 border-gray-300 p-4 flex items-center justify-between">
                   <div>
@@ -270,7 +270,7 @@ export function ResearchView({
           const file = displayFiles.find(f => f.id === selectedFile);
           if (!file) return null;
           return (
-            <div className="fixed inset-y-0 left-0 right-[350px] bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => { setShowSuggestionForm(false); setNewSuggestion(''); }}>
+            <div className="fixed inset-y-0 left-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style={{ right: 'var(--modal-r)', padding: 'clamp(4px, 2vw, 16px)' }} onClick={() => { setShowSuggestionForm(false); setNewSuggestion(''); }}>
               <div className="bg-white rounded-lg max-w-2xl w-full" onClick={e => e.stopPropagation()}>
                 <div className="border-b-2 border-gray-300 p-4 flex items-center justify-between">
                   <h3 className="text-gray-900 font-medium">Recommend Edit: {file.fileName}</h3>
@@ -409,7 +409,7 @@ export function ResearchView({
         const file = displayFiles.find(f => f.id === selectedFile);
         if (!file) return null;
         return (
-          <div className="fixed inset-y-0 left-0 right-[350px] bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedFile(null)}>
+          <div className="fixed inset-y-0 left-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style={{ right: 'var(--modal-r)', padding: 'clamp(4px, 2vw, 16px)' }} onClick={() => setSelectedFile(null)}>
             <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
               <div className="border-b-2 border-gray-300 p-4 flex items-center justify-between">
                 <div>
