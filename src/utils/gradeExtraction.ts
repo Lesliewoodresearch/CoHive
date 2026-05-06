@@ -58,8 +58,9 @@ export async function extractIdeasFromHexResults(
 
   const combinedText = sections.join('\n\n---\n\n');
 
-  const extractionPrompt = `Extract all distinct ideas, strategies, Big Ideas, creative concepts, and recommendations from these discussions.
-Return a numbered list — one idea per line, no explanation.
+  const extractionPrompt = `Extract the most distinct ideas, strategies, Big Ideas, creative concepts, and recommendations from these discussions.
+Consolidate similar or overlapping ideas into a single entry — do not list the same concept twice in different words.
+Return a numbered list of up to 12 ideas — one per line, concise (one sentence max), no explanation.
 Do not include process steps, questions, or methodology notes — only the actual ideas and recommendations.
 
 DISCUSSIONS:

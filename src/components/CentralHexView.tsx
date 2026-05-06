@@ -114,6 +114,7 @@ export function CentralHexView({
   const [excludedIdeas, setExcludedIdeas] = useState<Set<string>>(new Set());
   const [manualIdeas, setManualIdeas] = useState<string[]>([]);
   const [manualIdea, setManualIdea] = useState<string>('');
+  const [gradeSubmitted, setGradeSubmitted] = useState(false);
   const effectiveSelectedIdeas = [
     ...extractedIdeas.filter(idea => !excludedIdeas.has(idea)),
     ...manualIdeas,
@@ -304,11 +305,7 @@ export function CentralHexView({
       }
       const gradeAssessment = `[GRADE_SCALE:${testingScale}]\n[GRADE_IDEAS:${effectiveSelectedIdeas.join('||')}]`;
       onExecute(selectedFiles, ['grade'], gradeAssessment);
-      setCurrentStep(1);
-      setSelectedFiles([]);
-      setExcludedIdeas(new Set());
-      setManualIdeas([]);
-      setTestingScale('');
+      setGradeSubmitted(true);
       return;
     }
 
@@ -452,8 +449,42 @@ export function CentralHexView({
         </div>
       )}
 
+      {/* Step Progress Indicator for Grade Hex - 3 steps */}
+      {hexId === 'Grade' && (
+        <div className="flex items-center justify-between pb-1 border-b-2 border-gray-300">
+          <div className="flex items-center gap-4">
+            {[1, 2, 3].map((step) => (
+              <div key={step} className="flex items-center gap-2">
+                <button
+                  className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all ${
+                    currentStep === step
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : currentStep > step
+                        ? "bg-green-600 text-white border-green-600"
+                        : "bg-gray-200 text-gray-600 border-gray-300"
+                  }`}
+                  onClick={() => {
+                    if (step === 1) { setCurrentStep(1); setGradeSubmitted(false); }
+                    if (step === 2 && canProceedToStep2) setCurrentStep(2);
+                    if (step === 3 && canProceedToStep3) setCurrentStep(3);
+                  }}
+                  disabled={
+                    (step === 2 && !canProceedToStep2) ||
+                    (step === 3 && !canProceedToStep3)
+                  }
+                >
+                  {currentStep > step ? <CheckCircle className="w-5 h-5" /> : step}
+                </button>
+                {step < 3 && <ChevronRight className="w-5 h-5 text-gray-400" />}
+              </div>
+            ))}
+          </div>
+          <span className="text-sm text-gray-600">Step {currentStep} of 3</span>
+        </div>
+      )}
+
       {/* Step Progress Indicator for Persona Hexes - Without History Button */}
-      {(hexId === 'Consumers' || hexId === 'Luminaries' || hexId === 'Colleagues' || hexId === 'cultural' || hexId === 'Grade') && (
+      {(hexId === 'Consumers' || hexId === 'Luminaries' || hexId === 'Colleagues' || hexId === 'cultural') && (
         <div className="flex items-center justify-between pb-1 border-b-2 border-gray-300">
           <div className="flex items-center gap-4">
             {[1, 2].map((step) => (
@@ -1221,44 +1252,66 @@ export function CentralHexView({
         <div className="p-3">
           {hexId === 'Grade' ? (
             <>
-              <h3 className="text-gray-900 leading-tight mb-1">
-                Step 3 of 3: Choose Scoring Scale
-              </h3>
-              <p className="text-gray-600 mb-3 text-sm">
-                Select how the AI should score each idea against each segment.
-              </p>
-              <div className="space-y-1 mb-4">
-                <label className="flex items-center gap-2 p-2 cursor-pointer transition-colors">
-                  <input type="radio" name="testingScale" value="scale-1-5-written" checked={testingScale === "scale-1-5-written"} onChange={(e) => setTestingScale(e.target.value)} className="w-4 h-4" />
-                  <div className="flex-1"><div className="text-gray-900 font-semibold">Scale of 1–5 with written assessments</div></div>
-                </label>
-                <label className="flex items-start gap-2 p-2 cursor-pointer transition-colors">
-                  <input type="radio" name="testingScale" value="scale-1-5-no-written" checked={testingScale === "scale-1-5-no-written"} onChange={(e) => setTestingScale(e.target.value)} className="w-4 h-4" />
-                  <div className="flex-1"><div className="text-gray-900 font-semibold">Scale of 1–5, scores only</div></div>
-                </label>
-                <label className="flex items-start gap-2 p-2 cursor-pointer transition-colors">
-                  <input type="radio" name="testingScale" value="scale-1-10-written" checked={testingScale === "scale-1-10-written"} onChange={(e) => setTestingScale(e.target.value)} className="w-4 h-4" />
-                  <div className="flex-1"><div className="text-gray-900 font-semibold">Scale of 1–10 with written assessments</div></div>
-                </label>
-                <label className="flex items-start gap-2 p-2 cursor-pointer transition-colors">
-                  <input type="radio" name="testingScale" value="scale-1-10-no-written" checked={testingScale === "scale-1-10-no-written"} onChange={(e) => setTestingScale(e.target.value)} className="w-4 h-4" />
-                  <div className="flex-1"><div className="text-gray-900 font-semibold">Scale of 1–10, scores only</div></div>
-                </label>
-                <label className="flex items-start gap-2 p-2 cursor-pointer transition-colors">
-                  <input type="radio" name="testingScale" value="no-scale-written" checked={testingScale === "no-scale-written"} onChange={(e) => setTestingScale(e.target.value)} className="w-4 h-4" />
-                  <div className="flex-1"><div className="text-gray-900 font-semibold">Written assessments only, no numeric score</div></div>
-                </label>
-              </div>
-              <div className="flex justify-between mt-2">
-                <button className="px-6 py-2 border-2 border-gray-400 text-gray-700 rounded hover:bg-gray-50" onClick={() => setCurrentStep(2)}>← Back</button>
-                <button
-                  className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                  onClick={handleExecute}
-                  disabled={!canExecute}
-                >
-                  Run Scoring →
-                </button>
-              </div>
+              {gradeSubmitted ? (
+                <div className="py-4 text-center">
+                  <p className="text-green-700 font-semibold mb-1">Scoring request sent</p>
+                  <p className="text-gray-500 text-sm mb-4">Results will appear below once the AI finishes scoring.</p>
+                  <button
+                    className="px-5 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+                    onClick={() => {
+                      setGradeSubmitted(false);
+                      setCurrentStep(1);
+                      setSelectedFiles([]);
+                      setExcludedIdeas(new Set());
+                      setManualIdeas([]);
+                      setTestingScale('');
+                    }}
+                  >
+                    Score Again
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <h3 className="text-gray-900 leading-tight mb-1">
+                    Step 3 of 3: Choose Scoring Scale
+                  </h3>
+                  <p className="text-gray-600 mb-3 text-sm">
+                    Select how the AI should score each idea against each segment.
+                  </p>
+                  <div className="space-y-1 mb-4">
+                    <label className="flex items-center gap-2 p-2 cursor-pointer transition-colors">
+                      <input type="radio" name="testingScale" value="scale-1-5-written" checked={testingScale === "scale-1-5-written"} onChange={(e) => setTestingScale(e.target.value)} className="w-4 h-4" />
+                      <div className="flex-1"><div className="text-gray-900 font-semibold">Scale of 1–5 with written assessments</div></div>
+                    </label>
+                    <label className="flex items-start gap-2 p-2 cursor-pointer transition-colors">
+                      <input type="radio" name="testingScale" value="scale-1-5-no-written" checked={testingScale === "scale-1-5-no-written"} onChange={(e) => setTestingScale(e.target.value)} className="w-4 h-4" />
+                      <div className="flex-1"><div className="text-gray-900 font-semibold">Scale of 1–5, scores only</div></div>
+                    </label>
+                    <label className="flex items-start gap-2 p-2 cursor-pointer transition-colors">
+                      <input type="radio" name="testingScale" value="scale-1-10-written" checked={testingScale === "scale-1-10-written"} onChange={(e) => setTestingScale(e.target.value)} className="w-4 h-4" />
+                      <div className="flex-1"><div className="text-gray-900 font-semibold">Scale of 1–10 with written assessments</div></div>
+                    </label>
+                    <label className="flex items-start gap-2 p-2 cursor-pointer transition-colors">
+                      <input type="radio" name="testingScale" value="scale-1-10-no-written" checked={testingScale === "scale-1-10-no-written"} onChange={(e) => setTestingScale(e.target.value)} className="w-4 h-4" />
+                      <div className="flex-1"><div className="text-gray-900 font-semibold">Scale of 1–10, scores only</div></div>
+                    </label>
+                    <label className="flex items-start gap-2 p-2 cursor-pointer transition-colors">
+                      <input type="radio" name="testingScale" value="no-scale-written" checked={testingScale === "no-scale-written"} onChange={(e) => setTestingScale(e.target.value)} className="w-4 h-4" />
+                      <div className="flex-1"><div className="text-gray-900 font-semibold">Written assessments only, no numeric score</div></div>
+                    </label>
+                  </div>
+                  <div className="flex justify-between mt-2">
+                    <button className="px-6 py-2 border-2 border-gray-400 text-gray-700 rounded hover:bg-gray-50" onClick={() => setCurrentStep(2)}>← Back</button>
+                    <button
+                      className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      onClick={handleExecute}
+                      disabled={!canExecute}
+                    >
+                      Run Scoring →
+                    </button>
+                  </div>
+                </>
+              )}
             </>
           ) : (
           <>
