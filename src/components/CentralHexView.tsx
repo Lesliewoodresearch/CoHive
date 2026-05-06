@@ -1504,7 +1504,7 @@ export function CentralHexView({
 
       {/* Prior Persona Re-use Modal */}
       {showPriorPersonaModal && (
-        <div className="fixed inset-y-0 left-0 z-50 flex items-center justify-center bg-black/40" style={{ right: 'var(--modal-r)', padding: 'clamp(4px, 2vw, 16px)' }}>
+        <div className="fixed inset-y-0 left-0 z-50 flex items-center justify-center bg-black/40" style={{ right: 'var(--modal-r)', padding: 'var(--modal-p)' }}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col">
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-gray-900 font-semibold text-base">Previous results available</h3>
@@ -1572,7 +1572,7 @@ export function CentralHexView({
 
       {/* Direction Modal */}
       {showDirectionModal && (
-        <div className="fixed inset-y-0 left-0 z-50 flex items-center justify-center bg-black/40" style={{ right: 'var(--modal-r)', padding: 'clamp(4px, 2vw, 16px)' }}>
+        <div className="fixed inset-y-0 left-0 z-50 flex items-center justify-center bg-black/40" style={{ right: 'var(--modal-r)', padding: 'var(--modal-p)' }}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col">
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-gray-900 font-semibold text-base">Add insight, focus or direction</h3>

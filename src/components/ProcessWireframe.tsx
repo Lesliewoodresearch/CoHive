@@ -2549,7 +2549,7 @@ export default function ProcessWireframe() {
 
       {/* ── Grade Score Results Modal ── */}
       {gradeModalOpen && gradeScoreResults && (
-        <div className="fixed inset-y-0 left-0 z-50 flex items-center justify-center bg-black/60" style={{ right: 'var(--modal-r)', padding: 'clamp(4px, 2vw, 32px)' }} onClick={() => setGradeModalOpen(false)}>
+        <div className="fixed inset-y-0 left-0 z-50 flex items-center justify-center bg-black/60" style={{ right: 'var(--modal-r)', padding: 'var(--modal-p-lg)' }} onClick={() => setGradeModalOpen(false)}>
           <div
             className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col"
             onClick={e => e.stopPropagation()}

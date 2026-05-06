@@ -10,6 +10,8 @@
      Modal right inset: panel width + 30px gap. */
   --panel-w: clamp(200px, 20vw, 320px);
   --modal-r: calc(var(--panel-w) + 30px);
+  --modal-p: clamp(2px, 0.7vw, 5px);     /* modal overlay padding — standard */
+  --modal-p-lg: clamp(2px, 0.7vw, 10px); /* modal overlay padding — large modals */
 
   --font-size: 16px;
   --background: #ffffff;

@@ -685,7 +685,7 @@ export function ReviewView({ projectFiles, onDeleteFiles }: ReviewViewProps) {
       
       {/* File Viewer Modal */}
       {viewingFile && (
-        <div className="fixed inset-y-0 left-0 z-50 flex items-center justify-center bg-black bg-opacity-50" style={{ right: 'var(--modal-r)', padding: 'clamp(4px, 2vw, 16px)' }}>
+        <div className="fixed inset-y-0 left-0 z-50 flex items-center justify-center bg-black bg-opacity-50" style={{ right: 'var(--modal-r)', padding: 'var(--modal-p)' }}>
           <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
             {/* Modal Header */}
             <div className="border-b-2 border-gray-300 p-4 flex items-center justify-between">

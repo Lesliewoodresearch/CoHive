@@ -445,7 +445,7 @@ export function StoryModal({
 
     return (
       <div className="fixed inset-y-0 left-0 z-50 flex items-center justify-center"
-        style={{ right: 'var(--modal-r)', padding: 'clamp(4px, 2vw, 32px)', backgroundColor: 'rgba(0,0,0,0.2)' }}>
+        style={{ right: 'var(--modal-r)', padding: 'var(--modal-p-lg)', backgroundColor: 'rgba(0,0,0,0.2)' }}>
         <div className="bg-white rounded-xl shadow-2xl flex flex-col" style={{ width: '560px', maxHeight: '85vh' }}>
 
           {/* Header */}
@@ -550,7 +550,7 @@ export function StoryModal({
   // ── Story content ────────────────────────────────────────────────────────────
   return (
     <div className="fixed inset-y-0 left-0 z-50 flex items-center justify-center"
-      style={{ right: 'var(--modal-r)', padding: 'clamp(4px, 2vw, 32px)', backgroundColor: 'rgba(0,0,0,0.2)' }}>
+      style={{ right: 'var(--modal-r)', padding: 'var(--modal-p-lg)', backgroundColor: 'rgba(0,0,0,0.2)' }}>
       <div className="bg-white rounded-xl shadow-2xl flex flex-col" style={{ width: '700px', maxHeight: '85vh' }}>
 
         {/* Header */}

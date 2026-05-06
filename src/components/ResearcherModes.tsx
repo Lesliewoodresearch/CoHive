@@ -171,7 +171,7 @@ function downloadAsMarkdown(title: string, content: string) {
 function AIResponseModal({ isOpen, onClose, title, content, meta }: AIResponseModalProps) {
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-y-0 left-0 z-50 flex items-center justify-center" style={{ right: 'var(--modal-r)', padding: 'clamp(4px, 2vw, 16px)', backgroundColor: 'rgba(0,0,0,0.6)' }}>
+    <div className="fixed inset-y-0 left-0 z-50 flex items-center justify-center" style={{ right: 'var(--modal-r)', padding: 'var(--modal-p)', backgroundColor: 'rgba(0,0,0,0.6)' }}>
       <div className="bg-white rounded-xl shadow-2xl flex flex-col w-full max-w-3xl" style={{ maxHeight: '90vh' }}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl flex-shrink-0">
           <div>
@@ -855,7 +855,7 @@ export function ResearcherModes({
   const PreviewModal = () => {
     if (!previewFile) return null;
     return (
-      <div className="fixed inset-y-0 left-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style={{ right: 'var(--modal-r)', padding: 'clamp(4px, 2vw, 16px)' }}>
+      <div className="fixed inset-y-0 left-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style={{ right: 'var(--modal-r)', padding: 'var(--modal-p)' }}>
         <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col">
           <div className="border-b-2 border-gray-300 p-4 flex items-center justify-between">
             <div className="flex-1 mr-4">
@@ -1469,7 +1469,7 @@ export function ResearcherModes({
         )}
         <DatabricksFileBrowser open={showDatabricksBrowser} onClose={() => setShowDatabricksBrowser(false)} onFilesSelected={handleDatabricksFilesSelected} userRole={canApproveResearch ? 'researcher' : 'non-researcher'} />
         {showEditPopup && editingFile && (
-          <div className="fixed inset-y-0 left-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style={{ right: 'var(--modal-r)', padding: 'clamp(4px, 2vw, 16px)' }}>
+          <div className="fixed inset-y-0 left-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style={{ right: 'var(--modal-r)', padding: 'var(--modal-p)' }}>
             <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
               <div className="px-6 py-4 border-b border-gray-200"><h2 className="text-xl font-semibold text-gray-900">Edit: {editingFile.fileName}</h2></div>
               <div className="flex-1 overflow-y-auto px-6 py-4"><textarea className="w-full h-96 border-2 border-gray-300 bg-white rounded p-4 text-gray-700 font-mono text-sm focus:outline-none focus:border-purple-500" value={editedContent} onChange={e => setEditedContent(e.target.value)} /></div>

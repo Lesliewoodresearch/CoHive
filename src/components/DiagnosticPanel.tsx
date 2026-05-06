@@ -4761,7 +4761,7 @@ export function DiagnosticPanel({ onClose }: DiagnosticPanelProps) {
   // ═══════════════════════════���═══════════════════════════════════════════════
 
   return (
-    <div className="fixed inset-y-0 left-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style={{ right: 'var(--modal-r)', padding: 'clamp(4px, 2vw, 16px)' }}>
+    <div className="fixed inset-y-0 left-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style={{ right: 'var(--modal-r)', padding: 'var(--modal-p)' }}>
       <div className="bg-white rounded-lg shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col">
         
         {/* Header */}
